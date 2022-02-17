@@ -15,7 +15,7 @@
           buildInputs = [
             (pkgs.rWrapper.override {
               packages = with pkgs.rPackages;
-                [ tidyverse lintr styler xml2 devtools furrr ];
+                [ tidyverse lintr styler xml2 devtools furrr progressr ];
             })
           ];
         };
