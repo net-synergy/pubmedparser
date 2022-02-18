@@ -8,14 +8,21 @@
 
   outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
+      let pkgs = nixpkgs.legacyPackages.${system};
       in {
         devShell = pkgs.mkShell {
           buildInputs = [
             (pkgs.rWrapper.override {
-              packages = with pkgs.rPackages;
-                [ tidyverse lintr styler xml2 devtools furrr progressr ];
+              packages = with pkgs.rPackages; [
+                tidyverse
+                lintr
+                styler
+                xml2
+                devtools
+                furrr
+                progressr
+                tictoc
+              ];
             })
           ];
         };
