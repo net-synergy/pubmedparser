@@ -24,6 +24,9 @@
                 tictoc
               ];
             })
+            pkgs.gcc
+            pkgs.gdb
+            pkgs.astyle
           ];
         };
       });

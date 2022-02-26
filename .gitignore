@@ -1,2 +1,4 @@
 cache/
 results/
+bin/
+*.o
