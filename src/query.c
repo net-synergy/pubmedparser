@@ -3,16 +3,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define SEEK_LAST_DELIM(c, fptr) {\
-    if (c == '<' || c == '>' || c == '=')			\
-      fseek(fptr, -1, SEEK_CUR);				\
-  }
-
-int get_tag(FILE *fptr, char s[], int str_max)
+int get_tag(FILE *fptr, char c, char s[], int str_max)
 {
-  int c, i;
+  while (c != '<' && c != EOF)
+    c = fgetc(fptr);
 
-  while ((c = fgetc(fptr)) != '<' && c != EOF);
+  int i;
   for (i = 0; i < (str_max - 1) && (c = fgetc(fptr)) != ' ' && c != '>' &&
        c != EOF; i++)
     s[i] = c;
@@ -23,31 +19,27 @@ int get_tag(FILE *fptr, char s[], int str_max)
     s[0] = '/';
     s[1] = '\0';
   }
-
-  SEEK_LAST_DELIM(c, fptr);
   return c;
 }
 
-int get_value(FILE *fptr, char s[], int str_max)
+int get_value(FILE *fptr, char c, char s[], int str_max)
 {
-  int c, i;
+  while (c != '>' && c != EOF)
+  c = fgetc(fptr);
 
-  while ((c = fgetc(fptr)) != '>' && c != EOF);
-
+  int i;
   for (i = 0; i < (str_max - 1) && (c = fgetc(fptr)) != '<' && c != '"' &&
        c != '\n'; i++)
     s[i] = c;
   s[i] = '\0';
 
-  SEEK_LAST_DELIM(c, fptr);
   return c;
 }
 
-int get_attribute(FILE *fptr, char s[], int str_max)
+int get_attribute(FILE *fptr, char c, char s[], int str_max)
 {
-  int c, i;
-
-  while ((c = fgetc(fptr)) != '=' && c != '>' && c != EOF);
+  while (c != '=' && c != '>' && c != EOF)
+    c = fgetc(fptr);
 
   if (c == '>') {
     fprintf(stderr,
@@ -59,11 +51,11 @@ if looking for multiple attributes");
 
   /* Remove leading '"' */
   c = fgetc(fptr);
+  int i;
   for (i = 0; i < (str_max - 1) && (c = fgetc(fptr)) != ' ' && c != '"' &&
        c != '>'; i++)
     s[i] = c;
   s[i] = '\0';
 
-  SEEK_LAST_DELIM(c, fptr);
   return c;
 }

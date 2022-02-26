@@ -82,7 +82,7 @@ int main()
   /* char value[str_max]; */
 
   while (c != EOF) {
-    c = get_tag(fptr, tag, str_max);
+    c = get_tag(fptr, c, tag, str_max);
     if (current.length > 0) {
       if (IS_CLOSE(tag)) {
         RM_TAG(current);
@@ -90,7 +90,7 @@ int main()
         ADD_TAG(current, tag);
         for (int i = 0; i < n_nodes; i++) {
           if (path_match(&current, nodes[i]->path)) {
-            c = get_value(fptr, nodes[i]->value, str_max);
+            c = get_value(fptr, c, nodes[i]->value, str_max);
             PRINT_NODE(nodes[i]);
           }
         }
