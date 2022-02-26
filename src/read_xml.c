@@ -83,7 +83,7 @@ int main()
 
   while (c != EOF) {
     c = get_tag(fptr, c, tag, str_max);
-    if (current.length > 0) {
+    if (current.length > 0 && tag[0] != '?') {
       if (IS_CLOSE(tag)) {
         RM_TAG(current);
       } else {
@@ -101,6 +101,7 @@ int main()
       }
     }
   }
+
   if (current.length == 0) {
     return 0;
   } else {

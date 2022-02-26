@@ -12,13 +12,8 @@ int get_tag(FILE *fptr, char c, char s[], int str_max)
   for (i = 0; i < (str_max - 1) && (c = fgetc(fptr)) != ' ' && c != '>' &&
        c != EOF; i++)
     s[i] = c;
+  s[i] = '\0';
 
-  if (i != 0) {
-    s[i] = '\0';
-  } else {
-    s[0] = '/';
-    s[1] = '\0';
-  }
   return c;
 }
 
