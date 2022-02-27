@@ -16,6 +16,7 @@ typedef struct Node {
   char **sub_tags;
   int n_sub_tags;
   char *attribute;
+  char *expected_attribute;
   FILE *out;
 } node;
 

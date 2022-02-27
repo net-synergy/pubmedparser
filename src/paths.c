@@ -4,7 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define IS_SPECIAL(p) (p == '@' || p == '{')
+#define IS_SPECIAL(p) ((p == '@') || (p == '{') || (p == '['))
+
+#define NOATT 0
+#define ATT 1
+#define EXPATT 2
 
 static int n_components(char *p)
 {
@@ -74,22 +78,47 @@ static path *construct_path(char *xml_path, int str_max)
   return p;
 }
 
-static char *find_attribute_name(char *p, int str_max)
+static int find_attribute_name(char *p, int str_max, char **attribute_holder)
 {
-  while ((*p != '\0') && (*p != '@'))
+  while ((*p != '\0') && (*p != '@') && (*p != '['))
     p++;
 
-  if (*p == '\0')
-    return NULL;
+  attribute_holder[0] = NULL;
+  attribute_holder[1] = NULL;
+  if (*p == '\0') {
+    return NOATT;
+  }
 
-  p++; /* Pass @ */
+  int att_type;
+  if (*p == '@') {
+    att_type = ATT;
+  } else {
+    att_type = EXPATT;
+    p++; /* Skip [ */
+  }
+
+  p++; /* Skip @ */
   char attribute[str_max];
   int i;
-  for (i = 0; (p[i] != '\0') && (i < (str_max - 1)); i++)
+  for (i = 0; (p[i] != '\0') && (p[i] != '=') && (i < (str_max - 1)); i++)
     attribute[i] = p[i];
   attribute[i] = '\0';
 
-  return strdup(attribute);
+  attribute_holder[0] = strdup(attribute);
+
+  if (att_type == EXPATT) {
+    p += i;
+    while ((*p == '=') || (*p == '\'') || (*p == ' '))
+      p++;
+
+    for (i = 0; (p[i] != '\'') && (p[i] != ']') && (i < (str_max - 1)); i++)
+      attribute[i] = p[i];
+    attribute[i] = '\0';
+
+    attribute_holder[1] = strdup(attribute);
+  }
+
+  return att_type;
 }
 
 static int find_sub_tag_names(char *p, int str_max, char ***sub_tags_holder)
@@ -134,14 +163,16 @@ static node *construct_node(char *xml_path, char *name, int str_max,
                             char *cache_dir)
 {
   path *p = construct_path(xml_path, str_max);
-  char *attribute = find_attribute_name(xml_path, str_max);
+  char *attribute_holder[2];
+  int att_type = find_attribute_name(xml_path, str_max, attribute_holder);
   char **sub_tags_holder[1];
   int n_sub_tags = find_sub_tag_names(xml_path, str_max, sub_tags_holder);
   char **sub_tags = sub_tags_holder[0];
 
   int n_values = 0;
-  if (attribute != NULL)
+  if (att_type == ATT) {
     n_values++;
+  }
 
   if (n_sub_tags > 0) {
     n_values += n_sub_tags;
@@ -161,7 +192,8 @@ static node *construct_node(char *xml_path, char *name, int str_max,
   n->n_values = n_values;
   n->sub_tags = sub_tags;
   n->n_sub_tags = n_sub_tags;
-  n->attribute = attribute;
+  n->attribute = attribute_holder[0];
+  n->expected_attribute = attribute_holder[1];
   n->out = get_file(name, cache_dir);
   return n;
 }

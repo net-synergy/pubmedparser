@@ -66,7 +66,7 @@ int read(char *input, node_set *ns)
 
   int c = 0;
   char tag[STR_MAX];
-  char entry_tag[STR_MAX];
+  char extra_element[STR_MAX];
   int vali = 0;
 
   while (c != EOF) {
@@ -77,35 +77,43 @@ int read(char *input, node_set *ns)
       } else {
         ADD_TAG(current, tag, ns);
         for (int i = 0; i < ns->n; i++) {
-	  if (path_match(&current, ns->nodes[i]->path)) {
+          if (path_match(&current, ns->nodes[i]->path)) {
             vali = 0;
-            if (ns->nodes[i]->attribute != NULL) {
+            if (ns->nodes[i]->attribute != NULL &&
+                ns->nodes[i]->expected_attribute == NULL) {
               c = get_attribute(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
               vali++;
             }
 
             if (ns->nodes[i]->n_sub_tags == 0) {
-              c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
-            } else {
-              strcpy(entry_tag, tag);
+	      if (ns->nodes[i]->expected_attribute != NULL) {
+		c = get_attribute(fptr, c, extra_element, STR_MAX);
+		if (strcmp(extra_element, ns->nodes[i]->expected_attribute) == 0) {
+		  c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
+		}
+	      } else {
+		c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
+	      }
+	    } else {
+              strcpy(extra_element, tag);
               while ((c = get_tag(fptr, c, tag, STR_MAX)) != EOF &&
-                     (!matching_tags(entry_tag, tag))) {
-		for (int j = 0; j < ns->nodes[i]->n_sub_tags; j++) {
-		  if (!IS_CLOSE(tag) &&
-		      (strcmp(tag, ns->nodes[i]->sub_tags[j]) == 0)) {
+                     (!matching_tags(extra_element, tag))) {
+                for (int j = 0; j < ns->nodes[i]->n_sub_tags; j++) {
+                  if (!IS_CLOSE(tag) &&
+                      (strcmp(tag, ns->nodes[i]->sub_tags[j]) == 0)) {
                     c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
-		    vali++;
-		  }
+                    vali++;
+                  }
                 }
               }
-	      RM_TAG(current, ns);
+              RM_TAG(current, ns);
             }
 
             if (i != ns->key_idx) {
               PRINT_NODE(ns->nodes[ns->key_idx], ns->nodes[i]);
-	      for (int j = 0; j < ns->nodes[i]->n_values; j++) {
-		ns->nodes[i]->values[j][0] = '\0';
-	      }
+              for (int j = 0; j < ns->nodes[i]->n_values; j++) {
+                ns->nodes[i]->values[j][0] = '\0';
+              }
             }
           }
         }
@@ -138,7 +146,8 @@ int main()
     "Year",
     "Language",
     "Author",
-    "Chemical"
+    "Chemical",
+    "Reference"
   };
 
   char *xpaths[] = {
@@ -146,7 +155,8 @@ int main()
     "./PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
     "./PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Language",
     "./PubmedArticleSet/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
-    "./PubmedArticleSet/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI"
+    "./PubmedArticleSet/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
+    "./PubmedArticleSet/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
   };
   int key_idx = 0;
 
