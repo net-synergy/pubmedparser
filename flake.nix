@@ -25,6 +25,9 @@
               ];
             })
           ] ++ (with pkgs; [ gcc gdb valgrind astyle zlib ]);
+          shellHook = ''
+            export OMP_NUM_THREADS=4
+          '';
         };
       });
 }

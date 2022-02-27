@@ -87,15 +87,15 @@ int parse_file(char *input, node_set *ns)
             }
 
             if (ns->nodes[i]->n_sub_tags == 0) {
-	      if (ns->nodes[i]->expected_attribute != NULL) {
-		c = get_attribute(fptr, c, extra_element, STR_MAX);
-		if (strcmp(extra_element, ns->nodes[i]->expected_attribute) == 0) {
-		  c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
-		}
-	      } else {
-		c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
-	      }
-	    } else {
+              if (ns->nodes[i]->expected_attribute != NULL) {
+                c = get_attribute(fptr, c, extra_element, STR_MAX);
+                if (strcmp(extra_element, ns->nodes[i]->expected_attribute) == 0) {
+                  c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
+                }
+              } else {
+                c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
+              }
+            } else {
               strcpy(extra_element, tag);
               while ((c = get_tag(fptr, c, tag, STR_MAX)) != EOF &&
                      (!matching_tags(extra_element, tag))) {
@@ -139,8 +139,14 @@ int parse_file(char *input, node_set *ns)
 
 int main()
 {
-  char *input = "../data/pubmed21n0001.xml.gz";
-  /* char *input = "../data/pubmed21n1001.xml.gz"; */
+  char *input[] = {
+    "../data/pubmed21n1001.xml.gz",
+    "../data/pubmed21n1002.xml.gz",
+    "../data/pubmed21n1003.xml.gz",
+    "../data/pubmed21n1004.xml.gz"
+  };
+  int n_files = (sizeof(input) / sizeof(*input));
+
   char *parsed = "../cache/parsed.txt";
   char *root = "PubmedArticleSet";
   char *cache_dir = "../cache/";
@@ -174,6 +180,14 @@ int main()
     exit(3);
   }
 
-  parse_file(input, ns);
-  fprintf(progress_ptr, "%s\n", input);
+  #pragma omp parallel for
+  for (int i = 0; i < n_files; i++) {
+    int status = 0;
+    status = parse_file(input[i], ns);
+    if (status < 0) {
+      fprintf(stderr, "Tag mismatch in file: %s\n", input[i]);
+    }
+    fprintf(progress_ptr, "%s\n", input[i]);
+  }
+
 }
