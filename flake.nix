@@ -24,10 +24,7 @@
                 tictoc
               ];
             })
-            pkgs.gcc
-            pkgs.gdb
-            pkgs.astyle
-          ];
+          ] ++ (with pkgs; [ gcc gdb valgrind astyle ]);
         };
       });
 }

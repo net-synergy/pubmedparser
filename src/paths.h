@@ -10,13 +10,24 @@ typedef struct Path {
 
 typedef struct Node {
   char *name;
-  char *value;
   path *path;
+  char **values;
+  int n_values;
+  char **sub_tags;
+  int n_sub_tags;
+  char *attribute;
   FILE *out;
-  struct Node *key;
 } node;
 
-path* construct_path(char *xml_path, int lim);
-node* construct_node(char *xml_path, int lim, node *key);
+typedef struct NodeSet {
+  char *root;
+  int max_path_depth;
+  int key_idx;
+  node **nodes;
+  int n;
+} node_set;
+
+node_set *construct_node_set(char *root, char **xpaths, int n_nodes,
+                             char **names, int key_idx, int str_max, char *cache_dir);
 
 #endif

@@ -5,29 +5,33 @@
 #include "query.h"
 #include "paths.h"
 
+#define STR_MAX 100
 #define IS_CLOSE(tag) (tag[0] == '/')
 
-#define ADD_TAG(path, tag) {				\
-    if (path.length < max_p_depth) {			\
+#define ADD_TAG(path, tag, ns) {			\
+    if (path.length < ns->max_path_depth) {		\
       path.components[path.length] = strdup(tag);	\
     }							\
     path.length++;					\
   }
 
-#define RM_TAG(path) {				\
+#define RM_TAG(path, ns) {			\
     path.length--;				\
-    if (path.length < max_p_depth) {		\
+    if (path.length < ns->max_path_depth) {	\
       free(path.components[path.length]);	\
     }						\
   }
 
-#define PRINT_NODE(node) {			\
-    if (node->key != NULL) {			\
-      fprintf(node->out,			\
-	      "%s\t%s\n",			\
-	      node->key->value,			\
-	      node->value);			\
-    }						\
+/* Assumes key will only ever has 1 value. */
+#define PRINT_NODE(key, node) {				\
+    fprintf(node->out, "%s\t", key->values[0]);		\
+    for (int pi = 0; pi < (node->n_values - 1); pi++) {	\
+      fprintf(node->out,				\
+	      "%s\t", node->values[pi]);		\
+    }							\
+    fprintf(node->out,					\
+	    "%s\n",					\
+	    node->values[node->n_values - 1]);		\
   }
 
 int path_match(path *p1, path *p2)
@@ -41,63 +45,74 @@ int path_match(path *p1, path *p2)
   return i == 0;
 }
 
-int main()
+int matching_tags(char *open, char *close)
 {
-  char *input = "../data/pubmed21n0001.xml";
+  close++;
+  return strcmp(open, close) == 0;
+}
+
+int read(char *input, node_set *ns)
+{
   FILE *fptr;
   if (!(fptr = fopen(input, "r"))) {
-    printf("Couldn't open file");
+    fprintf(stderr, "Couldn't open file: %s", input);
     exit(1);
   }
 
-  int str_max = 100;
-  char *root = "PubmedArticleSet";
-  char *kp = "./PubmedArticleSet/PubmedArticle/MedlineCitation/PMID";
-  node *key = construct_node(kp, str_max, NULL);
-
-  char *xpaths[] = {
-    "./PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Journal/ISSN",
-    "./PubmedArticleSet/PubmedArticle/MedlineCitation/DateRevised/Year"
-  };
-
-  int n_nodes = (sizeof xpaths / sizeof * xpaths) + 1;
-  node *nodes[n_nodes];
-  nodes[0] = key;
-
-  for (int i = 0; i < (n_nodes - 1); i++)
-    nodes[i + 1] = construct_node(xpaths[i], str_max, key);
-
-  int max_p_depth = 0;
-  for (int i = 0; i < n_nodes; i++)
-    max_p_depth = (max_p_depth > nodes[i]->path->length) ? max_p_depth :
-                  nodes[i]->path->length;
-
   path current = {
     .length = 0,
-    .components = malloc(sizeof(char *) * max_p_depth)
+    .components = malloc(sizeof(char *) * ns->max_path_depth)
   };
 
   int c = 0;
-  char tag[str_max];
-  /* char value[str_max]; */
+  char tag[STR_MAX];
+  char entry_tag[STR_MAX];
+  int vali = 0;
 
   while (c != EOF) {
-    c = get_tag(fptr, c, tag, str_max);
+    c = get_tag(fptr, c, tag, STR_MAX);
     if (current.length > 0 && tag[0] != '?') {
       if (IS_CLOSE(tag)) {
-        RM_TAG(current);
+        RM_TAG(current, ns);
       } else {
-        ADD_TAG(current, tag);
-        for (int i = 0; i < n_nodes; i++) {
-          if (path_match(&current, nodes[i]->path)) {
-            c = get_value(fptr, c, nodes[i]->value, str_max);
-            PRINT_NODE(nodes[i]);
+        ADD_TAG(current, tag, ns);
+        for (int i = 0; i < ns->n; i++) {
+	  if (path_match(&current, ns->nodes[i]->path)) {
+            vali = 0;
+            if (ns->nodes[i]->attribute != NULL) {
+              c = get_attribute(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
+              vali++;
+            }
+
+            if (ns->nodes[i]->n_sub_tags == 0) {
+              c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
+            } else {
+              strcpy(entry_tag, tag);
+              while ((c = get_tag(fptr, c, tag, STR_MAX)) != EOF &&
+                     (!matching_tags(entry_tag, tag))) {
+		for (int j = 0; j < ns->nodes[i]->n_sub_tags; j++) {
+		  if (!IS_CLOSE(tag) &&
+		      (strcmp(tag, ns->nodes[i]->sub_tags[j]) == 0)) {
+                    c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
+		    vali++;
+		  }
+                }
+              }
+	      RM_TAG(current, ns);
+            }
+
+            if (i != ns->key_idx) {
+              PRINT_NODE(ns->nodes[ns->key_idx], ns->nodes[i]);
+	      for (int j = 0; j < ns->nodes[i]->n_values; j++) {
+		ns->nodes[i]->values[j][0] = '\0';
+	      }
+            }
           }
         }
       }
     } else {
-      if (strcmp(root, tag) == 0) {
-        ADD_TAG(current, tag);
+      if (strcmp(ns->root, tag) == 0) {
+        ADD_TAG(current, tag, ns);
       }
     }
   }
@@ -108,4 +123,43 @@ int main()
     fprintf(stderr, "Open and closing tags did not match.");
     exit(1);
   }
+}
+
+int main()
+{
+  char *input = "../data/pubmed21n0001.xml";
+  /* char *input = "../data/pubmed21n1000.xml"; */
+  char *parsed = "../cache/parsed.txt";
+  char *root = "PubmedArticleSet";
+  char *cache_dir = "../cache/";
+
+  char *names[] = {
+    "PMID",
+    "Year",
+    "Language",
+    "Author",
+    "Chemical"
+  };
+
+  char *xpaths[] = {
+    "./PubmedArticleSet/PubmedArticle/MedlineCitation/PMID",
+    "./PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
+    "./PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Language",
+    "./PubmedArticleSet/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
+    "./PubmedArticleSet/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI"
+  };
+  int key_idx = 0;
+
+  int n_nodes = (sizeof(xpaths) / sizeof(*xpaths));
+  node_set *ns = construct_node_set(root, xpaths, n_nodes, names, key_idx,
+                                    STR_MAX, cache_dir);
+
+  FILE *progress_ptr;
+  if (!(progress_ptr = fopen(parsed, "a"))) {
+    fprintf(stderr, "Failed to open parsed file.");
+    exit(3);
+  }
+
+  read(input, ns);
+  fprintf(progress_ptr, "%s\n", input);
 }
