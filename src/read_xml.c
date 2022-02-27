@@ -56,7 +56,7 @@ int parse_file(char *input, node_set *ns)
 {
   gzFile fptr;
   if (!(fptr = gzopen(input, "rb"))) {
-    fprintf(stderr, "Couldn't open file: %s", input);
+    fprintf(stderr, "Couldn't open file: %s\n", input);
     exit(1);
   }
 
@@ -129,8 +129,11 @@ int parse_file(char *input, node_set *ns)
   if (current.length == 0) {
     return 0;
   } else {
-    fprintf(stderr, "Open and closing tags did not match.");
-    exit(1);
+    /* TODO: Tags sometimes end with ...\> then have no value or
+       closing tag causing a mismatch in opening and closing
+       tags. Need to figrue out how to handle that.*/
+    fprintf(stderr, "Open and closing tags did not match.\n");
+    return -1;
   }
 }
 
@@ -167,7 +170,7 @@ int main()
 
   FILE *progress_ptr;
   if (!(progress_ptr = fopen(parsed, "a"))) {
-    fprintf(stderr, "Failed to open parsed file.");
+    fprintf(stderr, "Failed to open parsed file.\n");
     exit(3);
   }
 

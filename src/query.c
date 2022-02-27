@@ -41,7 +41,7 @@ int get_attribute(gzFile fptr, char c, char s[], int str_max)
     fprintf(stderr,
             "Did not find attribute. \
 Attributes must be listed in the order they appear \
-if looking for multiple attributes");
+if looking for multiple attributes.\n");
     exit(1);
   }
 
