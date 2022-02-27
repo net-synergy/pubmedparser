@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zlib.h>
 
 #include "query.h"
 #include "paths.h"
@@ -51,10 +52,10 @@ int matching_tags(char *open, char *close)
   return strcmp(open, close) == 0;
 }
 
-int read(char *input, node_set *ns)
+int parse_file(char *input, node_set *ns)
 {
-  FILE *fptr;
-  if (!(fptr = fopen(input, "r"))) {
+  gzFile fptr;
+  if (!(fptr = gzopen(input, "rb"))) {
     fprintf(stderr, "Couldn't open file: %s", input);
     exit(1);
   }
@@ -135,8 +136,8 @@ int read(char *input, node_set *ns)
 
 int main()
 {
-  char *input = "../data/pubmed21n0001.xml";
-  /* char *input = "../data/pubmed21n1000.xml"; */
+  char *input = "../data/pubmed21n0001.xml.gz";
+  /* char *input = "../data/pubmed21n1001.xml.gz"; */
   char *parsed = "../cache/parsed.txt";
   char *root = "PubmedArticleSet";
   char *cache_dir = "../cache/";
@@ -170,6 +171,6 @@ int main()
     exit(3);
   }
 
-  read(input, ns);
+  parse_file(input, ns);
   fprintf(progress_ptr, "%s\n", input);
 }

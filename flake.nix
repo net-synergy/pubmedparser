@@ -24,7 +24,7 @@
                 tictoc
               ];
             })
-          ] ++ (with pkgs; [ gcc gdb valgrind astyle ]);
+          ] ++ (with pkgs; [ gcc gdb valgrind astyle zlib ]);
         };
       });
 }
