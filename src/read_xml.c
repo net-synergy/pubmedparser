@@ -23,6 +23,13 @@
     }						\
   }
 
+#define CONTINUE_EMPTY_TAG(c, path, ns) {	\
+    if (c == EMPTY_TAG) {			\
+      RM_TAG(path, ns)				\
+      continue;					\
+    }						\
+  }
+
 /* Assumes key will only ever has 1 value. */
 #define PRINT_NODE(key, node) {				\
     fprintf(node->out, "%s\t", key->values[0]);		\
@@ -72,8 +79,8 @@ int parse_file(char *input, node_set *ns)
 
   while (c != EOF) {
     c = get_tag(fptr, c, tag, STR_MAX);
-    if (current.length > 0 && tag[0] != '?') {
-      if (IS_CLOSE(tag)) {
+    if ((current.length > 0) && (tag[0] != '?') && (c != EMPTY_TAG)) {
+      if (IS_CLOSE(tag) || (c == PREV_EMPTY_TAG)) {
         RM_TAG(current, ns);
       } else {
         ADD_TAG(current, tag, ns);
@@ -83,18 +90,22 @@ int parse_file(char *input, node_set *ns)
             if (ns->nodes[i]->attribute != NULL &&
                 ns->nodes[i]->expected_attribute == NULL) {
               c = get_attribute(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
+	      CONTINUE_EMPTY_TAG(c, current, ns);
               vali++;
             }
 
             if (ns->nodes[i]->n_sub_tags == 0) {
               if (ns->nodes[i]->expected_attribute != NULL) {
                 c = get_attribute(fptr, c, extra_element, STR_MAX);
-                if (strcmp(extra_element, ns->nodes[i]->expected_attribute) == 0) {
+		CONTINUE_EMPTY_TAG(c, current, ns);
+		if (strcmp(extra_element, ns->nodes[i]->expected_attribute) == 0) {
                   c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
-                }
+		  CONTINUE_EMPTY_TAG(c, current, ns);
+		}
               } else {
                 c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
-              }
+		CONTINUE_EMPTY_TAG(c, current, ns);
+	      }
             } else {
               strcpy(extra_element, tag);
               while ((c = get_tag(fptr, c, tag, STR_MAX)) != EOF &&
@@ -103,7 +114,7 @@ int parse_file(char *input, node_set *ns)
                   if (!IS_CLOSE(tag) &&
                       (strcmp(tag, ns->nodes[i]->sub_tags[j]) == 0)) {
                     c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
-                    vali++;
+		    vali++;
                   }
                 }
               }
@@ -121,7 +132,7 @@ int parse_file(char *input, node_set *ns)
       }
     } else {
       if (strcmp(ns->root, tag) == 0) {
-        ADD_TAG(current, tag, ns);
+	ADD_TAG(current, tag, ns);
       }
     }
   }
@@ -129,9 +140,6 @@ int parse_file(char *input, node_set *ns)
   if (current.length == 0) {
     return 0;
   } else {
-    /* TODO: Tags sometimes end with ...\> then have no value or
-       closing tag causing a mismatch in opening and closing
-       tags. Need to figrue out how to handle that.*/
     fprintf(stderr, "Open and closing tags did not match.\n");
     return -1;
   }
@@ -186,8 +194,8 @@ int main()
     status = parse_file(input[i], ns);
     if (status < 0) {
       fprintf(stderr, "Tag mismatch in file: %s\n", input[i]);
+      exit(1);
     }
     fprintf(progress_ptr, "%s\n", input[i]);
   }
-
 }

@@ -6,8 +6,14 @@
 
 int get_tag(gzFile fptr, char c, char s[], int str_max)
 {
-  while (c != '<' && c != EOF)
-    c = gzgetc(fptr);
+  while (c != '<' && c != EOF) {
+    if (c != '/') {
+      c = gzgetc(fptr);
+    } else {
+      if ((c = gzgetc(fptr)) == '>')
+	return PREV_EMPTY_TAG;
+    }
+  }
 
   int i;
   for (i = 0; i < (str_max - 1) && (c = gzgetc(fptr)) != ' ' && c != '>' &&
@@ -15,13 +21,22 @@ int get_tag(gzFile fptr, char c, char s[], int str_max)
     s[i] = c;
   s[i] = '\0';
 
+  if (s[i - 1] == '/')
+    return EMPTY_TAG;
+
   return c;
 }
 
 int get_value(gzFile fptr, char c, char s[], int str_max)
 {
-  while (c != '>' && c != EOF)
-  c = gzgetc(fptr);
+  while (c != '>' && c != EOF) {
+    if (c == '/') {
+      if ((c = gzgetc(fptr)) == '>')
+	return EMPTY_TAG;
+    } else {
+      c = gzgetc(fptr);
+    }
+  }
 
   int i;
   for (i = 0; i < (str_max - 1) && (c = gzgetc(fptr)) != '<' && c != '"' &&
@@ -34,15 +49,17 @@ int get_value(gzFile fptr, char c, char s[], int str_max)
 
 int get_attribute(gzFile fptr, char c, char s[], int str_max)
 {
-  while (c != '=' && c != '>' && c != EOF)
-    c = gzgetc(fptr);
+  while (c != '=' && c != '>' && c != EOF) {
+    if (c == '/') {
+      if ((c = gzgetc(fptr)) == '>')
+	return EMPTY_TAG;
+    } else {
+      c = gzgetc(fptr);
+    }
+  }
 
   if (c == '>') {
-    fprintf(stderr,
-            "Did not find attribute. \
-Attributes must be listed in the order they appear \
-if looking for multiple attributes.\n");
-    exit(1);
+    return NO_ATTRIBUTE;
   }
 
   /* Remove leading '"' */
