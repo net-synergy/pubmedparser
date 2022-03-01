@@ -42,6 +42,8 @@
 	    node->values[node->n_values - 1]);		\
   }
 
+#define matching_tags(open, close) (strcmp(open, close + 1) == 0)
+
 int path_match(path *p1, path *p2)
 {
   if (p1->length != p2->length) return 0;
@@ -51,12 +53,6 @@ int path_match(path *p1, path *p2)
          (strcmp(p1->components[i - 1], p2->components[i - 1]) == 0)) i--;
 
   return i == 0;
-}
-
-int matching_tags(char *open, char *close)
-{
-  close++;
-  return strcmp(open, close) == 0;
 }
 
 int parse_file(char *input, node_set *ns)
