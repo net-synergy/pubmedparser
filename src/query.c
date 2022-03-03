@@ -11,7 +11,7 @@ int get_tag(gzFile fptr, char c, char s[], int str_max)
       c = gzgetc(fptr);
     } else {
       if ((c = gzgetc(fptr)) == '>')
-	return PREV_EMPTY_TAG;
+        return PREV_EMPTY_TAG;
     }
   }
 
@@ -32,7 +32,7 @@ int get_value(gzFile fptr, char c, char s[], int str_max)
   while (c != '>' && c != EOF) {
     if (c == '/') {
       if ((c = gzgetc(fptr)) == '>')
-	return EMPTY_TAG;
+        return EMPTY_TAG;
     } else {
       c = gzgetc(fptr);
     }
@@ -52,7 +52,7 @@ int get_attribute(gzFile fptr, char c, char s[], int str_max)
   while (c != '=' && c != '>' && c != EOF) {
     if (c == '/') {
       if ((c = gzgetc(fptr)) == '>')
-	return EMPTY_TAG;
+        return EMPTY_TAG;
     } else {
       c = gzgetc(fptr);
     }

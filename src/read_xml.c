@@ -23,14 +23,14 @@
     }						\
   }
 
-#define CONTINUE_EMPTY_TAG(c, path, ns) {	\
+#define CONTINUE_IF_EMPTY_TAG(c, path, ns) {	\
     if (c == EMPTY_TAG) {			\
       RM_TAG(path, ns)				\
       continue;					\
     }						\
   }
 
-/* Assumes key will only ever has 1 value. */
+/* Assumes key will only ever have 1 value. */
 #define PRINT_NODE(key, node) {				\
     fprintf(node->out, "%s\t", key->values[0]);		\
     for (int pi = 0; pi < (node->n_values - 1); pi++) {	\
@@ -86,22 +86,22 @@ int parse_file(char *input, node_set *ns)
             if (ns->nodes[i]->attribute != NULL &&
                 ns->nodes[i]->expected_attribute == NULL) {
               c = get_attribute(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
-	      CONTINUE_EMPTY_TAG(c, current, ns);
+              CONTINUE_IF_EMPTY_TAG(c, current, ns);
               vali++;
             }
 
             if (ns->nodes[i]->n_sub_tags == 0) {
               if (ns->nodes[i]->expected_attribute != NULL) {
                 c = get_attribute(fptr, c, extra_element, STR_MAX);
-		CONTINUE_EMPTY_TAG(c, current, ns);
-		if (strcmp(extra_element, ns->nodes[i]->expected_attribute) == 0) {
+                CONTINUE_IF_EMPTY_TAG(c, current, ns);
+                if (strcmp(extra_element, ns->nodes[i]->expected_attribute) == 0) {
                   c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
-		  CONTINUE_EMPTY_TAG(c, current, ns);
-		}
+                  CONTINUE_IF_EMPTY_TAG(c, current, ns);
+                }
               } else {
                 c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
-		CONTINUE_EMPTY_TAG(c, current, ns);
-	      }
+                CONTINUE_IF_EMPTY_TAG(c, current, ns);
+              }
             } else {
               strcpy(extra_element, tag);
               while ((c = get_tag(fptr, c, tag, STR_MAX)) != EOF &&
@@ -110,7 +110,7 @@ int parse_file(char *input, node_set *ns)
                   if (!IS_CLOSE(tag) &&
                       (strcmp(tag, ns->nodes[i]->sub_tags[j]) == 0)) {
                     c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
-		    vali++;
+                    vali++;
                   }
                 }
               }
@@ -128,7 +128,7 @@ int parse_file(char *input, node_set *ns)
       }
     } else {
       if (strcmp(ns->root, tag) == 0) {
-	ADD_TAG(current, tag, ns);
+        ADD_TAG(current, tag, ns);
       }
     }
   }
@@ -151,17 +151,17 @@ int main()
   };
   int n_files = (sizeof(input) / sizeof(*input));
 
-  char *parsed = "../cache/parsed.txt";
+  char *parsed = "../cache/processed.txt";
   char *root = "PubmedArticleSet";
   char *cache_dir = "../cache/";
 
   char *names[] = {
-    "PMID",
-    "Year",
-    "Language",
-    "Author",
-    "Chemical",
-    "Reference"
+    "publication",
+    "year",
+    "language",
+    "author",
+    "chemical",
+    "reference"
   };
 
   char *xpaths[] = {
