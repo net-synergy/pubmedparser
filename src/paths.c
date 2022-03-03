@@ -30,11 +30,11 @@ static void get_components(char *p, char **components, int str_max)
   int tag_i = 0;
   int comp_i = 0;
   char name[str_max];
-  if ((p[0] != '.') | (p[1] != '/')) {
-    printf("Path malformed. Most start with './'");
+  if (*p != '/') {
+    printf("Path malformed. Must start with '/'");
     exit(2);
   }
-  p += 2; // Strip initial './';
+  p++; // Strip initial '/';
   while (*p != '\0' && !IS_SPECIAL(*p)) {
     if (*p == '/') {
       name[tag_i] = '\0';

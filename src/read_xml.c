@@ -64,7 +64,7 @@ int parse_file(char *input, node_set *ns)
   }
 
   path current = {
-    .length = 0,
+    .length = -1,
     .components = malloc(sizeof(char *) * ns->max_path_depth)
   };
 
@@ -75,7 +75,7 @@ int parse_file(char *input, node_set *ns)
 
   while (c != EOF) {
     c = get_tag(fptr, c, tag, STR_MAX);
-    if ((current.length > 0) && (tag[0] != '?') && (c != EMPTY_TAG)) {
+    if ((current.length >= 0) && (tag[0] != '?') && (c != EMPTY_TAG)) {
       if (IS_CLOSE(tag) || (c == PREV_EMPTY_TAG)) {
         RM_TAG(current, ns);
       } else {
@@ -135,7 +135,7 @@ int parse_file(char *input, node_set *ns)
     }
   }
 
-  if (current.length == 0) {
+  if (current.length == -1) {
     return 0;
   } else {
     fprintf(stderr, "Open and closing tags did not match.\n");
@@ -167,12 +167,12 @@ int main()
   };
 
   char *xpaths[] = {
-    "./PubmedArticleSet/PubmedArticle/MedlineCitation/PMID",
-    "./PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
-    "./PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Language",
-    "./PubmedArticleSet/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
-    "./PubmedArticleSet/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
-    "./PubmedArticleSet/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
+    "/PubmedArticle/MedlineCitation/PMID",
+    "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
+    "/PubmedArticle/MedlineCitation/Article/Language",
+    "/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
+    "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
+    "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
   };
   int key_idx = 0;
 
