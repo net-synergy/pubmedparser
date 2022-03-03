@@ -122,7 +122,9 @@ int parse_file(char *input, node_set *ns)
               for (int j = 0; j < ns->nodes[i]->n_values; j++) {
                 ns->nodes[i]->values[j][0] = '\0';
               }
-            }
+            } else
+              fprintf(ns->nodes[ns->key_idx]->out, "%s\n",
+                      ns->nodes[ns->key_idx]->values[0]);
           }
         }
       }
