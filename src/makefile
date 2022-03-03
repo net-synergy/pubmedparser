@@ -1,19 +1,29 @@
 CC = gcc
-OUT_DIR = ../bin
-LIBS = z
+CFLAGS = -Wall -Werror -Wextra
 
-read_xml.o: read_xml.c query.h paths.h
-	$(CC) -fopenmp -c read_xml.c
-read_xml: read_xml.o query.o paths.o
-	$(CC) -l$(LIBS) -fopenmp -O3 query.o paths.o read_xml.o -o $(OUT_DIR)/read_xml
-debug: read_xml.o query.o paths.o
-	$(CC) -g -l$(LIBS) -fopenmp query.o paths.o read_xml.o -o $(OUT_DIR)/read_xml
-profile: read_xml.o query.o paths.o
-	$(CC) -pg -l$(LIBS) -fopenmp query.o paths.o read_xml.o -o $(OUT_DIR)/read_xml
-	$(OUT_DIR)/read_xml
-	gprof -b $(OUT_DIR)/read_xml
-run: read_xml
-	$(OUT_DIR)/read_xml
+TOP_DIR = ..
+OUT_DIR = ../bin
+CACHE_DIR = ../cache
+LIBS = z
+READXML := $(OUT_DIR)/read_xml
+
+debug: CFLAGS += -g
+profile: CFLAGS += -pg
+
+.PHONY: debug profile run all clean
+read_xml.o: read_xml.c paths.h query.h
+	$(CC) -fopenmp -c $*.c
+$(READXML): read_xml.o paths.o query.o
+	@mkdir -p $(CACHE_DIR)
+	@mkdir -p $(OUT_DIR)
+	$(CC) $(CFLAGS) -l$(LIBS) -fopenmp -O3 $^ -o $@
+debug: $(READXML)
+profile: $(READXML)
+	$^
+	gprof -b $^
+run: $(READXML)
+	$^
+all: $(READXML)
 clean:
-	rm *.o
-	rm -r ../cache && mkdir ../cache
+	-rm *.o
+	-rm -rf $(OUT_DIR) $(CACHE_DIR)
