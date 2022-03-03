@@ -16,7 +16,7 @@ int get_tag(gzFile fptr, char c, char s[], int str_max)
   }
 
   int i;
-  for (i = 0; i < (str_max - 1) && (c = gzgetc(fptr)) != ' ' && c != '>' &&
+  for (i = 0; (c = gzgetc(fptr)) != ' ' && c != '>' && i < (str_max - 1) &&
        c != EOF; i++)
     s[i] = c;
   s[i] = '\0';
@@ -39,7 +39,7 @@ int get_value(gzFile fptr, char c, char s[], int str_max)
   }
 
   int i;
-  for (i = 0; i < (str_max - 1) && (c = gzgetc(fptr)) != '<' && c != '"' &&
+  for (i = 0; (c = gzgetc(fptr)) != '<' && c != '"' && i < (str_max - 1) &&
        c != '\n'; i++)
     s[i] = c;
   s[i] = '\0';
@@ -65,7 +65,7 @@ int get_attribute(gzFile fptr, char c, char s[], int str_max)
   /* Remove leading '"' */
   c = gzgetc(fptr);
   int i;
-  for (i = 0; i < (str_max - 1) && (c = gzgetc(fptr)) != ' ' && c != '"' &&
+  for (i = 0; (c = gzgetc(fptr)) != ' ' && c != '"' && i < (str_max - 1) &&
        c != '>'; i++)
     s[i] = c;
   s[i] = '\0';
