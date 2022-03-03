@@ -15,4 +15,5 @@ profile: read_xml.o query.o paths.o
 run: read_xml
 	$(OUT_DIR)/read_xml
 clean:
-	rm -r *.o
+	rm *.o
+	rm -r ../cache && mkdir ../cache
