@@ -24,7 +24,7 @@
                 tictoc
               ];
             })
-          ] ++ (with pkgs; [ gcc gdb valgrind astyle zlib ]);
+          ] ++ (with pkgs; [ gcc gdb valgrind astyle zlib cmocka ]);
           shellHook = ''
             export OMP_NUM_THREADS=4
           '';

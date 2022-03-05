@@ -135,6 +135,7 @@ int parse_file(char *input, node_set *ns)
     }
   }
 
+  gzclose(fptr);
   if (current.length == -1) {
     return 0;
   } else {
@@ -145,6 +146,7 @@ int parse_file(char *input, node_set *ns)
 
 int main()
 {
+  char *structure_file = "../example/structure.yml";
   char *input[] = {
     "../data/pubmed21n1001.xml.gz",
     "../data/pubmed21n1002.xml.gz",
@@ -154,31 +156,9 @@ int main()
   int n_files = (sizeof(input) / sizeof(*input));
 
   char *parsed = "../cache/processed.txt";
-  char *root = "PubmedArticleSet";
   char *cache_dir = "../cache/";
 
-  char *names[] = {
-    "publication",
-    "year",
-    "language",
-    "author",
-    "chemical",
-    "reference"
-  };
-
-  char *xpaths[] = {
-    "/PubmedArticle/MedlineCitation/PMID",
-    "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
-    "/PubmedArticle/MedlineCitation/Article/Language",
-    "/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
-    "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
-    "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
-  };
-  int key_idx = 0;
-
-  int n_nodes = (sizeof(xpaths) / sizeof(*xpaths));
-  node_set *ns = construct_node_set(root, xpaths, n_nodes, names, key_idx,
-                                    STR_MAX, cache_dir);
+  node_set *ns = construct_node_set(structure_file, cache_dir, STR_MAX);
 
   FILE *progress_ptr;
   if (!(progress_ptr = fopen(parsed, "a"))) {
@@ -196,4 +176,6 @@ int main()
     }
     fprintf(progress_ptr, "%s\n", input[i]);
   }
+
+  fclose(progress_ptr);
 }
