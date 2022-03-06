@@ -27,6 +27,7 @@ test_yaml_reader: test_yaml_reader.c $(SRC_DIR)/yaml_reader.o
 test_xml_reader: test_xml_reader_argument_parsing.bats test_xml_reader_output.bats \
 		 $(OUT_DIR)/read_xml
 	./test_xml_reader_argument_parsing.bats
+	./test_xml_reader_output.bats
 
 test: test_yaml_reader test_xml_reader
 

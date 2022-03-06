@@ -1,13 +1,20 @@
 #! /usr/bin/env bats
 
 setup() {
-    DIR=$(dirname $BATS_TEST_FILENAME)
-    cd $DIR
-    PATH="$DIR/../bin:$PATH"
-    cache_dir=$DIR/cache
-    structure_file=$DIR/../example/structure.yml
-    data_dir=$DIR/../data
-    mkdir -p $cache_dir
+    load 'bats_helpers'
+    _common_setup
+}
+
+setup_file() {
+    load 'bats_helpers'
+    _common_file_setup
+
+    export data_dir=$BATS_DIR/../data
+}
+
+teardown_file() {
+    load 'bats_helpers'
+    _common_file_teardown
 }
 
 @test "Test passing xml file" {

@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 #include "../src/yaml_reader.h"
-#define STRUCTURE_FILE "./data/test_structure.yml"
+#define STRUCTURE_FILE "./data/test_yaml_reader_structure.yml"
 #define STR_MAX 100
 
 static void test_yaml_finds_key_value(void **state)

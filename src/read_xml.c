@@ -103,7 +103,9 @@ int parse_file(char *input, node_set *ns)
                 if (strcmp(extra_element, ns->nodes[i]->expected_attribute) == 0) {
                   c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
                   CONTINUE_IF_EMPTY_TAG(c, current, ns);
-                }
+                } else {
+		  continue;
+		}
               } else {
                 c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
                 CONTINUE_IF_EMPTY_TAG(c, current, ns);
@@ -143,7 +145,7 @@ int parse_file(char *input, node_set *ns)
     return 0;
   } else {
     fprintf(stderr, "Open and closing tags did not match.\n");
-    return -1;
+    return 1;
   }
 }
 
@@ -223,7 +225,7 @@ int main(int argc, char **argv)
     for (int i = optind; i < argc; i++) {
       status = parse_file(argv[i], ns);
 
-      if (status < 0) {
+      if (status != 0) {
         fprintf(stderr, "Tag mismatch in file: %s\n", argv[i]);
         exit(1);
       }
@@ -232,5 +234,5 @@ int main(int argc, char **argv)
   }
 
   fclose(progress_ptr);
-  return 0;
+  return status;
 }
