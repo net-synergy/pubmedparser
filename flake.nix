@@ -11,7 +11,7 @@
       let pkgs = nixpkgs.legacyPackages.${system};
       in {
         devShell = pkgs.mkShell {
-          buildInputs = (with pkgs; [ gcc gdb valgrind astyle zlib cmocka ]);
+          buildInputs = (with pkgs; [ gcc gdb valgrind astyle zlib bats cmocka ]);
           shellHook = ''
             export OMP_NUM_THREADS=4
           '';

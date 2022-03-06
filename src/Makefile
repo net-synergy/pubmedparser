@@ -29,7 +29,7 @@ profile: $(READXML)
 	gprof -b $^
 
 run: $(READXML)
-	$^
+	$^ --cache-dir=$(CACHE_DIR) --structure-file=../example/structure.yml ../data/pubmed21n0001.xml.gz
 
 all: $(READXML)
 
