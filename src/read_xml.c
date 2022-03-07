@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <getopt.h>
 #include <zlib.h>
 
@@ -170,9 +171,18 @@ static char * expandfile(char *filename, char *dirname) {
   return strdup(temp);
 }
 
-static void usage(char *program_name)
+static void usage(char *program_name, int failed)
 {
-  printf("Usage for %s", program_name);
+  if (failed) {
+    puts("Called with unknown argument.\n");
+  }
+  printf("Usage: %s OPTION ... [FILE]...\n", program_name);
+  puts("Read XML files and print selected values to files.\n");
+  puts("With no FILE read standard input.\n");
+  puts("-c, --cache-dir=STRING\tdirectory output files are written to. \
+Defualts to \"cache\".");
+  puts("-s, --structure-file=STRING\ta yaml file with the xml paths to collect. \
+Defaults to \"structure.yml\".");
 }
 
 static struct option const longopts[] = {
@@ -185,24 +195,25 @@ static struct option const longopts[] = {
 int main(int argc, char **argv)
 {
   int optc;
-  char *structure_file = "../structure.yml";
-  char *cache_dir = "../cache";
+  char *structure_file = "structure.yml";
+  char *cache_dir = "cache";
   char *program_name = argv[0];
 
   while ((optc = getopt_long(argc, argv, "c:s:h", longopts, NULL)) != EOF) {
     switch (optc) {
     case 'c':
       cache_dir = ensure_path_ends_with_slash(optarg);
+      mkdir(cache_dir, 0777);
       break;
     case 's':
       structure_file = optarg;
       break;
     case 'h':
-      usage(program_name);
-      break;
+      usage(program_name, 0);
+      return 0;
     default:
-      /* FIXME: Should be aware that this is being called on an error. */
-      usage(program_name);
+      usage(program_name, 1);
+      return 1;
     }
   }
 
