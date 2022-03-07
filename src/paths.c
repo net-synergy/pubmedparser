@@ -186,16 +186,21 @@ static node *construct_node(char *xml_path, char *name, int str_max,
     values[i] = malloc(sizeof(char) * str_max);
   }
 
-  node *n = malloc(sizeof(node));
-  n->name = strdup(name);
-  n->path = p;
-  n->values = values;
-  n->n_values = n_values;
-  n->sub_tags = sub_tags;
-  n->n_sub_tags = n_sub_tags;
-  n->attribute = attribute_holder[0];
-  n->expected_attribute = attribute_holder[1];
-  n->out = get_file(name, cache_dir);
+  node n_init = {
+    .name = strdup(name),
+    .path = p,
+    .values = values,
+    .n_values = n_values,
+    .sub_tags = (const char **)sub_tags,
+    .n_sub_tags = n_sub_tags,
+    .attribute = attribute_holder[0],
+    .expected_attribute = attribute_holder[1],
+    .out = get_file(name, cache_dir)
+  };
+
+  node *n = malloc(sizeof * n);
+  memcpy(n, &n_init, sizeof * n);
+
   return n;
 }
 
@@ -253,12 +258,16 @@ node_set *construct_node_set(char *structure_file, char *cache_dir,
     max_p_depth = (max_p_depth > nodes[i]->path->length) ? max_p_depth :
                   nodes[i]->path->length;
 
-  node_set *ns = malloc(sizeof(node_set));
-  ns->root = strdup(root);
-  ns->max_path_depth = max_p_depth;
-  ns->key_idx = key_idx;
-  ns->nodes = nodes;
-  ns->n = n_nodes;
+  node_set ns_init = {
+    .root = strdup(root),
+    .max_path_depth = max_p_depth,
+    .key_idx = 0,
+    .nodes = nodes,
+    .n = n_nodes
+  };
+
+  node_set *ns = malloc(sizeof * ns);
+  memcpy(ns, &ns_init, sizeof * ns);
 
   for (int i = 0; i < N_NAMES; i++) {
     free(key_values_pairs[i][0]);

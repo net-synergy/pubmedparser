@@ -46,7 +46,7 @@
 
 #define matching_tags(open, close) (strcmp(open, close + 1) == 0)
 
-int path_match(path *p1, path *p2)
+int path_match(const path *p1, const path *p2)
 {
   if (p1->length != p2->length) return 0;
 
