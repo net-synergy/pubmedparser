@@ -11,20 +11,7 @@
       let pkgs = nixpkgs.legacyPackages.${system};
       in {
         devShell = pkgs.mkShell {
-          buildInputs = [
-            (pkgs.rWrapper.override {
-              packages = with pkgs.rPackages; [
-                tidyverse
-                lintr
-                styler
-                xml2
-                devtools
-                furrr
-                progressr
-                tictoc
-              ];
-            })
-          ] ++ (with pkgs; [ gcc gdb valgrind astyle zlib ]);
+          buildInputs = (with pkgs; [ gcc gdb valgrind astyle zlib bats cmocka ]);
           shellHook = ''
             export OMP_NUM_THREADS=4
           '';

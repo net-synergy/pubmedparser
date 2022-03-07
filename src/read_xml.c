@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <getopt.h>
 #include <zlib.h>
 
 #include "query.h"
@@ -58,7 +60,12 @@ int path_match(path *p1, path *p2)
 int parse_file(char *input, node_set *ns)
 {
   gzFile fptr;
-  if (!(fptr = gzopen(input, "rb"))) {
+  if (strcmp(input, "-") == 0) {
+    fptr = gzdopen(fileno(stdin), "rb");
+  } else {
+    fptr = gzopen(input, "rb");
+  }
+  if (!fptr) {
     fprintf(stderr, "Couldn't open file: %s\n", input);
     exit(1);
   }
@@ -97,18 +104,19 @@ int parse_file(char *input, node_set *ns)
                 if (strcmp(extra_element, ns->nodes[i]->expected_attribute) == 0) {
                   c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
                   CONTINUE_IF_EMPTY_TAG(c, current, ns);
-                }
+                } else {
+		  continue;
+		}
               } else {
                 c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
                 CONTINUE_IF_EMPTY_TAG(c, current, ns);
               }
             } else {
-              strcpy(extra_element, tag);
-              while ((c = get_tag(fptr, c, tag, STR_MAX)) != EOF &&
-                     (!matching_tags(extra_element, tag))) {
+              while ((c = get_tag(fptr, c, extra_element, STR_MAX)) != EOF &&
+                     (!matching_tags(tag, extra_element))) {
                 for (int j = 0; j < ns->nodes[i]->n_sub_tags; j++) {
-                  if (!IS_CLOSE(tag) &&
-                      (strcmp(tag, ns->nodes[i]->sub_tags[j]) == 0)) {
+                  if (!IS_CLOSE(extra_element) &&
+                      (strcmp(extra_element, ns->nodes[i]->sub_tags[j]) == 0)) {
                     c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
                     vali++;
                   }
@@ -119,9 +127,8 @@ int parse_file(char *input, node_set *ns)
 
             if (i != ns->key_idx) {
               PRINT_NODE(ns->nodes[ns->key_idx], ns->nodes[i]);
-              for (int j = 0; j < ns->nodes[i]->n_values; j++) {
+              for (int j = 0; j < ns->nodes[i]->n_values; j++)
                 ns->nodes[i]->values[j][0] = '\0';
-              }
             } else
               fprintf(ns->nodes[ns->key_idx]->out, "%s\n",
                       ns->nodes[ns->key_idx]->values[0]);
@@ -129,9 +136,8 @@ int parse_file(char *input, node_set *ns)
         }
       }
     } else {
-      if (strcmp(ns->root, tag) == 0) {
+      if (strcmp(ns->root, tag) == 0)
         ADD_TAG(current, tag, ns);
-      }
     }
   }
 
@@ -139,61 +145,104 @@ int parse_file(char *input, node_set *ns)
     return 0;
   } else {
     fprintf(stderr, "Open and closing tags did not match.\n");
-    return -1;
+    return 1;
   }
 }
 
-int main()
+static char * ensure_path_ends_with_slash(char *p) {
+  int str_len;
+  for (str_len = 0; p[str_len] != '\0'; str_len++);
+  str_len--;
+
+  if (p[str_len] != '/') {
+    char temp_dir[500];
+    strcpy(temp_dir, p);
+    strcat(temp_dir, "/");
+    p = strdup(temp_dir);
+  }
+
+  return p;
+}
+
+static char * expandfile(char *filename, char *dirname) {
+  char temp[500];
+  strcpy(temp, dirname);
+  strcat(temp, filename);
+  return strdup(temp);
+}
+
+static void usage(char *program_name, int failed)
 {
-  char *input[] = {
-    "../data/pubmed21n1001.xml.gz",
-    "../data/pubmed21n1002.xml.gz",
-    "../data/pubmed21n1003.xml.gz",
-    "../data/pubmed21n1004.xml.gz"
-  };
-  int n_files = (sizeof(input) / sizeof(*input));
+  if (failed) {
+    puts("Called with unknown argument.\n");
+  }
+  printf("Usage: %s OPTION ... [FILE]...\n", program_name);
+  puts("Read XML files and print selected values to files.\n");
+  puts("With no FILE read standard input.\n");
+  puts("-c, --cache-dir=STRING\tdirectory output files are written to. \
+Defualts to \"cache\".");
+  puts("-s, --structure-file=STRING\ta yaml file with the xml paths to collect. \
+Defaults to \"structure.yml\".");
+}
 
-  char *parsed = "../cache/processed.txt";
-  char *root = "PubmedArticleSet";
-  char *cache_dir = "../cache/";
+static struct option const longopts[] = {
+  {"cache-dir", required_argument, NULL, 'c'},
+  {"structure-file", required_argument, NULL, 's'},
+  {"help", no_argument, NULL, 'h'},
+  {NULL, 0, NULL, 0}
+};
 
-  char *names[] = {
-    "publication",
-    "year",
-    "language",
-    "author",
-    "chemical",
-    "reference"
-  };
+int main(int argc, char **argv)
+{
+  int optc;
+  char *structure_file = "structure.yml";
+  char *cache_dir = "cache";
+  char *program_name = argv[0];
 
-  char *xpaths[] = {
-    "/PubmedArticle/MedlineCitation/PMID",
-    "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
-    "/PubmedArticle/MedlineCitation/Article/Language",
-    "/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
-    "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
-    "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
-  };
-  int key_idx = 0;
+  while ((optc = getopt_long(argc, argv, "c:s:h", longopts, NULL)) != EOF) {
+    switch (optc) {
+    case 'c':
+      cache_dir = ensure_path_ends_with_slash(optarg);
+      mkdir(cache_dir, 0777);
+      break;
+    case 's':
+      structure_file = optarg;
+      break;
+    case 'h':
+      usage(program_name, 0);
+      return 0;
+    default:
+      usage(program_name, 1);
+      return 1;
+    }
+  }
 
-  int n_nodes = (sizeof(xpaths) / sizeof(*xpaths));
-  node_set *ns = construct_node_set(root, xpaths, n_nodes, names, key_idx,
-                                    STR_MAX, cache_dir);
+  char *parsed = expandfile("processed.txt", cache_dir);
+
+  node_set *ns = construct_node_set(structure_file, cache_dir, STR_MAX);
 
   FILE *progress_ptr;
   if (!(progress_ptr = fopen(parsed, "a"))) {
     fprintf(stderr, "Failed to open parsed file.\n");
-    exit(3);
+    return 1;
   }
 
-  #pragma omp parallel for
-  for (int i = 0; i < n_files; i++) {
-    int status = 0;
-    status = parse_file(input[i], ns);
-    if (status < 0) {
-      fprintf(stderr, "Tag mismatch in file: %s\n", input[i]);
-      exit(1);
+  int status = 0;
+  if (optind == argc) {
+    status = parse_file("-", ns);
+  } else {
+    #pragma omp parallel for private (status)
+    for (int i = optind; i < argc; i++) {
+      status = parse_file(argv[i], ns);
+
+      if (status != 0) {
+        fprintf(stderr, "Tag mismatch in file: %s\n", argv[i]);
+        exit(1);
+      }
+      fprintf(progress_ptr, "%s\n", argv[i]);
     }
-    fprintf(progress_ptr, "%s\n", input[i]);
   }
+
+  fclose(progress_ptr);
+  return status;
 }

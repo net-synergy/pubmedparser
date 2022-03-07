@@ -28,7 +28,6 @@ typedef struct NodeSet {
   int n;
 } node_set;
 
-node_set *construct_node_set(char *root, char **xpaths, int n_nodes,
-                             char **names, int key_idx, int str_max, char *cache_dir);
+node_set *construct_node_set(char *structure_file, char *cache_dir, int str_max);
 
 #endif

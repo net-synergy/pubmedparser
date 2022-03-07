@@ -1,4 +1,5 @@
 #include "paths.h"
+#include "yaml_reader.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -141,7 +142,7 @@ static int find_sub_tag_names(char *p, int str_max, char ***sub_tags_holder)
   }
 
   if (p[i] == '\0') {
-    fprintf(stderr, "Malformed path");
+    fprintf(stderr, "Could not find subtag; malformed path.\n");
     exit(3);
   }
 
@@ -198,16 +199,62 @@ static node *construct_node(char *xml_path, char *name, int str_max,
   return n;
 }
 
-node_set *construct_node_set(char *root, char **xpaths, int n_nodes,
-                             char **names, int key_idx, int str_max, char *cache_dir)
+node_set *construct_node_set(char *structure_file, char *cache_dir,
+                             int str_max)
 {
-  node **nodes = malloc(sizeof(node *) * n_nodes);
+  char root[str_max];
+  size_t n_keys = 0;
+  char **key_xpath_pairs[2];
+  size_t n_key_values = 0;
+  char **key_values_xpath_pairs[2];
+  size_t n_nodes = 0;
+  char **node_xpath_pairs[2];
 
-  for (int i = 0; i < (n_nodes); i++)
+  int rc;
+
+  rc = yaml_get_map_value(structure_file, "root", root, str_max);
+  rc &= yaml_get_map_contents(structure_file, "key", key_xpath_pairs, &n_keys);
+  rc &= yaml_get_map_contents(structure_file, "key_values", key_values_xpath_pairs,
+                        &n_key_values);
+  rc &= yaml_get_map_contents(structure_file, "nodes", node_xpath_pairs, &n_nodes);
+
+  if (rc) {
+    fprintf(stderr, "Structure file not formatted correctly; terminating.\n");
+    exit(rc);
+  }
+
+  if (n_keys > 1) {
+    fprintf(stderr, "Too many key values in %s. Must have exactly one key.\n",
+            structure_file);
+    exit(1);
+  }
+
+  char *names[n_keys + n_key_values + n_nodes];
+  char *xpaths[n_keys + n_key_values + n_nodes];
+
+  int key_idx = 0;
+  names[key_idx] = key_xpath_pairs[0][0];
+  xpaths[key_idx] = key_xpath_pairs[1][0];
+
+  for (int i = 0; i < (int)n_key_values; i++) {
+    names[n_keys + i] = key_values_xpath_pairs[0][i];
+    xpaths[n_keys + i] = key_values_xpath_pairs[1][i];
+  }
+
+  for (int i = 0; i < (int)n_nodes; i++) {
+    names[n_keys + n_key_values + i] = node_xpath_pairs[0][i];
+    xpaths[n_keys + n_key_values + i] = node_xpath_pairs[1][i];
+  }
+
+  n_nodes += (n_keys + n_key_values);
+
+  node **nodes = malloc(sizeof * nodes * n_nodes);
+
+  for (int i = 0; i < (int)n_nodes; i++)
     nodes[i] = construct_node(xpaths[i], names[i], str_max, cache_dir);
 
   int max_p_depth = 0;
-  for (int i = 0; i < n_nodes; i++)
+  for (int i = 0; i < (int)n_nodes; i++)
     max_p_depth = (max_p_depth > nodes[i]->path->length) ? max_p_depth :
                   nodes[i]->path->length;
 
@@ -217,6 +264,13 @@ node_set *construct_node_set(char *root, char **xpaths, int n_nodes,
   ns->key_idx = key_idx;
   ns->nodes = nodes;
   ns->n = n_nodes;
+
+  free(key_xpath_pairs[0]);
+  free(key_xpath_pairs[1]);
+  free(key_values_xpath_pairs[0]);
+  free(key_values_xpath_pairs[1]);
+  free(node_xpath_pairs[0]);
+  free(node_xpath_pairs[1]);
 
   return ns;
 }

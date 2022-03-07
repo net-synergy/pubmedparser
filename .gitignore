@@ -2,3 +2,8 @@ cache/
 results/
 bin/
 *.o
+tests/*
+!tests/*.c
+!tests/*.bats
+!tests/data/
+!tests/Makefile

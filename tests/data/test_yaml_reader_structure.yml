@@ -1,0 +1,15 @@
+placeholder: "to test can skip unwanted key"
+placeholder2: {
+  foo: "Test more complicated skip",
+  bar: "continue"
+}
+test_get_value: "Success"
+test_missing_value:
+test_get_contents_multiline: {
+  a: "1",
+  b: "2",
+  c: "3"
+}
+test_get_contents_inline: { a: 1, b: 2, c: 3 }
+test_handles_string_literals: "/test/this/{path,syntax}"
+test_malformed_value: "Does not have end quatiation mark.
