@@ -210,11 +210,18 @@ node_set *construct_node_set(char *structure_file, char *cache_dir,
   size_t n_nodes = 0;
   char **node_xpath_pairs[2];
 
-  yaml_get_map_value(structure_file, "root", root, str_max);
-  yaml_get_map_contents(structure_file, "key", key_xpath_pairs, &n_keys);
-  yaml_get_map_contents(structure_file, "key_values", key_values_xpath_pairs,
+  int rc;
+
+  rc = yaml_get_map_value(structure_file, "root", root, str_max);
+  rc &= yaml_get_map_contents(structure_file, "key", key_xpath_pairs, &n_keys);
+  rc &= yaml_get_map_contents(structure_file, "key_values", key_values_xpath_pairs,
                         &n_key_values);
-  yaml_get_map_contents(structure_file, "nodes", node_xpath_pairs, &n_nodes);
+  rc &= yaml_get_map_contents(structure_file, "nodes", node_xpath_pairs, &n_nodes);
+
+  if (rc) {
+    fprintf(stderr, "Structure file not formatted correctly; terminating.\n");
+    exit(rc);
+  }
 
   if (n_keys > 1) {
     fprintf(stderr, "Too many key values in %s. Must have exactly one key.\n",

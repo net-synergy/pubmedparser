@@ -224,7 +224,7 @@ int main(int argc, char **argv)
   FILE *progress_ptr;
   if (!(progress_ptr = fopen(parsed, "a"))) {
     fprintf(stderr, "Failed to open parsed file.\n");
-    exit(3);
+    return 1;
   }
 
   int status = 0;
