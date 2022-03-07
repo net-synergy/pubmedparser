@@ -29,5 +29,6 @@ typedef struct NodeSet {
 } node_set;
 
 node_set *construct_node_set(char *structure_file, char *cache_dir, int str_max);
+void release_node_set(node_set *ns);
 
 #endif

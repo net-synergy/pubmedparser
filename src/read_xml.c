@@ -105,8 +105,8 @@ int parse_file(char *input, node_set *ns)
                   c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
                   CONTINUE_IF_EMPTY_TAG(c, current, ns);
                 } else {
-		  continue;
-		}
+                  continue;
+                }
               } else {
                 c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
                 CONTINUE_IF_EMPTY_TAG(c, current, ns);
@@ -130,8 +130,7 @@ int parse_file(char *input, node_set *ns)
               for (int j = 0; j < ns->nodes[i]->n_values; j++)
                 ns->nodes[i]->values[j][0] = '\0';
             } else
-              fprintf(ns->nodes[ns->key_idx]->out, "%s\n",
-                      ns->nodes[ns->key_idx]->values[0]);
+              fputs(ns->nodes[ns->key_idx]->values[0], ns->nodes[ns->key_idx]->out);
           }
         }
       }
@@ -141,6 +140,7 @@ int parse_file(char *input, node_set *ns)
     }
   }
 
+  gzclose(fptr);
   if (current.length == -1) {
     return 0;
   } else {
@@ -149,7 +149,8 @@ int parse_file(char *input, node_set *ns)
   }
 }
 
-static char * ensure_path_ends_with_slash(char *p) {
+static char *ensure_path_ends_with_slash(char *p)
+{
   int str_len;
   for (str_len = 0; p[str_len] != '\0'; str_len++);
   str_len--;
@@ -164,7 +165,8 @@ static char * ensure_path_ends_with_slash(char *p) {
   return p;
 }
 
-static char * expandfile(char *filename, char *dirname) {
+static char *expandfile(char *filename, char *dirname)
+{
   char temp[500];
   strcpy(temp, dirname);
   strcat(temp, filename);
@@ -239,10 +241,14 @@ int main(int argc, char **argv)
         fprintf(stderr, "Tag mismatch in file: %s\n", argv[i]);
         exit(1);
       }
-      fprintf(progress_ptr, "%s\n", argv[i]);
+      fputs(argv[i], progress_ptr);
     }
   }
 
   fclose(progress_ptr);
+  release_node_set(ns);
+  free(cache_dir);
+  free(parsed);
+
   return status;
 }

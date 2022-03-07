@@ -204,6 +204,21 @@ static node *construct_node(char *xml_path, char *name, int str_max,
   return n;
 }
 
+static void release_node(node *node)
+{
+  free((char *)node->name);
+  for (int i = 0; i < node->n_values; i++) {
+    free(node->values[i]);
+  }
+  for (int i = 0; i < node->n_sub_tags; i++) {
+    free((char *)node->sub_tags[i]);
+  }
+  free((char *)node->attribute);
+  free((char *)node->expected_attribute);
+
+  fclose(node->out);
+}
+
 #define N_NAMES 3
 node_set *construct_node_set(char *structure_file, char *cache_dir,
                              int str_max)
@@ -249,7 +264,6 @@ node_set *construct_node_set(char *structure_file, char *cache_dir,
   }
 
   node **nodes = malloc(sizeof * nodes * n_nodes);
-
   for (int i = 0; i < (int)n_nodes; i++)
     nodes[i] = construct_node(xpaths[i], names[i], str_max, cache_dir);
 
@@ -270,9 +284,23 @@ node_set *construct_node_set(char *structure_file, char *cache_dir,
   memcpy(ns, &ns_init, sizeof * ns);
 
   for (int i = 0; i < N_NAMES; i++) {
+    for (int j = 0; j < (int)n_keys[i]; j++) {
+      free(key_values_pairs[i][0][j]);
+      free(key_values_pairs[i][1][j]);
+    }
     free(key_values_pairs[i][0]);
     free(key_values_pairs[i][1]);
   }
 
   return ns;
+}
+
+void release_node_set(node_set *ns)
+{
+  for (int i = 0; i < (int)ns->n; i++)
+    release_node(ns->nodes[i]);
+
+  free(ns->nodes);
+  free((char *)ns->root);
+  free(ns);
 }
