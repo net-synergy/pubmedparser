@@ -111,12 +111,11 @@ int parse_file(char *input, node_set *ns)
                 CONTINUE_IF_EMPTY_TAG(c, current, ns);
               }
             } else {
-              strcpy(extra_element, tag);
-              while ((c = get_tag(fptr, c, tag, STR_MAX)) != EOF &&
-                     (!matching_tags(extra_element, tag))) {
+              while ((c = get_tag(fptr, c, extra_element, STR_MAX)) != EOF &&
+                     (!matching_tags(tag, extra_element))) {
                 for (int j = 0; j < ns->nodes[i]->n_sub_tags; j++) {
-                  if (!IS_CLOSE(tag) &&
-                      (strcmp(tag, ns->nodes[i]->sub_tags[j]) == 0)) {
+                  if (!IS_CLOSE(extra_element) &&
+                      (strcmp(extra_element, ns->nodes[i]->sub_tags[j]) == 0)) {
                     c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
                     vali++;
                   }
