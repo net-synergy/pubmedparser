@@ -55,7 +55,7 @@ static void get_components(char *p, char **components, int str_max)
   }
 }
 
-static FILE *get_file(char *name, char *cache_dir)
+static FILE *get_file(const char *name, const char *cache_dir)
 {
   FILE *fptr = malloc(sizeof(FILE));
   char out[100];
@@ -277,7 +277,7 @@ node_set *construct_node_set(char *structure_file, char *cache_dir,
     .max_path_depth = max_p_depth,
     .key_idx = 0,
     .nodes = nodes,
-    .n = n_nodes
+    .n = (int)n_nodes
   };
 
   node_set *ns = malloc(sizeof * ns);
@@ -297,10 +297,47 @@ node_set *construct_node_set(char *structure_file, char *cache_dir,
 
 void release_node_set(node_set *ns)
 {
-  for (int i = 0; i < (int)ns->n; i++)
+  for (int i = 0; i < ns->n; i++)
     release_node(ns->nodes[i]);
 
   free(ns->nodes);
   free((char *)ns->root);
+  free(ns);
+}
+
+node_set *clone_node_set(node_set *ns, char *cache_dir, int thread,
+                         int str_max)
+{
+  node_set *dup_ns = malloc(sizeof * dup_ns);
+  memcpy(dup_ns, ns, sizeof * ns);
+
+  dup_ns->nodes = malloc(sizeof * ns->nodes * ns->n);
+  for (int i = 0; i < dup_ns->n; i++) {
+    dup_ns->nodes[i] = malloc(sizeof * ns->nodes[i]);
+    memcpy(dup_ns->nodes[i], ns->nodes[i], sizeof * dup_ns->nodes[i]);
+    dup_ns->nodes[i]->name = malloc(sizeof(char *) * str_max);
+    sprintf((char *)dup_ns->nodes[i]->name, "%s_%d", ns->nodes[i]->name, thread);
+    dup_ns->nodes[i]->values = malloc(sizeof * ns->nodes[i]->values *
+                                      ns->nodes[i]->n_values);
+
+    for (int j = 0; j < ns->nodes[i]->n_values; j++)
+      dup_ns->nodes[i]->values[j] = malloc(sizeof(char *) * str_max);
+
+    dup_ns->nodes[i]->out = get_file(dup_ns->nodes[i]->name, cache_dir);
+  }
+
+  return dup_ns;
+}
+
+void *release_clone(node_set *ns)
+{
+  for (int i = 0; i < ns->n; i++) {
+    for (int j = 0; j < ns->nodes[i]->n_values; j++)
+      free(ns->nodes[i]->values[j]);
+
+    free(ns->nodes[i]->values);
+    fclose(ns->nodes[i]->out);
+    free(ns->nodes[i]);
+  }
   free(ns);
 }

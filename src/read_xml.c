@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <getopt.h>
+#include <omp.h>
 #include <zlib.h>
 
 #include "query.h"
@@ -233,9 +234,21 @@ int main(int argc, char **argv)
   if (optind == argc) {
     status = parse_file("-", ns);
   } else {
+    int n_threads = 0;
+    if (!(getenv("OMP_NUM_THREADS"))) {
+      fputs("Error: environment variable \"OMP_NUM_THREADS\" not set.", stderr);
+    } else {
+      n_threads = atoi(getenv("OMP_NUM_THREADS"));
+    }
+
+    node_set *ns_dup[n_threads];
+    for (int i = 0; i < n_threads; i++)
+      ns_dup[i] = clone_node_set(ns, cache_dir, i, STR_MAX);
+
+
     #pragma omp parallel for private (status)
     for (int i = optind; i < argc; i++) {
-      status = parse_file(argv[i], ns);
+      status = parse_file(argv[i], ns_dup[omp_get_thread_num()]);
 
       if (status != 0) {
         fprintf(stderr, "Tag mismatch in file: %s\n", argv[i]);
@@ -246,9 +259,6 @@ int main(int argc, char **argv)
   }
 
   fclose(progress_ptr);
-  release_node_set(ns);
-  free(cache_dir);
-  free(parsed);
 
   return status;
 }
