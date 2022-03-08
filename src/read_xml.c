@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <getopt.h>
+#include <omp.h>
 #include <zlib.h>
 
 #include "query.h"
@@ -46,7 +47,7 @@
 
 #define matching_tags(open, close) (strcmp(open, close + 1) == 0)
 
-int path_match(path *p1, path *p2)
+int path_match(const path *p1, const path *p2)
 {
   if (p1->length != p2->length) return 0;
 
@@ -105,8 +106,8 @@ int parse_file(char *input, node_set *ns)
                   c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
                   CONTINUE_IF_EMPTY_TAG(c, current, ns);
                 } else {
-		  continue;
-		}
+                  continue;
+                }
               } else {
                 c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
                 CONTINUE_IF_EMPTY_TAG(c, current, ns);
@@ -130,8 +131,7 @@ int parse_file(char *input, node_set *ns)
               for (int j = 0; j < ns->nodes[i]->n_values; j++)
                 ns->nodes[i]->values[j][0] = '\0';
             } else
-              fprintf(ns->nodes[ns->key_idx]->out, "%s\n",
-                      ns->nodes[ns->key_idx]->values[0]);
+              fputs(ns->nodes[ns->key_idx]->values[0], ns->nodes[ns->key_idx]->out);
           }
         }
       }
@@ -141,6 +141,7 @@ int parse_file(char *input, node_set *ns)
     }
   }
 
+  gzclose(fptr);
   if (current.length == -1) {
     return 0;
   } else {
@@ -149,7 +150,8 @@ int parse_file(char *input, node_set *ns)
   }
 }
 
-static char * ensure_path_ends_with_slash(char *p) {
+static char *ensure_path_ends_with_slash(char *p)
+{
   int str_len;
   for (str_len = 0; p[str_len] != '\0'; str_len++);
   str_len--;
@@ -164,7 +166,8 @@ static char * ensure_path_ends_with_slash(char *p) {
   return p;
 }
 
-static char * expandfile(char *filename, char *dirname) {
+static char *expandfile(char *filename, char *dirname)
+{
   char temp[500];
   strcpy(temp, dirname);
   strcat(temp, filename);
@@ -231,18 +234,31 @@ int main(int argc, char **argv)
   if (optind == argc) {
     status = parse_file("-", ns);
   } else {
+    int n_threads = 0;
+    if (!(getenv("OMP_NUM_THREADS"))) {
+      fputs("Error: environment variable \"OMP_NUM_THREADS\" not set.", stderr);
+    } else {
+      n_threads = atoi(getenv("OMP_NUM_THREADS"));
+    }
+
+    node_set *ns_dup[n_threads];
+    for (int i = 0; i < n_threads; i++)
+      ns_dup[i] = clone_node_set(ns, cache_dir, i, STR_MAX);
+
+
     #pragma omp parallel for private (status)
     for (int i = optind; i < argc; i++) {
-      status = parse_file(argv[i], ns);
+      status = parse_file(argv[i], ns_dup[omp_get_thread_num()]);
 
       if (status != 0) {
         fprintf(stderr, "Tag mismatch in file: %s\n", argv[i]);
         exit(1);
       }
-      fprintf(progress_ptr, "%s\n", argv[i]);
+      fputs(argv[i], progress_ptr);
     }
   }
 
   fclose(progress_ptr);
+
   return status;
 }

@@ -32,7 +32,7 @@ static void get_components(char *p, char **components, int str_max)
   int comp_i = 0;
   char name[str_max];
   if (*p != '/') {
-    printf("Path malformed. Must start with '/'");
+    fprintf(stderr, "Path malformed. Must start with '/'");
     exit(2);
   }
   p++; // Strip initial '/';
@@ -55,7 +55,7 @@ static void get_components(char *p, char **components, int str_max)
   }
 }
 
-static FILE *get_file(char *name, char *cache_dir)
+static FILE *get_file(const char *name, const char *cache_dir)
 {
   FILE *fptr = malloc(sizeof(FILE));
   char out[100];
@@ -186,70 +186,84 @@ static node *construct_node(char *xml_path, char *name, int str_max,
     values[i] = malloc(sizeof(char) * str_max);
   }
 
-  node *n = malloc(sizeof(node));
-  n->name = strdup(name);
-  n->path = p;
-  n->values = values;
-  n->n_values = n_values;
-  n->sub_tags = sub_tags;
-  n->n_sub_tags = n_sub_tags;
-  n->attribute = attribute_holder[0];
-  n->expected_attribute = attribute_holder[1];
-  n->out = get_file(name, cache_dir);
+  node n_init = {
+    .name = strdup(name),
+    .path = p,
+    .values = values,
+    .n_values = n_values,
+    .sub_tags = (const char **)sub_tags,
+    .n_sub_tags = n_sub_tags,
+    .attribute = attribute_holder[0],
+    .expected_attribute = attribute_holder[1],
+    .out = get_file(name, cache_dir)
+  };
+
+  node *n = malloc(sizeof * n);
+  memcpy(n, &n_init, sizeof * n);
+
   return n;
 }
 
+static void release_node(node *node)
+{
+  free((char *)node->name);
+  for (int i = 0; i < node->n_values; i++) {
+    free(node->values[i]);
+  }
+  for (int i = 0; i < node->n_sub_tags; i++) {
+    free((char *)node->sub_tags[i]);
+  }
+  free((char *)node->attribute);
+  free((char *)node->expected_attribute);
+
+  fclose(node->out);
+}
+
+#define N_NAMES 3
 node_set *construct_node_set(char *structure_file, char *cache_dir,
                              int str_max)
 {
   char root[str_max];
-  size_t n_keys = 0;
-  char **key_xpath_pairs[2];
-  size_t n_key_values = 0;
-  char **key_values_xpath_pairs[2];
-  size_t n_nodes = 0;
-  char **node_xpath_pairs[2];
+  char *keys[N_NAMES] = { "key", "key_values", "nodes" };
+  size_t n_keys[N_NAMES];
+  char **key_values_pairs[N_NAMES][2];
+  int rc = 0;
 
-  int rc;
-
-  rc = yaml_get_map_value(structure_file, "root", root, str_max);
-  rc &= yaml_get_map_contents(structure_file, "key", key_xpath_pairs, &n_keys);
-  rc &= yaml_get_map_contents(structure_file, "key_values", key_values_xpath_pairs,
-                        &n_key_values);
-  rc &= yaml_get_map_contents(structure_file, "nodes", node_xpath_pairs, &n_nodes);
+  yaml_get_map_value(structure_file, "root", root, str_max);
+  for (int i = 0; i < N_NAMES; i++) {
+    rc &= yaml_get_map_contents(structure_file, keys[i],
+                                key_values_pairs[i], &n_keys[i]);
+  }
 
   if (rc) {
     fprintf(stderr, "Structure file not formatted correctly; terminating.\n");
     exit(rc);
   }
 
-  if (n_keys > 1) {
+  if (n_keys[0] > 1) {
     fprintf(stderr, "Too many key values in %s. Must have exactly one key.\n",
             structure_file);
     exit(1);
   }
 
-  char *names[n_keys + n_key_values + n_nodes];
-  char *xpaths[n_keys + n_key_values + n_nodes];
-
-  int key_idx = 0;
-  names[key_idx] = key_xpath_pairs[0][0];
-  xpaths[key_idx] = key_xpath_pairs[1][0];
-
-  for (int i = 0; i < (int)n_key_values; i++) {
-    names[n_keys + i] = key_values_xpath_pairs[0][i];
-    xpaths[n_keys + i] = key_values_xpath_pairs[1][i];
+  size_t n_nodes = 0;
+  for (int i = 0; i < N_NAMES; i++) {
+    n_nodes += n_keys[i];
   }
 
-  for (int i = 0; i < (int)n_nodes; i++) {
-    names[n_keys + n_key_values + i] = node_xpath_pairs[0][i];
-    xpaths[n_keys + n_key_values + i] = node_xpath_pairs[1][i];
-  }
+  char *names[n_nodes];
+  char *xpaths[n_nodes];
 
-  n_nodes += (n_keys + n_key_values);
+  int pos = 0;
+  for (int i = 0; i < N_NAMES; i++) {
+    for (int j = 0; j < (int)n_keys[i]; j++) {
+      names[pos] = key_values_pairs[i][0][j];
+      xpaths[pos] = key_values_pairs[i][1][j];
+      pos++;
+    }
+  }
 
   node **nodes = malloc(sizeof * nodes * n_nodes);
-
   for (int i = 0; i < (int)n_nodes; i++)
     nodes[i] = construct_node(xpaths[i], names[i], str_max, cache_dir);
 
@@ -258,19 +272,72 @@ node_set *construct_node_set(char *structure_file, char *cache_dir,
     max_p_depth = (max_p_depth > nodes[i]->path->length) ? max_p_depth :
                   nodes[i]->path->length;
 
-  node_set *ns = malloc(sizeof(node_set));
-  ns->root = strdup(root);
-  ns->max_path_depth = max_p_depth;
-  ns->key_idx = key_idx;
-  ns->nodes = nodes;
-  ns->n = n_nodes;
+  node_set ns_init = {
+    .root = strdup(root),
+    .max_path_depth = max_p_depth,
+    .key_idx = 0,
+    .nodes = nodes,
+    .n = (int)n_nodes
+  };
 
-  free(key_xpath_pairs[0]);
-  free(key_xpath_pairs[1]);
-  free(key_values_xpath_pairs[0]);
-  free(key_values_xpath_pairs[1]);
-  free(node_xpath_pairs[0]);
-  free(node_xpath_pairs[1]);
+  node_set *ns = malloc(sizeof * ns);
+  memcpy(ns, &ns_init, sizeof * ns);
+
+  for (int i = 0; i < N_NAMES; i++) {
+    for (int j = 0; j < (int)n_keys[i]; j++) {
+      free(key_values_pairs[i][0][j]);
+      free(key_values_pairs[i][1][j]);
+    }
+    free(key_values_pairs[i][0]);
+    free(key_values_pairs[i][1]);
+  }
 
   return ns;
+}
+
+void release_node_set(node_set *ns)
+{
+  for (int i = 0; i < ns->n; i++)
+    release_node(ns->nodes[i]);
+
+  free(ns->nodes);
+  free((char *)ns->root);
+  free(ns);
+}
+
+node_set *clone_node_set(node_set *ns, char *cache_dir, int thread,
+                         int str_max)
+{
+  node_set *dup_ns = malloc(sizeof * dup_ns);
+  memcpy(dup_ns, ns, sizeof * ns);
+
+  dup_ns->nodes = malloc(sizeof * ns->nodes * ns->n);
+  for (int i = 0; i < dup_ns->n; i++) {
+    dup_ns->nodes[i] = malloc(sizeof * ns->nodes[i]);
+    memcpy(dup_ns->nodes[i], ns->nodes[i], sizeof * dup_ns->nodes[i]);
+    dup_ns->nodes[i]->name = malloc(sizeof(char *) * str_max);
+    sprintf((char *)dup_ns->nodes[i]->name, "%s_%d", ns->nodes[i]->name, thread);
+    dup_ns->nodes[i]->values = malloc(sizeof * ns->nodes[i]->values *
+                                      ns->nodes[i]->n_values);
+
+    for (int j = 0; j < ns->nodes[i]->n_values; j++)
+      dup_ns->nodes[i]->values[j] = malloc(sizeof(char *) * str_max);
+
+    dup_ns->nodes[i]->out = get_file(dup_ns->nodes[i]->name, cache_dir);
+  }
+
+  return dup_ns;
+}
+
+void *release_clone(node_set *ns)
+{
+  for (int i = 0; i < ns->n; i++) {
+    for (int j = 0; j < ns->nodes[i]->n_values; j++)
+      free(ns->nodes[i]->values[j]);
+
+    free(ns->nodes[i]->values);
+    fclose(ns->nodes[i]->out);
+    free(ns->nodes[i]);
+  }
+  free(ns);
 }
