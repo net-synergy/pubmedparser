@@ -59,6 +59,7 @@ static FILE *get_file(const char *name, const char *cache_dir)
 {
   FILE *fptr = malloc(sizeof(FILE));
   char out[100];
+
   strcpy(out, cache_dir);
   strcat(out, name);
   strcat(out, ".tsv");
