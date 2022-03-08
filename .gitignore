@@ -4,6 +4,7 @@ bin/
 *.o
 tests/*
 !tests/*.c
+!tests/*.bash
 !tests/*.bats
 !tests/data/
 !tests/Makefile
