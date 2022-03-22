@@ -1,3 +1,89 @@
-Contains scripts for converting Pubmed xml files to node and relationship csv files then importing them into neo4j. See [[https://dtd.nlm.nih.gov/ncbi/pubmed/doc/out/190101/index.html][pubmed_190101.dtd]] for information on xml files.
+#+TITLE: Pubmed parser
 
-Files ~nodes.list~ and ~relationships.list~ contain the element names in the xml files that should be collected in csv files as nodes and relationships.
+Read XML files and pull out selected values.
+Values to collect are determined by paths found in a [[#structure-file][structure file]].
+The structure file also includes a key which associates the values with a parent element and names, which determine which file to place the elements in.
+
+Files can be passed as either gzipped or uncompressed XML files or from standard in.
+
+For more info on Pubmed's XML files see: [[https://dtd.nlm.nih.gov/ncbi/pubmed/doc/out/190101/index.html][pubmed_190101.dtd.]]
+
+Usage:
+#+begin_src sh :eval no
+  xml_read --cache-dir=cache --structure-file=structure.yml \
+      data/*.xml.gz
+#+end_src
+
+The cache directory is where the results are stored.
+
+* Structure file
+:PROPERTIES:
+:CUSTOM_ID: structure-file
+:header_args: eval no
+:END:
+
+The structure file is a YAML file containing key-value pairs for different tags and paths.
+There are four required keys: ~root~, ~key~, ~key_values~, and ~nodes~.
+~Root~ provide the top-level tag, in the case of the pubmed files this will be ~PubmedArticleSet~.
+
+#+begin_src sh :tangle ./example/structure.yml
+  root: "PubmedArticleSet"
+#+end_src
+
+Only tags below the root tag will be considered.
+
+~Key~ is a reference tag.
+In the pubmed case all data is with respect to a publication, so the key should identify the publication the values are linked to.
+The ~PMID~ tag is a suitable candidate.
+
+#+begin_src sh :tangle ./example/structure.yml
+  key: {
+      publication: "/PubmedArticle/MedlineCitation/PMID"
+  }
+#+end_src
+
+Unlike ~root~, the value of ~key~ should be a map.
+In the example above, ~key~ is named publication and it's value is an XML path.
+The name is used to determine the file to write ~PMID~ values to.
+This file acts as a reference for all publications seen, even those for which no other value was found.
+Key's value is a path indicating where to find the desired tag in the XML hierarchy.
+All paths start after the root.
+
+Both ~key_values~ and ~nodes~ determine the other values to collect.
+The ~read_xml~ program does not distinguish between them, but it is useful for post-processing the data if we keep them separate (see [[#example-creating-node-and-edges]]).
+~Key_values~ is for values that are apart of the key's node.
+For instance, the date of publication is specific to the publication, all publications have one, and only one, publication date.
+~Nodes~ handles other values that characterize a publication but are can have any number (including 0) of instances, such as references and authors.
+These make up distinct node type (i.e. a given author is a node of type author which can be connected to various other nodes such as the publications that author contributed to).
+
+#+begin_src sh :tangle ./example/structure.yml
+  key_values: {
+    year: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
+    language: "/PubmedArticle/MedlineCitation/Article/Language"
+  }
+
+  nodes: {
+    author: "/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
+    grant: "/PubmedArticle/MedlineCitation/Article/GrantList/Grant/GrantID",
+    chemical: "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
+    qualifier: "/PubmedArticle/MedlineCitation/MashHeadingList/MeshHeading/QualifierName/@UI",
+    descriptor: "/PubmedArticle/MedlineCitation/MashHeadingList/MeshHeading/DescriptorName/@UI",
+    reference: "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
+  }
+#+end_src
+
+In the above example there is some special syntax.
+For ~author~ multiple values are returned each time the ~author~ tag is found.
+This is expressed by using the ~{child_tag1,child_tag2,...}~ notation.
+Each child tag under the parent tag is collected and returned in a single row, represented multiple node features.
+This notation prevents mismatches between features of a given node if any tags are missing.
+In the case a tag is missing an empty string is printed.
+
+To get an attribute from a tag, the ~@attribute~ notation is used---as in the ~chemical~ node.
+Whenever a path ends with an attribute ~xml_read~ will collect both the attribute and tag value.
+
+Lastly, ~[@attribute='value']~ filters for attributes with the supplied values.
+In the case of ~reference~ above this will ensure all references are identified by ~PMID~ as opposed to other IDs, such as DOI, so ~references~ can be linked with ~publication~ nodes.
+
+This example structure file can be found in the example directory of this project at: [[file:./example/structure.yml]]
+
