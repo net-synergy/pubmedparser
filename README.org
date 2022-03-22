@@ -326,3 +326,38 @@ For the special case of references, both IDs should be publications:
 :END:
 
 * Example: importing with neo4j
+#+begin_src bash
+  import_file=example/importpubmed.sh
+  cat > $import_file <<_EOF_
+  #!/usr/bin/env bash
+
+  database_dir=\$XDG_DATA_HOME/neo4j/data
+  import_dir=$import_dir
+  name=neo4j
+
+  [ -d \$database_dir ] && rm -r \$database_dir
+
+  neo4j-admin import \\
+      --database=\$name \\
+      --delimiter="\\t" \\
+      --quote="\\"" \\
+      --skip-bad-relationships=true \\
+      --trim-strings=true \\
+      --id-type=STRING \\
+      --nodes=Publication=\$import_dir/Publication_nodes.tsv \\
+  _EOF_
+
+  while IFS=': ' read node value; do
+      [[ $node == "Reference" ]] && continue
+      echo "    --nodes=${node}=\$import_dir/${node}_nodes.tsv \\" >> $import_file
+  done <<< "$(components nodes)"
+
+  while IFS=': ' read node value; do
+      [[ $node == "Reference" ]] && continue
+      echo "    --relationships=${key}-${node}=\$import_dir/${key}_${node}_edges.tsv \\" >> $import_file
+  done <<< "$(components nodes)"
+
+  echo "    --relationships=${key}-${key}=\$import_dir/${key}_${key}_edges.tsv" >> $import_file
+
+  chmod +x $import_file
+#+end_src

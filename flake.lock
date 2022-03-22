@@ -15,6 +15,42 @@
         "type": "github"
       }
     },
+    "flake-utils_2": {
+      "locked": {
+        "lastModified": 1644229661,
+        "narHash": "sha256-1YdnJAsNy69bpcjuoKdOYQX0YxZBiCYZo4Twxerqv7k=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "3cecb5b042f7f209c56ffd8371b2711a290ec797",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "neo4j": {
+      "inputs": {
+        "flake-utils": "flake-utils_2",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1645067093,
+        "narHash": "sha256-LHQWeNGa3QDD95OFwF/xy4+N7GB6MLniHlOS+Sgx2bQ=",
+        "ref": "master",
+        "rev": "d4ccc0dc1c5bae57e06c77cc1a3e396b5c6f6ab0",
+        "revCount": 5,
+        "type": "git",
+        "url": "file:///home/voidee/packages/nixpkgs/neo4j"
+      },
+      "original": {
+        "type": "git",
+        "url": "file:///home/voidee/packages/nixpkgs/neo4j"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1646420439,
@@ -33,6 +69,7 @@
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
+        "neo4j": "neo4j",
         "nixpkgs": "nixpkgs"
       }
     }
