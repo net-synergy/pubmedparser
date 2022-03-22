@@ -6,6 +6,7 @@ OUT_DIR = ../bin
 CACHE_DIR = ../cache
 LIBS = z
 READXML := $(OUT_DIR)/read_xml
+YAMLCONTENTS := $(OUT_DIR)/yaml_get_key_component
 
 debug: CFLAGS += -g
 profile: CFLAGS += -pg
@@ -22,16 +23,25 @@ $(READXML): read_xml.o paths.o query.o yaml_reader.o
 	@mkdir -p $(OUT_DIR)
 	$(CC) $(CFLAGS) -l$(LIBS) -fopenmp -O3 $^ -o $@
 
+yaml_get_key_component.o: yaml_get_key_component.c yaml_reader.h
+	$(CC) -c $*.c
+
+$(YAMLCONTENTS): yaml_get_key_component.o yaml_reader.o
+	$(CC) $(CFLAGS) $^ -o $@
+
 debug: $(READXML)
 
 profile: $(READXML)
-	$^
+	$^ --cache-dir=$(CACHE_DIR) --structure-file=../example/structure.yml ~/data/pubmed/pubmed21n0001.xml.gz
 	gprof -b $^
 
 run: $(READXML)
 	$^ --cache-dir=$(CACHE_DIR) --structure-file=../example/structure.yml ../data/pubmed21n0001.xml.gz
 
-all: $(READXML)
+run-get-content: $(YAMLCONTENTS)
+	$^ --structure-file=../example/structure.yml nodes
+
+all: $(READXML) $(YAMLCONTENTS)
 
 clean:
 	-rm *.o

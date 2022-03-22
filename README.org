@@ -87,3 +87,231 @@ In the case of ~reference~ above this will ensure all references are identified 
 
 This example structure file can be found in the example directory of this project at: [[file:./example/structure.yml]]
 
+* Example: creating node and edge files for importing with neo4j
+:PROPERTIES:
+:CUSTOM_ID: example-creating-node-and-edges
+:header-args: :session *readme* :eval yes :results none
+:END:
+
+The resulting values can be used to generate node and edge files that work with ~neo4j~.
+First step is to set up the environment:
+
+#+begin_src bash :exports none :tangle ./example/process.sh
+  #! /usr/bin/env bash
+  # Processes Pubmed XML files with read_xml then converts those into
+  # node and edge files for use with neo4j.
+#+end_src
+
+#+begin_src bash :tangle ./example/process.sh :eval no
+  top_dir=../$(dirname $0)
+  bin_dir=$top_dir/bin
+  cache_dir=~/data/synergy/cache
+  data_dir=~/data/pubmed
+  structure_file=$top_dir/example/structure.yml
+  import_dir=~/data/synergy/import
+  delete_cache=false # If true clear cache.
+  nthreads=64
+
+  $delete_cache && \
+      [ -d $cache_dir ] && \
+      rm -r $cache_dir && \
+      mkdir -p $cache_dir
+#+end_src
+
+#+begin_src bash :exports none
+  top_dir=$PWD
+  bin_dir=$top_dir/bin
+  cache_dir=./cache
+  data_dir=~/data/pubmed
+  structure_file=$top_dir/example/structure.yml
+  import_dir=~/data/synergy/import
+  nthreads=4
+  delete_cache=false # If true clear cache.
+
+  $delete_cache && \
+      [ -d $cache_dir ] && \
+      rm -r $cache_dir && \
+      mkdir -p $cache_dir
+#+end_src
+
+Within the cache directory is a ~processed.txt~ file which contains a list of all files that have been read.
+We can use this to filter out files that have already been read in the case the program has been stopped:
+
+#+begin_src bash :eval no :tangle ./example/process.sh
+  if [[ -f $cache_dir/processed.txt ]]; then
+      files=$(cat $cache_dir/processed.txt <(ls "$data_dir/*.xml.gz") \
+          | sort | uniq -u)
+  else
+      files="$data_dir/*.xml.gz"
+  fi
+#+end_src
+
+#+begin_src bash :exports none
+  files="$top_dir/data/*.xml.gz"
+#+end_src
+
+Then read the files.
+
+#+begin_src bash :tangle ./example/process.sh
+  # Assuming the executables are in this directory and not installed globally.
+  PATH="$bin_dir:$PATH" OMP_NUM_THREADS="$nthreads" read_xml \
+      --structure-file=$structure_file \
+      --cache-dir=$cache_dir \
+      $files
+#+end_src
+
+If ~read_xml~ was run across multiple files, the files are read in parallel and each thread will print to it's own set of files, distinguished by their thread number.
+The script ~cat_resuts.sh~ can be used to combine the results across threads so there is one file for each node type.
+
+#+begin_src bash :tangle ./example/process.sh
+  $top_dir/cat_results.sh $cache_dir
+#+end_src
+
+Now using the ~yaml_get_key_components~ executable, we can read the contents of the structure file into shell and use those to generate ids, create a list of all nodes for each node type, join the nodes with ~key~ to create edge lists, and generate ~neo4j~ style headers.
+
+First, the ~yaml_get_key_components~ can be written into a wrapper function so we don't have to keep passing the same arguments.
+
+#+begin_src bash :tangle ./example/process.sh :results none
+  components() {
+      local name=$1
+      PATH="$bin_dir:$PATH" yaml_get_key_component \
+          --structure-file=$structure_file $name
+  }
+#+end_src
+
+** Generating node files
+To generate nodes we will remove remove the ~PMID~ column, sort, keep the unique rows, then print with line numbers (which will be used as IDs).
+
+#+begin_src bash :tangle ./example/process.sh
+  tabsep="=+=t=+=" # Key to keep non-id columns together
+  spcsep="=+s+="
+  # ${key_value} looks like ${key}: ${value}
+  while IFS=': ' read key value; do
+      [[ $key == "Reference" ]] && continue
+      key_file=$cache_dir/$key.tsv
+      paste <(cut -f1 $key_file) \
+          <(cut -f1 --complement $key_file | \
+          sed -e "s/\\t/$tabsep/g" -e  "s/\\s/$spcsep/g") | \
+          sort -k 2 > \
+          tmp && mv tmp $key_file
+
+      cut -f1 --complement $key_file | sort -u | \
+          cat -n | sed 's/^\s*//' > $import_dir/${key}_nodes.tsv
+  done <<< "$(components nodes)"
+#+end_src
+
+*Note*: the ~reference~ file is really an edge file (publication--publication edges) so it doesn't make sense to make a node file for it.
+Additionally, since both of it's columns are PMIDs they should not be renumbered, instead IDs generated for the ~publication~ nodes will be used to renumber both columns of ~reference~.
+
+The ~key_values~ files will be added to the ~key~ file as another node file but that will be done later to prevent them from getting in the way of joins while creating the edge files.
+But before making the edge files, we'll generate IDs for the key file too.
+~PMID~ would work as a unique identifier, but by creating a IDs we can ensure the values are a range from 1--~n_publications~ which will make it possible to use as indices for other applications (See [[#example-overlap]]).
+
+*Note*: The publications may reference files outside of the database leading to values in the second column of the reference file to not be included in the publication node file so we have to add them to the cache publication file.
+
+#+begin_src bash :tangle ./example/process.sh
+  key_value=$(components key)
+  key=${key_value%%:*}
+  cat <(cut -f1 $cache_dir/$key.tsv) <(cut -f2 $cache_dir/Reference.tsv) \
+      | sort -u | cat -n | sed 's/^\s*//' > $import_dir/${key}_nodes.tsv
+#+end_src
+
+The resulting file has the new IDs in column one and the PMIDs in column two.
+** Generating edge files
+Now we need to join the cache files with their node files to add the node ID columns to the cache files.
+
+#+begin_src bash :tangle ./example/process.sh
+  while IFS=': ' read node value; do
+      [[ $node == "Reference" ]] && continue
+      join -j 2 $cache_dir/${node}.tsv $import_dir/${node}_nodes.tsv | \
+          sort -k 2b,2 > $cache_dir/${node}_tmp.tsv
+  done <<< "$(components nodes)"
+#+end_src
+
+Then to create the edge files, join the publication node file with the cached files on PMID and remove the features so only the IDs are left.
+
+#+begin_src bash :tangle ./example/process.sh
+  while IFS=': ' read node value; do
+      [[ $node == "Reference" ]] && continue
+      join -j 2 $cache_dir/${node}_tmp.tsv $import_dir/${key}_nodes.tsv | \
+          awk '{ print $4,"\t",$3 }'> \
+          $import_dir/${key}_${node}_edges.tsv
+  done <<< "$(components nodes)"
+#+end_src
+
+Now replace the PMIDs in the reference file to the new publication IDs by both columns with the publication nodes file.
+
+#+begin_src bash :tangle ./example/process.sh
+  paste <(join -1 2 -2 1 $import_dir/${key}_nodes.tsv <(sort -k 1 $cache_dir/Reference.tsv) | cut -d" " -f2) \
+      <(join -j 2 $import_dir/${key}_nodes.tsv <(sort -k 2 $cache_dir/Reference.tsv) | cut -d" " -f2) > \
+      $import_dir/${key}_${key}_edges.tsv
+#+end_src
+
+** Joining key's features to key
+#+begin_src bash :tangle ./example/process.sh
+  awk '{ print $2,$1 }' < $import_dir/${key}_nodes.tsv > tmp && \
+      mv tmp $import_dir/${key}_nodes.tsv
+  while IFS=': ' read key_feature value; do
+      join -j 1 $import_dir/${key}_nodes.tsv \
+          <(sort -k 1b,1 $cache_dir/${key_feature}.tsv) > tmp \
+          && mv tmp $import_dir/${key}_nodes.tsv
+  done <<< "$(components key_values)"
+  sed 's/\s/\t/g' < $import_dir/${key}_nodes.tsv | cut -f 2- > tmp && \
+      mv tmp $import_dir/${key}_nodes.tsv
+#+end_src
+
+** Cleaning up (replacing temporary separators)
+#+begin_src bash :tangle ./example/process.sh
+  while IFS=': ' read node value; do
+      sed -e 's/ /\t/g' -e "s/$tabsep/\t/g" -e "s/$spcsep/ /g" < $import_dir/${node}_nodes.tsv > tmp && \
+          mv tmp $import_dir/${node}_nodes.tsv
+  done <<< "$(components nodes)"
+#+end_src
+
+** Adding headers
+For the key nodes:
+#+begin_src bash :tangle ./example/process.sh
+  key_value=$(components key)
+  key=${key_value%%:*}
+  header="${key}Id:ID($key)"
+  while IFS=': ' read node value; do
+      header="${header}\t${node}"
+  done <<< "$(components key_values)"
+
+  cat <(echo -e $header) $import_dir/${key}_nodes.tsv > \
+      tmp && mv tmp $import_dir/${key}_nodes.tsv
+#+end_src
+
+For other nodes:
+#+begin_src bash :tangle ./example/process.sh
+  while IFS=': ' read node value; do
+      [[ $node == "Reference" ]] && continue
+      header="${node}Id:ID(${node})"
+      IFS=','; for v in $value; do
+          header="${header}\t${v}"
+      done
+
+      cat <(echo -e $header) $import_dir/${node}_nodes.tsv > \
+          tmp && mv tmp $import_dir/${node}_nodes.tsv
+  done <<< "$(components nodes)"
+#+end_src
+
+For edges (excluding references):
+#+begin_src bash :tangle ./example/process.sh
+  while IFS=': ' read node value; do
+      [[ $node == "Reference" ]] && continue
+      header=":START_ID(${key})"
+      header="${header}\t:END_ID(${node})"
+
+      cat <(echo -e $header) $import_dir/${key}_${node}_edges.tsv > \
+          tmp && mv tmp $import_dir/${key}_${node}_edges.tsv
+  done <<< "$(components nodes)"
+#+end_src
+
+For the special case of references, both IDs should be publications:
+#+begin_src bash :tangle ./example/process.sh
+  header=":START_ID($key)\t:END_ID($key)"
+  cat <(echo -e $header) $import_dir/${key}_${key}_edges.tsv > \
+      tmp && mv tmp $import_dir/${key}_${key}_edges.tsv
+#+end_src
+
