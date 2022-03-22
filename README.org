@@ -344,19 +344,15 @@ For the special case of references, both IDs should be publications:
       --skip-bad-relationships=true \\
       --trim-strings=true \\
       --id-type=STRING \\
-      --nodes=Publication=\$import_dir/Publication_nodes.tsv \\
   _EOF_
 
   while IFS=': ' read node value; do
       [[ $node == "Reference" ]] && continue
       echo "    --nodes=${node}=\$import_dir/${node}_nodes.tsv \\" >> $import_file
-  done <<< "$(components nodes)"
-
-  while IFS=': ' read node value; do
-      [[ $node == "Reference" ]] && continue
       echo "    --relationships=${key}-${node}=\$import_dir/${key}_${node}_edges.tsv \\" >> $import_file
   done <<< "$(components nodes)"
 
+  echo "    --nodes=${key}=\$import_dir/${key}_nodes.tsv \\" >> $import_file
   echo "    --relationships=${key}-${key}=\$import_dir/${key}_${key}_edges.tsv" >> $import_file
 
   chmod +x $import_file

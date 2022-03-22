@@ -13,15 +13,15 @@ neo4j-admin import \
     --skip-bad-relationships=true \
     --trim-strings=true \
     --id-type=STRING \
-    --nodes=Publication=$import_dir/Publication_nodes.tsv \
     --nodes=Author=$import_dir/Author_nodes.tsv \
-    --nodes=Grant=$import_dir/Grant_nodes.tsv \
-    --nodes=Chemical=$import_dir/Chemical_nodes.tsv \
-    --nodes=Qualifier=$import_dir/Qualifier_nodes.tsv \
-    --nodes=Descriptor=$import_dir/Descriptor_nodes.tsv \
     --relationships=Publication-Author=$import_dir/Publication_Author_edges.tsv \
+    --nodes=Grant=$import_dir/Grant_nodes.tsv \
     --relationships=Publication-Grant=$import_dir/Publication_Grant_edges.tsv \
+    --nodes=Chemical=$import_dir/Chemical_nodes.tsv \
     --relationships=Publication-Chemical=$import_dir/Publication_Chemical_edges.tsv \
+    --nodes=Qualifier=$import_dir/Qualifier_nodes.tsv \
     --relationships=Publication-Qualifier=$import_dir/Publication_Qualifier_edges.tsv \
+    --nodes=Descriptor=$import_dir/Descriptor_nodes.tsv \
     --relationships=Publication-Descriptor=$import_dir/Publication_Descriptor_edges.tsv \
+    --nodes=Publication=$import_dir/Publication_nodes.tsv \
     --relationships=Publication-Publication=$import_dir/Publication_Publication_edges.tsv
