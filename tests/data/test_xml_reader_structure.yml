@@ -2,7 +2,7 @@ Root: "PubmedArticleSet"
 key: {
   Publication: "/PubmedArticle/MedlineCitation/PMID"
 }
-key_values: {
+key_features: {
   Year: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
   Language: "/PubmedArticle/MedlineCitation/Article/Language"
 }

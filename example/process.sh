@@ -81,7 +81,7 @@ while IFS=': ' read key_feature value; do
     join -j 1 $import_dir/${key}_nodes.tsv \
         <(sort -k 1b,1 $cache_dir/${key_feature}.tsv) > tmp \
         && mv tmp $import_dir/${key}_nodes.tsv
-done <<< "$(components key_values)"
+done <<< "$(components key_features)"
 sed 's/\s/\t/g' < $import_dir/${key}_nodes.tsv | cut -f 2- > tmp && \
     mv tmp $import_dir/${key}_nodes.tsv
 
@@ -95,7 +95,7 @@ key=${key_value%%:*}
 header="${key}Id:ID($key)"
 while IFS=': ' read node value; do
     header="${header}\t${node}"
-done <<< "$(components key_values)"
+done <<< "$(components key_features)"
 
 cat <(echo -e $header) $import_dir/${key}_nodes.tsv > \
     tmp && mv tmp $import_dir/${key}_nodes.tsv

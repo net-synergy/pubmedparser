@@ -225,7 +225,7 @@ node_set *construct_node_set(char *structure_file, char *cache_dir,
                              int str_max)
 {
   char root[str_max];
-  char *keys[N_NAMES] = { "key", "key_values", "nodes" };
+  char *keys[N_NAMES] = { "key", "key_features", "nodes" };
   size_t n_keys[N_NAMES];
   char **key_values_pairs[N_NAMES][2];
   int rc = 0;
