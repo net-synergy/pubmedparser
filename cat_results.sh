@@ -10,8 +10,9 @@ if ! [[ -d $cache_dir ]]; then
    >&2 echo "Error: cache directory \"$cache_dir\" does not exist."
    exit 1
 fi
+cd "$cache_dir"
 
-master_files=$(ls $cache_dir/*.tsv | sed -n '/_[0-9]*\.tsv/!p')
+master_files=$(ls *.tsv | sed -n '/_[0-9]*\.tsv/!p')
 for f in $master_files; do
     cat ${f%%\.*}_*.tsv > ${f%%\.*}.tsv
     rm ${f%%\.*}_*.tsv
