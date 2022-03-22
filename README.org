@@ -116,6 +116,8 @@ First step is to set up the environment:
       [ -d $cache_dir ] && \
       rm -r $cache_dir && \
       mkdir -p $cache_dir
+
+  rm -r $import_dir && mkdir -p $import_dir
 #+end_src
 
 #+begin_src bash :exports none
@@ -132,6 +134,8 @@ First step is to set up the environment:
       [ -d $cache_dir ] && \
       rm -r $cache_dir && \
       mkdir -p $cache_dir
+
+  rm -r $import_dir && mkdir -p $import_dir
 #+end_src
 
 Within the cache directory is a ~processed.txt~ file which contains a list of all files that have been read.
@@ -315,3 +319,9 @@ For the special case of references, both IDs should be publications:
       tmp && mv tmp $import_dir/${key}_${key}_edges.tsv
 #+end_src
 
+* TODO Example: calculating overlap
+:PROPERTIES:
+:CUSTOM_ID: example-overlap
+:END:
+
+* Example: importing with neo4j

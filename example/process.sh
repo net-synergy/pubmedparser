@@ -16,6 +16,8 @@ $delete_cache && \
     rm -r $cache_dir && \
     mkdir -p $cache_dir
 
+rm -r $import_dir && mkdir -p $import_dir
+
 if [[ -f $cache_dir/processed.txt ]]; then
     files=$(cat $cache_dir/processed.txt <(ls "$data_dir/*.xml.gz") \
         | sort | uniq -u)
