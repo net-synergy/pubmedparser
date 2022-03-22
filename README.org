@@ -38,7 +38,7 @@ The ~PMID~ tag is a suitable candidate.
 
 #+begin_src sh :tangle ./example/structure.yml
   key: {
-      publication: "/PubmedArticle/MedlineCitation/PMID"
+    Publication: "/PubmedArticle/MedlineCitation/PMID"
   }
 #+end_src
 
@@ -58,17 +58,17 @@ These make up distinct node type (i.e. a given author is a node of type author w
 
 #+begin_src sh :tangle ./example/structure.yml
   key_values: {
-    year: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
-    language: "/PubmedArticle/MedlineCitation/Article/Language"
+    Year: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
+    Language: "/PubmedArticle/MedlineCitation/Article/Language"
   }
 
   nodes: {
-    author: "/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
-    grant: "/PubmedArticle/MedlineCitation/Article/GrantList/Grant/GrantID",
-    chemical: "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
-    qualifier: "/PubmedArticle/MedlineCitation/MashHeadingList/MeshHeading/QualifierName/@UI",
-    descriptor: "/PubmedArticle/MedlineCitation/MashHeadingList/MeshHeading/DescriptorName/@UI",
-    reference: "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
+    Author: "/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
+    Grant: "/PubmedArticle/MedlineCitation/Article/GrantList/Grant/GrantID",
+    Chemical: "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
+    Qualifier: "/PubmedArticle/MedlineCitation/MashHeadingList/MeshHeading/QualifierName/@UI",
+    Descriptor: "/PubmedArticle/MedlineCitation/MashHeadingList/MeshHeading/DescriptorName/@UI",
+    Reference: "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
   }
 #+end_src
 

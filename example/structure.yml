@@ -1,7 +1,7 @@
 root: "PubmedArticleSet"
 
 key: {
-    Publication: "/PubmedArticle/MedlineCitation/PMID"
+  Publication: "/PubmedArticle/MedlineCitation/PMID"
 }
 
 key_values: {
