@@ -1,4 +1,6 @@
 #+TITLE: Pubmed parser
+#+PROPERTY: header-args:sh :eval no
+#+PROPERTY: header-args:bash :eval yes :session *readme* :results none
 
 Read XML files and pull out selected values.
 Values to collect are determined by paths found in a [[#structure-file][structure file]].
@@ -90,7 +92,6 @@ This example structure file can be found in the example directory of this projec
 * Example: creating node and edge files for importing with neo4j
 :PROPERTIES:
 :CUSTOM_ID: example-creating-node-and-edges
-:header-args: :session *readme* :eval yes :results none
 :END:
 
 The resulting values can be used to generate node and edge files that work with ~neo4j~.
