@@ -8,3 +8,4 @@ tests/*
 !tests/*.bats
 !tests/data/
 !tests/Makefile
+import.report
