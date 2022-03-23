@@ -144,6 +144,7 @@ int parse_file(char *input, node_set *ns)
     }
   }
 
+  free(current.components);
   gzclose(fptr);
   if (current.length == -1) {
     return 0;
