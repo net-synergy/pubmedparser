@@ -330,7 +330,7 @@ node_set *clone_node_set(node_set *ns, char *cache_dir, int thread,
   return dup_ns;
 }
 
-void *release_clone(node_set *ns)
+void release_clone(node_set *ns)
 {
   for (int i = 0; i < ns->n; i++) {
     for (int j = 0; j < ns->nodes[i]->n_values; j++)

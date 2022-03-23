@@ -33,6 +33,6 @@ node_set *construct_node_set(char *structure_file, char *cache_dir,
 void release_node_set(node_set *ns);
 node_set *clone_node_set(node_set *ns, char *cache_dir, int thread,
                          int str_max);
-void *release_clone(node_set *ns);
+void release_clone(node_set *ns);
 
 #endif
