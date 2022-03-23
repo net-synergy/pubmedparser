@@ -32,7 +32,7 @@ static void get_components(char *p, char **components, int str_max)
   int comp_i = 0;
   char name[str_max];
   if (*p != '/') {
-    fprintf(stderr, "Path malformed. Must start with '/'");
+    fprintf(stderr, "Path malformed. Most start with '/'");
     exit(2);
   }
   p++; // Strip initial '/';
