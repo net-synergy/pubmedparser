@@ -58,7 +58,7 @@ static void get_components(char *p, char **components, int str_max)
 static FILE *get_file(const char *name, const char *cache_dir)
 {
   FILE *fptr = malloc(sizeof(FILE));
-  char out[100];
+  char out[1000];
 
   strcpy(out, cache_dir);
   strcat(out, name);

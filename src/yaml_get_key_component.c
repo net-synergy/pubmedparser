@@ -5,7 +5,7 @@
 
 #include "yaml_reader.h"
 
-#define STRMAX 500
+#define STRMAX 1000
 #define get_next_value(p, i, container)		\
   while (*p != '\0' && *p != '/') {		\
     container[i] = *p;				\

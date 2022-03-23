@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#define STR_MAX 400
-#define BLOCK_MAX 5000
+#define STR_MAX 1000
+#define BLOCK_MAX 50000
 #define ISWHITESPACE(c) ((c == ' ') || (c == '\n') || (c == '\t'))
 #define ISALPHA(c) (((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')))
 
