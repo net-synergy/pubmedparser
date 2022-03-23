@@ -4,10 +4,10 @@
 
 top_dir=../$(dirname $0)
 bin_dir=$top_dir/bin
-cache_dir=~/data/synergy/cache
-data_dir=~/data/pubmed
+cache_dir=~/Documents/david/data/synergy/cache
+data_dir=~/Documents/david/data/pubmed
 structure_file=$top_dir/example/structure.yml
-import_dir=~/data/synergy/import
+import_dir=~/Documents/david/data/synergy/import
 delete_cache=false # If true clear cache.
 nthreads=64
 
