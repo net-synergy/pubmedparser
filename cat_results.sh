@@ -14,6 +14,6 @@ cd "$cache_dir"
 
 master_files=$(ls *.tsv | sed -n '/_[0-9]*\.tsv/!p')
 for f in $master_files; do
-    cat ${f%%\.*}_*.tsv > ${f%%\.*}.tsv
-    rm ${f%%\.*}_*.tsv
+    cat "${f%%\.*}"_*.tsv > "${f%%\.*}.tsv"
+    rm "${f%%\.*}"_*.tsv
 done
