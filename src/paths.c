@@ -42,7 +42,7 @@ static void get_components(char *p, char **components, int str_max)
       components[comp_i] = strdup(name);
       comp_i++;
       tag_i = 0;
-    } else {
+    } else if (tag_i < (str_max - 1)) {
       name[tag_i] = *p;
       tag_i++;
     }
@@ -150,7 +150,7 @@ static int find_sub_tag_names(char *p, int str_max, char ***sub_tags_holder)
   sub_tags_holder[0] = malloc(sizeof(char *) * count);
   char tag[str_max];
   for (int j = 0; j < count; j++) {
-    for (i = 0; (*p != ',') && (*p != '}'); i++, p++) {
+    for (i = 0; (*p != ',') && (*p != '}') && (i < (str_max - 1)); i++, p++) {
       tag[i] = *p;
     }
     p++;
