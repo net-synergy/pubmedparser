@@ -12,18 +12,18 @@
 #define STR_MAX 1000
 #define IS_CLOSE(tag) (tag[0] == '/')
 
-#define ADD_TAG(path, tag, ns) {			\
-    if (path.length < ns->max_path_depth) {		\
-      path.components[path.length] = strdup(tag);	\
-    }							\
-    path.length++;					\
+#define ADD_TAG(path, tag, ns) {				\
+    if (path.length < ns->max_path_depth && path.length >= 0) {	\
+      path.components[path.length] = strdup(tag);		\
+    }								\
+    path.length++;						\
   }
 
-#define RM_TAG(path, ns) {			\
-    path.length--;				\
-    if (path.length < ns->max_path_depth) {	\
-      free(path.components[path.length]);	\
-    }						\
+#define RM_TAG(path, ns) {					\
+    path.length--;						\
+    if (path.length < ns->max_path_depth && path.length >= 0) {	\
+      free(path.components[path.length]);			\
+    }								\
   }
 
 #define CONTINUE_IF_EMPTY_TAG(c, path, ns) {	\
