@@ -1,6 +1,6 @@
 #+TITLE: Pubmed parser
 #+PROPERTY: header-args:sh :eval no
-#+PROPERTY: header-args:bash :eval yes :session *readme* :results none
+#+PROPERTY: header-args:bash :eval no :session *readme* :results none
 
 Read XML files and pull out selected values.
 Values to collect are determined by paths found in a [[#structure-file][structure file]].
@@ -115,10 +115,10 @@ First step is to set up the environment:
 
   $delete_cache && \
       [ -d $cache_dir ] && \
-      rm -r $cache_dir && \
-      mkdir -p $cache_dir
+      rm -r $cache_dir
 
-  rm -r $import_dir && mkdir -p $import_dir
+  [ -d $import_dir ] && rm -r $import_dir
+  mkdir -p $import_dir
 #+end_src
 
 #+begin_src bash :exports none
