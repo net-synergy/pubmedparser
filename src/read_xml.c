@@ -83,6 +83,7 @@ int parse_file(char *input, node_set *ns)
 
   while (c != EOF) {
     c = get_tag(fptr, c, tag, STR_MAX);
+
     if ((current.length >= 0) && (tag[0] != '?') && (c != EMPTY_TAG)) {
       if (IS_CLOSE(tag) || (c == PREV_EMPTY_TAG)) {
         RM_TAG(current, ns);
@@ -246,7 +247,6 @@ int main(int argc, char **argv)
     node_set *ns_dup[n_threads];
     for (int i = 0; i < n_threads; i++)
       ns_dup[i] = clone_node_set(ns, cache_dir, i, STR_MAX);
-
 
     #pragma omp parallel for private (status)
     for (int i = optind; i < argc; i++) {
