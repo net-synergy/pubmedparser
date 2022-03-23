@@ -68,8 +68,8 @@ These make up distinct node type (i.e. a given author is a node of type author w
     Author: "/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
     Grant: "/PubmedArticle/MedlineCitation/Article/GrantList/Grant/GrantID",
     Chemical: "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
-    Qualifier: "/PubmedArticle/MedlineCitation/MashHeadingList/MeshHeading/QualifierName/@UI",
-    Descriptor: "/PubmedArticle/MedlineCitation/MashHeadingList/MeshHeading/DescriptorName/@UI",
+    Qualifier: "/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/QualifierName/@UI",
+    Descriptor: "/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/DescriptorName/@UI",
     Reference: "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
   }
 #+end_src
