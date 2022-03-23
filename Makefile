@@ -1,7 +1,6 @@
 CC = gcc
 SRC_DIR = src
 TEST_DIR = tests
-LIBS = z
 
 .PHONY: all clean run test
 all:

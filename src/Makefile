@@ -21,7 +21,7 @@ read_xml.o: read_xml.c paths.h query.h yaml_reader.h
 $(READXML): read_xml.o paths.o query.o yaml_reader.o
 	@mkdir -p $(CACHE_DIR)
 	@mkdir -p $(OUT_DIR)
-	$(CC) $(CFLAGS) -l$(LIBS) -fopenmp -O3 $^ -o $@
+	$(CC) $(CFLAGS) -fopenmp -O3 $^ -o $@ -l$(LIBS)
 
 yaml_get_key_component.o: yaml_get_key_component.c yaml_reader.h
 	$(CC) -c $*.c
