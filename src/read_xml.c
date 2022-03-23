@@ -256,7 +256,8 @@ int main(int argc, char **argv)
         fprintf(stderr, "Tag mismatch in file: %s\n", argv[i]);
         exit(1);
       }
-      fputs(argv[i], progress_ptr);
+
+      fprintf(progress_ptr, "%s\n", argv[i]);
     }
   }
 
