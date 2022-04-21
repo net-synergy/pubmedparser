@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2022-03-22 Tue 01:58 -->
+<!-- 2022-04-20 Wed 20:08 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Pubmed parser</title>
@@ -225,6 +225,11 @@
     text-decoration: none;
   }
 
+  code {
+    color: black;
+    font-weight: 600;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     color: black;
     font-family: sans-serif;
@@ -241,11 +246,11 @@
   }
 
   a:link {
-    color: #1D6F42;
+    color: #0031a9;
   }
 
   a:visited {
-    color: #623C5D;
+    color: #673AB7;
   }
 
   pre.src:before {
@@ -265,15 +270,15 @@
 <li><a href="#structure-file">1. Structure file</a></li>
 <li><a href="#example-creating-node-and-edges">2. Example: creating node and edge files for importing with neo4j</a>
 <ul>
-<li><a href="#org92a533c">2.1. Generating node files</a></li>
-<li><a href="#orgedf9ba6">2.2. Generating edge files</a></li>
-<li><a href="#org66ed84b">2.3. Joining key's features to key</a></li>
-<li><a href="#org4b147d7">2.4. Cleaning up (replacing temporary separators)</a></li>
-<li><a href="#orgc9b8c94">2.5. Adding headers</a></li>
+<li><a href="#orgf525aca">2.1. Generating node files</a></li>
+<li><a href="#orgd06f921">2.2. Generating edge files</a></li>
+<li><a href="#org4870753">2.3. Joining key's features to key</a></li>
+<li><a href="#org2e6ff56">2.4. Cleaning up (replacing temporary separators)</a></li>
+<li><a href="#orgef3a9be">2.5. Adding headers</a></li>
 </ul>
 </li>
 <li><a href="#example-overlap">3. <span class="todo TODO">TODO</span> Example: calculating overlap</a></li>
-<li><a href="#orgf814b62">4. Example: importing with neo4j</a></li>
+<li><a href="#org55aceff">4. Example: importing with neo4j</a></li>
 </ul>
 </div>
 </div>
@@ -303,6 +308,15 @@ Usage:
 <p>
 The cache directory is where the results are stored.
 </p>
+
+<p>
+Build:
+Requires <code>zlib</code>
+</p>
+<div class="org-src-container">
+<pre class="src src-sh">make all
+</pre>
+</div>
 
 <div id="outline-container-structure-file" class="outline-2">
 <h2 id="structure-file"><span class="section-number-2">1.</span> Structure file</h2>
@@ -363,8 +377,8 @@ nodes: <span style="color: #000000;">{</span>
   Author: <span style="color: #FFAB91;">"/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}"</span>,
   Grant: <span style="color: #FFAB91;">"/PubmedArticle/MedlineCitation/Article/GrantList/Grant/GrantID"</span>,
   Chemical: <span style="color: #FFAB91;">"/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI"</span>,
-  Qualifier: <span style="color: #FFAB91;">"/PubmedArticle/MedlineCitation/MashHeadingList/MeshHeading/QualifierName/@UI"</span>,
-  Descriptor: <span style="color: #FFAB91;">"/PubmedArticle/MedlineCitation/MashHeadingList/MeshHeading/DescriptorName/@UI"</span>,
+  Qualifier: <span style="color: #FFAB91;">"/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/QualifierName/@UI"</span>,
+  Descriptor: <span style="color: #FFAB91;">"/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/DescriptorName/@UI"</span>,
   Reference: <span style="color: #FFAB91;">"/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"</span>
 <span style="color: #000000;">}</span>
 </pre>
@@ -406,19 +420,19 @@ First step is to set up the environment:
 <div class="org-src-container">
 <pre class="src src-bash"><span style="color: #37474F; font-weight: bold;">top_dir</span>=../$<span style="color: #000000;">(</span>dirname $<span style="color: #37474F; font-weight: bold;">0</span><span style="color: #000000;">)</span>
 <span style="color: #37474F; font-weight: bold;">bin_dir</span>=$<span style="color: #37474F; font-weight: bold;">top_dir</span>/bin
-<span style="color: #37474F; font-weight: bold;">cache_dir</span>=~/data/synergy/cache
-<span style="color: #37474F; font-weight: bold;">data_dir</span>=~/data/pubmed
+<span style="color: #37474F; font-weight: bold;">cache_dir</span>=~/Documents/david/data/synergy/cache
+<span style="color: #37474F; font-weight: bold;">data_dir</span>=~/Documents/david/data/pubmed
 <span style="color: #37474F; font-weight: bold;">structure_file</span>=$<span style="color: #37474F; font-weight: bold;">top_dir</span>/example/structure.yml
-<span style="color: #37474F; font-weight: bold;">import_dir</span>=~/data/synergy/import
+<span style="color: #37474F; font-weight: bold;">import_dir</span>=~/Documents/david/data/synergy/import
 <span style="color: #37474F; font-weight: bold;">delete_cache</span>=false <span style="color: #B0BEC5;"># </span><span style="color: #B0BEC5;">If true clear cache.</span>
 <span style="color: #37474F; font-weight: bold;">nthreads</span>=64
 
 $<span style="color: #37474F; font-weight: bold;">delete_cache</span> &amp;&amp; <span style="color: #FFAB91;">\</span>
     <span style="color: #000000;">[</span> -d $<span style="color: #37474F; font-weight: bold;">cache_dir</span> <span style="color: #000000;">]</span> &amp;&amp; <span style="color: #FFAB91;">\</span>
-    rm -r $<span style="color: #37474F; font-weight: bold;">cache_dir</span> &amp;&amp; <span style="color: #FFAB91;">\</span>
-    mkdir -p $<span style="color: #37474F; font-weight: bold;">cache_dir</span>
+    rm -r $<span style="color: #37474F; font-weight: bold;">cache_dir</span>
 
-rm -r $<span style="color: #37474F; font-weight: bold;">import_dir</span> &amp;&amp; mkdir -p $<span style="color: #37474F; font-weight: bold;">import_dir</span>
+<span style="color: #000000;">[</span> -d $<span style="color: #37474F; font-weight: bold;">import_dir</span> <span style="color: #000000;">]</span> &amp;&amp; rm -r $<span style="color: #37474F; font-weight: bold;">import_dir</span>
+mkdir -p $<span style="color: #37474F; font-weight: bold;">import_dir</span>
 </pre>
 </div>
 
@@ -478,8 +492,8 @@ First, the <code>yaml_get_key_components</code> can be written into a wrapper fu
 </div>
 </div>
 
-<div id="outline-container-org92a533c" class="outline-3">
-<h3 id="org92a533c"><span class="section-number-3">2.1.</span> Generating node files</h3>
+<div id="outline-container-orgf525aca" class="outline-3">
+<h3 id="orgf525aca"><span class="section-number-3">2.1.</span> Generating node files</h3>
 <div class="outline-text-3" id="text-2-1">
 <p>
 To generate nodes we will remove remove the <code>PMID</code> column, sort, keep the unique rows, then print with line numbers (which will be used as IDs).
@@ -532,8 +546,8 @@ The resulting file has the new IDs in column one and the PMIDs in column two.
 </p>
 </div>
 </div>
-<div id="outline-container-orgedf9ba6" class="outline-3">
-<h3 id="orgedf9ba6"><span class="section-number-3">2.2.</span> Generating edge files</h3>
+<div id="outline-container-orgd06f921" class="outline-3">
+<h3 id="orgd06f921"><span class="section-number-3">2.2.</span> Generating edge files</h3>
 <div class="outline-text-3" id="text-2-2">
 <p>
 Now we need to join the cache files with their node files to add the node ID columns to the cache files.
@@ -575,8 +589,8 @@ Now replace the PMIDs in the reference file to the new publication IDs by both c
 </div>
 </div>
 
-<div id="outline-container-org66ed84b" class="outline-3">
-<h3 id="org66ed84b"><span class="section-number-3">2.3.</span> Joining key's features to key</h3>
+<div id="outline-container-org4870753" class="outline-3">
+<h3 id="org4870753"><span class="section-number-3">2.3.</span> Joining key's features to key</h3>
 <div class="outline-text-3" id="text-2-3">
 <div class="org-src-container">
 <pre class="src src-bash">awk <span style="color: #FFAB91;">'{ print $2,$1 }'</span> &lt; $<span style="color: #37474F; font-weight: bold;">import_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">key</span><span style="color: #000000;">}</span>_nodes.tsv &gt; tmp &amp;&amp; <span style="color: #FFAB91;">\</span>
@@ -593,8 +607,8 @@ sed <span style="color: #FFAB91;">'s/\s/\t/g'</span> &lt; $<span style="color: #
 </div>
 </div>
 
-<div id="outline-container-org4b147d7" class="outline-3">
-<h3 id="org4b147d7"><span class="section-number-3">2.4.</span> Cleaning up (replacing temporary separators)</h3>
+<div id="outline-container-org2e6ff56" class="outline-3">
+<h3 id="org2e6ff56"><span class="section-number-3">2.4.</span> Cleaning up (replacing temporary separators)</h3>
 <div class="outline-text-3" id="text-2-4">
 <div class="org-src-container">
 <pre class="src src-bash"><span style="color: #673AB7;">while</span> <span style="color: #37474F; font-weight: bold;">IFS</span>=<span style="color: #FFAB91;">': '</span> read node value; <span style="color: #673AB7;">do</span>
@@ -606,8 +620,8 @@ sed <span style="color: #FFAB91;">'s/\s/\t/g'</span> &lt; $<span style="color: #
 </div>
 </div>
 
-<div id="outline-container-orgc9b8c94" class="outline-3">
-<h3 id="orgc9b8c94"><span class="section-number-3">2.5.</span> Adding headers</h3>
+<div id="outline-container-orgef3a9be" class="outline-3">
+<h3 id="orgef3a9be"><span class="section-number-3">2.5.</span> Adding headers</h3>
 <div class="outline-text-3" id="text-2-5">
 <p>
 For the key nodes:
@@ -676,8 +690,8 @@ cat &lt;<span style="color: #000000;">(</span><span style="color: #673AB7;">echo
 </div>
 </div>
 
-<div id="outline-container-orgf814b62" class="outline-2">
-<h2 id="orgf814b62"><span class="section-number-2">4.</span> Example: importing with neo4j</h2>
+<div id="outline-container-org55aceff" class="outline-2">
+<h2 id="org55aceff"><span class="section-number-2">4.</span> Example: importing with neo4j</h2>
 <div class="outline-text-2" id="text-4">
 <div class="org-src-container">
 <pre class="src src-bash"><span style="color: #37474F; font-weight: bold;">import_file</span>=example/importpubmed.sh
@@ -697,19 +711,15 @@ cat &gt; $<span style="color: #37474F; font-weight: bold;">import_file</span> &l
 <span style="color: #2544bb;">    --skip-bad-relationships=true \\</span>
 <span style="color: #2544bb;">    --trim-strings=true \\</span>
 <span style="color: #2544bb;">    --id-type=STRING \\</span>
-<span style="color: #2544bb;">    --nodes=Publication=\$import_dir/Publication_nodes.tsv \\</span>
 <span style="color: #2544bb;">_EOF_</span>
 
 <span style="color: #673AB7;">while</span> <span style="color: #37474F; font-weight: bold;">IFS</span>=<span style="color: #FFAB91;">': '</span> read node value; <span style="color: #673AB7;">do</span>
     <span style="color: #000000;">[</span><span style="color: #a8007f;">[</span> $<span style="color: #37474F; font-weight: bold;">node</span> == <span style="color: #FFAB91;">"Reference"</span> <span style="color: #a8007f;">]</span><span style="color: #000000;">]</span> &amp;&amp; <span style="color: #673AB7;">continue</span>
     <span style="color: #673AB7;">echo</span> <span style="color: #FFAB91;">"    --nodes=${node}=\$import_dir/${node}_nodes.tsv \\"</span> &gt;&gt; $<span style="color: #37474F; font-weight: bold;">import_file</span>
-<span style="color: #673AB7;">done</span> &lt;&lt;&lt; <span style="color: #FFAB91;">"$(components nodes)"</span>
-
-<span style="color: #673AB7;">while</span> <span style="color: #37474F; font-weight: bold;">IFS</span>=<span style="color: #FFAB91;">': '</span> read node value; <span style="color: #673AB7;">do</span>
-    <span style="color: #000000;">[</span><span style="color: #a8007f;">[</span> $<span style="color: #37474F; font-weight: bold;">node</span> == <span style="color: #FFAB91;">"Reference"</span> <span style="color: #a8007f;">]</span><span style="color: #000000;">]</span> &amp;&amp; <span style="color: #673AB7;">continue</span>
     <span style="color: #673AB7;">echo</span> <span style="color: #FFAB91;">"    --relationships=${key}-${node}=\$import_dir/${key}_${node}_edges.tsv \\"</span> &gt;&gt; $<span style="color: #37474F; font-weight: bold;">import_file</span>
 <span style="color: #673AB7;">done</span> &lt;&lt;&lt; <span style="color: #FFAB91;">"$(components nodes)"</span>
 
+<span style="color: #673AB7;">echo</span> <span style="color: #FFAB91;">"    --nodes=${key}=\$import_dir/${key}_nodes.tsv \\"</span> &gt;&gt; $<span style="color: #37474F; font-weight: bold;">import_file</span>
 <span style="color: #673AB7;">echo</span> <span style="color: #FFAB91;">"    --relationships=${key}-${key}=\$import_dir/${key}_${key}_edges.tsv"</span> &gt;&gt; $<span style="color: #37474F; font-weight: bold;">import_file</span>
 
 chmod +x $<span style="color: #37474F; font-weight: bold;">import_file</span>
@@ -720,7 +730,7 @@ chmod +x $<span style="color: #37474F; font-weight: bold;">import_file</span>
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: David R. Connell</p>
-<p class="date">Created: 2022-03-22 Tue 01:58</p>
+<p class="date">Created: 2022-04-20 Wed 20:08</p>
 </div>
 </body>
 </html>

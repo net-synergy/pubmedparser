@@ -18,6 +18,12 @@ Usage:
 
 The cache directory is where the results are stored.
 
+Build:
+Requires ~zlib~
+#+begin_src sh :eval no
+  make all
+#+end_src
+
 * Structure file
 :PROPERTIES:
 :CUSTOM_ID: structure-file
