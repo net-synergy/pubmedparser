@@ -1,0 +1,41 @@
+#! /usr/bin/env bats
+
+setup() {
+    load 'bats_helpers'
+    _common_setup
+}
+
+setup_file() {
+    load 'bats_helpers'
+    _common_file_setup
+
+    cat <<-EOF > $cache_dir/edges.tsv
+NODE1 NODE2
+1     1
+1     2
+1     3
+2     1
+2     2
+3     1
+3     3
+4     3
+EOF
+}
+
+teardown_file() {
+    load 'bats_helpers'
+    _common_file_teardown
+}
+
+@test "Test overlap calculator" {
+    overlap $cache_dir/edges.tsv > $cache_dir/overlap.tsv
+    diff $cache_dir/overlap.tsv <(cat<<EOF
+NODE1	NODE1	weight
+1	2	2
+1	3	2
+1	4	1
+2	3	1
+3	4	1
+EOF
+				 )
+}
