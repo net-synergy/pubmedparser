@@ -29,6 +29,9 @@ test_xml_reader: test_xml_reader_argument_parsing.bats test_xml_reader_output.ba
 	./test_xml_reader_argument_parsing.bats
 	./test_xml_reader_output.bats
 
+test_sort_performance: test_sort_performance.bats $(OUT_DIR)/read_xml
+	./test_sort_performance.bats
+
 test: test_yaml_reader test_xml_reader
 
 clean:

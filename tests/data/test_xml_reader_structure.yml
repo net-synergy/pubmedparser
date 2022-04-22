@@ -1,11 +1,14 @@
-Root: "PubmedArticleSet"
+root: "PubmedArticleSet"
+
 key: {
   Publication: "/PubmedArticle/MedlineCitation/PMID"
 }
+
 key_features: {
   Year: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
   Language: "/PubmedArticle/MedlineCitation/Article/Language"
 }
+
 nodes: {
   Author: "/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
   Chemical: "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
