@@ -41,19 +41,26 @@ components() {
 
 tabsep="=+=t=+=" # Key to keep non-id columns together
 spcsep="=+s+="
-# ${key_value} looks like ${key}: ${value}
-while IFS=': ' read key value; do
-    [[ $key == "Reference" ]] && continue
+
+gen_node() {
+    local key=$1
+
     key_file=$cache_dir/$key.tsv
     paste <(cut -f1 $key_file) \
         <(cut -f1 --complement $key_file | \
         sed -e "s/\\t/$tabsep/g" -e  "s/\\s/$spcsep/g") | \
         sort -k 2 > \
-        tmp && mv tmp $key_file
+        tmp_${key} && mv tmp_${key} $key_file
 
     cut -f1 --complement $key_file | sort -u | \
         cat -n | sed 's/^\s*//' > $import_dir/${key}_nodes.tsv
+}
+
+while IFS=': ' read key value; do
+    [[ $key == "Reference" ]] && continue
+    gen_node $key &
 done <<< "$(components nodes)"
+wait
 
 key_value=$(components key)
 key=${key_value%%:*}
@@ -63,15 +70,17 @@ cat <(cut -f1 $cache_dir/$key.tsv) <(cut -f2 $cache_dir/Reference.tsv) \
 while IFS=': ' read node value; do
     [[ $node == "Reference" ]] && continue
     join -j 2 $cache_dir/${node}.tsv $import_dir/${node}_nodes.tsv | \
-        sort -k 2b,2 > $cache_dir/${node}_tmp.tsv
+        sort -k 2b,2 > $cache_dir/${node}_tmp.tsv &
 done <<< "$(components nodes)"
+wait
 
 while IFS=': ' read node value; do
     [[ $node == "Reference" ]] && continue
     join -j 2 $cache_dir/${node}_tmp.tsv $import_dir/${key}_nodes.tsv | \
         awk '{ print $4,"\t",$3 }'> \
-        $import_dir/${key}_${node}_edges.tsv
+        $import_dir/${key}_${node}_edges.tsv &
 done <<< "$(components nodes)"
+wait
 
 paste <(join -1 2 -2 1 $import_dir/${key}_nodes.tsv <(sort -k 1 $cache_dir/Reference.tsv) | cut -d" " -f2) \
     <(join -j 2 $import_dir/${key}_nodes.tsv <(sort -k 2 $cache_dir/Reference.tsv) | cut -d" " -f2) > \
@@ -88,9 +97,10 @@ sed 's/\s/\t/g' < $import_dir/${key}_nodes.tsv | cut -f 2- > tmp && \
     mv tmp $import_dir/${key}_nodes.tsv
 
 while IFS=': ' read node value; do
-    sed -e 's/ /\t/g' -e "s/$tabsep/\t/g" -e "s/$spcsep/ /g" < $import_dir/${node}_nodes.tsv > tmp && \
-        mv tmp $import_dir/${node}_nodes.tsv
+    sed -e 's/ /\t/g' -e "s/$tabsep/\t/g" -e "s/$spcsep/ /g" < $import_dir/${node}_nodes.tsv > tmp_${node} && \
+        mv tmp_${node} $import_dir/${node}_nodes.tsv &
 done <<< "$(components nodes)"
+wait
 
 key_value=$(components key)
 key=${key_value%%:*}

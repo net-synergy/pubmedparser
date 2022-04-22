@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2022-04-20 Wed 20:08 -->
+<!-- 2022-04-21 Thu 23:08 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Pubmed parser</title>
@@ -191,7 +191,7 @@
     { font-size: 10px; font-weight: bold; white-space: nowrap; }
   .org-info-js_search-highlight
     { background-color: #ffff00; color: #000000; font-weight: bold; }
-  .org-svg { width: 90%; }
+  .org-svg { }
 </style>
 
 <style>
@@ -270,15 +270,15 @@
 <li><a href="#structure-file">1. Structure file</a></li>
 <li><a href="#example-creating-node-and-edges">2. Example: creating node and edge files for importing with neo4j</a>
 <ul>
-<li><a href="#orgf525aca">2.1. Generating node files</a></li>
-<li><a href="#orgd06f921">2.2. Generating edge files</a></li>
-<li><a href="#org4870753">2.3. Joining key's features to key</a></li>
-<li><a href="#org2e6ff56">2.4. Cleaning up (replacing temporary separators)</a></li>
-<li><a href="#orgef3a9be">2.5. Adding headers</a></li>
+<li><a href="#org4b301de">2.1. Generating node files</a></li>
+<li><a href="#orgb1db7a1">2.2. Generating edge files</a></li>
+<li><a href="#orgdd78b6b">2.3. Joining key's features to key</a></li>
+<li><a href="#orga19c765">2.4. Cleaning up (replacing temporary separators)</a></li>
+<li><a href="#orgac9c7f8">2.5. Adding headers</a></li>
 </ul>
 </li>
 <li><a href="#example-overlap">3. <span class="todo TODO">TODO</span> Example: calculating overlap</a></li>
-<li><a href="#org55aceff">4. Example: importing with neo4j</a></li>
+<li><a href="#orgfcedd02">4. Example: importing with neo4j</a></li>
 </ul>
 </div>
 </div>
@@ -492,8 +492,8 @@ First, the <code>yaml_get_key_components</code> can be written into a wrapper fu
 </div>
 </div>
 
-<div id="outline-container-orgf525aca" class="outline-3">
-<h3 id="orgf525aca"><span class="section-number-3">2.1.</span> Generating node files</h3>
+<div id="outline-container-org4b301de" class="outline-3">
+<h3 id="org4b301de"><span class="section-number-3">2.1.</span> Generating node files</h3>
 <div class="outline-text-3" id="text-2-1">
 <p>
 To generate nodes we will remove remove the <code>PMID</code> column, sort, keep the unique rows, then print with line numbers (which will be used as IDs).
@@ -502,19 +502,26 @@ To generate nodes we will remove remove the <code>PMID</code> column, sort, keep
 <div class="org-src-container">
 <pre class="src src-bash"><span style="color: #37474F; font-weight: bold;">tabsep</span>=<span style="color: #FFAB91;">"=+=t=+="</span> <span style="color: #B0BEC5;"># </span><span style="color: #B0BEC5;">Key to keep non-id columns together</span>
 <span style="color: #37474F; font-weight: bold;">spcsep</span>=<span style="color: #FFAB91;">"=+s+="</span>
-<span style="color: #B0BEC5;"># </span><span style="color: #B0BEC5;">${key_value} looks like ${key}: ${value}</span>
-<span style="color: #673AB7;">while</span> <span style="color: #37474F; font-weight: bold;">IFS</span>=<span style="color: #FFAB91;">': '</span> read key value; <span style="color: #673AB7;">do</span>
-    <span style="color: #000000;">[</span><span style="color: #a8007f;">[</span> $<span style="color: #37474F; font-weight: bold;">key</span> == <span style="color: #FFAB91;">"Reference"</span> <span style="color: #a8007f;">]</span><span style="color: #000000;">]</span> &amp;&amp; <span style="color: #673AB7;">continue</span>
+
+<span style="color: #37474F; font-weight: bold;">gen_node</span><span style="color: #000000;">()</span> <span style="color: #000000;">{</span>
+    <span style="color: #673AB7;">local</span> <span style="color: #37474F; font-weight: bold;">key</span>=$<span style="color: #37474F; font-weight: bold;">1</span>
+
     <span style="color: #37474F; font-weight: bold;">key_file</span>=$<span style="color: #37474F; font-weight: bold;">cache_dir</span>/$<span style="color: #37474F; font-weight: bold;">key</span>.tsv
-    paste &lt;<span style="color: #000000;">(</span>cut -f1 $<span style="color: #37474F; font-weight: bold;">key_file</span><span style="color: #000000;">)</span> <span style="color: #FFAB91;">\</span>
-        &lt;<span style="color: #000000;">(</span>cut -f1 --complement $<span style="color: #37474F; font-weight: bold;">key_file</span> | <span style="color: #FFAB91;">\</span>
-        sed -e <span style="color: #FFAB91;">"s/\\t/$tabsep/g"</span> -e  <span style="color: #FFAB91;">"s/\\s/$spcsep/g"</span><span style="color: #000000;">)</span> | <span style="color: #FFAB91;">\</span>
+    paste &lt;<span style="color: #a8007f;">(</span>cut -f1 $<span style="color: #37474F; font-weight: bold;">key_file</span><span style="color: #a8007f;">)</span> <span style="color: #FFAB91;">\</span>
+        &lt;<span style="color: #a8007f;">(</span>cut -f1 --complement $<span style="color: #37474F; font-weight: bold;">key_file</span> | <span style="color: #FFAB91;">\</span>
+        sed -e <span style="color: #FFAB91;">"s/\\t/$tabsep/g"</span> -e  <span style="color: #FFAB91;">"s/\\s/$spcsep/g"</span><span style="color: #a8007f;">)</span> | <span style="color: #FFAB91;">\</span>
         sort -k 2 &gt; <span style="color: #FFAB91;">\</span>
-        tmp &amp;&amp; mv tmp $<span style="color: #37474F; font-weight: bold;">key_file</span>
+        tmp_$<span style="color: #a8007f;">{</span><span style="color: #37474F; font-weight: bold;">key</span><span style="color: #a8007f;">}</span> &amp;&amp; mv tmp_$<span style="color: #a8007f;">{</span><span style="color: #37474F; font-weight: bold;">key</span><span style="color: #a8007f;">}</span> $<span style="color: #37474F; font-weight: bold;">key_file</span>
 
     cut -f1 --complement $<span style="color: #37474F; font-weight: bold;">key_file</span> | sort -u | <span style="color: #FFAB91;">\</span>
-        cat -n | sed <span style="color: #FFAB91;">'s/^\s*//'</span> &gt; $<span style="color: #37474F; font-weight: bold;">import_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">key</span><span style="color: #000000;">}</span>_nodes.tsv
+        cat -n | sed <span style="color: #FFAB91;">'s/^\s*//'</span> &gt; $<span style="color: #37474F; font-weight: bold;">import_dir</span>/$<span style="color: #a8007f;">{</span><span style="color: #37474F; font-weight: bold;">key</span><span style="color: #a8007f;">}</span>_nodes.tsv
+<span style="color: #000000;">}</span>
+
+<span style="color: #673AB7;">while</span> <span style="color: #37474F; font-weight: bold;">IFS</span>=<span style="color: #FFAB91;">': '</span> read key value; <span style="color: #673AB7;">do</span>
+    <span style="color: #000000;">[</span><span style="color: #a8007f;">[</span> $<span style="color: #37474F; font-weight: bold;">key</span> == <span style="color: #FFAB91;">"Reference"</span> <span style="color: #a8007f;">]</span><span style="color: #000000;">]</span> &amp;&amp; <span style="color: #673AB7;">continue</span>
+    gen_node $<span style="color: #37474F; font-weight: bold;">key</span> &amp;
 <span style="color: #673AB7;">done</span> &lt;&lt;&lt; <span style="color: #FFAB91;">"$(components nodes)"</span>
+<span style="color: #673AB7;">wait</span>
 </pre>
 </div>
 
@@ -546,8 +553,8 @@ The resulting file has the new IDs in column one and the PMIDs in column two.
 </p>
 </div>
 </div>
-<div id="outline-container-orgd06f921" class="outline-3">
-<h3 id="orgd06f921"><span class="section-number-3">2.2.</span> Generating edge files</h3>
+<div id="outline-container-orgb1db7a1" class="outline-3">
+<h3 id="orgb1db7a1"><span class="section-number-3">2.2.</span> Generating edge files</h3>
 <div class="outline-text-3" id="text-2-2">
 <p>
 Now we need to join the cache files with their node files to add the node ID columns to the cache files.
@@ -557,8 +564,9 @@ Now we need to join the cache files with their node files to add the node ID col
 <pre class="src src-bash"><span style="color: #673AB7;">while</span> <span style="color: #37474F; font-weight: bold;">IFS</span>=<span style="color: #FFAB91;">': '</span> read node value; <span style="color: #673AB7;">do</span>
     <span style="color: #000000;">[</span><span style="color: #a8007f;">[</span> $<span style="color: #37474F; font-weight: bold;">node</span> == <span style="color: #FFAB91;">"Reference"</span> <span style="color: #a8007f;">]</span><span style="color: #000000;">]</span> &amp;&amp; <span style="color: #673AB7;">continue</span>
     join -j 2 $<span style="color: #37474F; font-weight: bold;">cache_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">node</span><span style="color: #000000;">}</span>.tsv $<span style="color: #37474F; font-weight: bold;">import_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">node</span><span style="color: #000000;">}</span>_nodes.tsv | <span style="color: #FFAB91;">\</span>
-        sort -k 2b,2 &gt; $<span style="color: #37474F; font-weight: bold;">cache_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">node</span><span style="color: #000000;">}</span>_tmp.tsv
+        sort -k 2b,2 &gt; $<span style="color: #37474F; font-weight: bold;">cache_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">node</span><span style="color: #000000;">}</span>_tmp.tsv &amp;
 <span style="color: #673AB7;">done</span> &lt;&lt;&lt; <span style="color: #FFAB91;">"$(components nodes)"</span>
+<span style="color: #673AB7;">wait</span>
 </pre>
 </div>
 
@@ -571,8 +579,9 @@ Then to create the edge files, join the publication node file with the cached fi
     <span style="color: #000000;">[</span><span style="color: #a8007f;">[</span> $<span style="color: #37474F; font-weight: bold;">node</span> == <span style="color: #FFAB91;">"Reference"</span> <span style="color: #a8007f;">]</span><span style="color: #000000;">]</span> &amp;&amp; <span style="color: #673AB7;">continue</span>
     join -j 2 $<span style="color: #37474F; font-weight: bold;">cache_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">node</span><span style="color: #000000;">}</span>_tmp.tsv $<span style="color: #37474F; font-weight: bold;">import_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">key</span><span style="color: #000000;">}</span>_nodes.tsv | <span style="color: #FFAB91;">\</span>
         awk <span style="color: #FFAB91;">'{ print $4,"\t",$3 }'</span>&gt; <span style="color: #FFAB91;">\</span>
-        $<span style="color: #37474F; font-weight: bold;">import_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">key</span><span style="color: #000000;">}</span>_$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">node</span><span style="color: #000000;">}</span>_edges.tsv
+        $<span style="color: #37474F; font-weight: bold;">import_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">key</span><span style="color: #000000;">}</span>_$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">node</span><span style="color: #000000;">}</span>_edges.tsv &amp;
 <span style="color: #673AB7;">done</span> &lt;&lt;&lt; <span style="color: #FFAB91;">"$(components nodes)"</span>
+<span style="color: #673AB7;">wait</span>
 </pre>
 </div>
 
@@ -589,8 +598,8 @@ Now replace the PMIDs in the reference file to the new publication IDs by both c
 </div>
 </div>
 
-<div id="outline-container-org4870753" class="outline-3">
-<h3 id="org4870753"><span class="section-number-3">2.3.</span> Joining key's features to key</h3>
+<div id="outline-container-orgdd78b6b" class="outline-3">
+<h3 id="orgdd78b6b"><span class="section-number-3">2.3.</span> Joining key's features to key</h3>
 <div class="outline-text-3" id="text-2-3">
 <div class="org-src-container">
 <pre class="src src-bash">awk <span style="color: #FFAB91;">'{ print $2,$1 }'</span> &lt; $<span style="color: #37474F; font-weight: bold;">import_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">key</span><span style="color: #000000;">}</span>_nodes.tsv &gt; tmp &amp;&amp; <span style="color: #FFAB91;">\</span>
@@ -607,21 +616,22 @@ sed <span style="color: #FFAB91;">'s/\s/\t/g'</span> &lt; $<span style="color: #
 </div>
 </div>
 
-<div id="outline-container-org2e6ff56" class="outline-3">
-<h3 id="org2e6ff56"><span class="section-number-3">2.4.</span> Cleaning up (replacing temporary separators)</h3>
+<div id="outline-container-orga19c765" class="outline-3">
+<h3 id="orga19c765"><span class="section-number-3">2.4.</span> Cleaning up (replacing temporary separators)</h3>
 <div class="outline-text-3" id="text-2-4">
 <div class="org-src-container">
 <pre class="src src-bash"><span style="color: #673AB7;">while</span> <span style="color: #37474F; font-weight: bold;">IFS</span>=<span style="color: #FFAB91;">': '</span> read node value; <span style="color: #673AB7;">do</span>
-    sed -e <span style="color: #FFAB91;">'s/ /\t/g'</span> -e <span style="color: #FFAB91;">"s/$tabsep/\t/g"</span> -e <span style="color: #FFAB91;">"s/$spcsep/ /g"</span> &lt; $<span style="color: #37474F; font-weight: bold;">import_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">node</span><span style="color: #000000;">}</span>_nodes.tsv &gt; tmp &amp;&amp; <span style="color: #FFAB91;">\</span>
-        mv tmp $<span style="color: #37474F; font-weight: bold;">import_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">node</span><span style="color: #000000;">}</span>_nodes.tsv
+    sed -e <span style="color: #FFAB91;">'s/ /\t/g'</span> -e <span style="color: #FFAB91;">"s/$tabsep/\t/g"</span> -e <span style="color: #FFAB91;">"s/$spcsep/ /g"</span> &lt; $<span style="color: #37474F; font-weight: bold;">import_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">node</span><span style="color: #000000;">}</span>_nodes.tsv &gt; tmp_$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">node</span><span style="color: #000000;">}</span> &amp;&amp; <span style="color: #FFAB91;">\</span>
+        mv tmp_$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">node</span><span style="color: #000000;">}</span> $<span style="color: #37474F; font-weight: bold;">import_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">node</span><span style="color: #000000;">}</span>_nodes.tsv &amp;
 <span style="color: #673AB7;">done</span> &lt;&lt;&lt; <span style="color: #FFAB91;">"$(components nodes)"</span>
+<span style="color: #673AB7;">wait</span>
 </pre>
 </div>
 </div>
 </div>
 
-<div id="outline-container-orgef3a9be" class="outline-3">
-<h3 id="orgef3a9be"><span class="section-number-3">2.5.</span> Adding headers</h3>
+<div id="outline-container-orgac9c7f8" class="outline-3">
+<h3 id="orgac9c7f8"><span class="section-number-3">2.5.</span> Adding headers</h3>
 <div class="outline-text-3" id="text-2-5">
 <p>
 For the key nodes:
@@ -690,8 +700,8 @@ cat &lt;<span style="color: #000000;">(</span><span style="color: #673AB7;">echo
 </div>
 </div>
 
-<div id="outline-container-org55aceff" class="outline-2">
-<h2 id="org55aceff"><span class="section-number-2">4.</span> Example: importing with neo4j</h2>
+<div id="outline-container-orgfcedd02" class="outline-2">
+<h2 id="orgfcedd02"><span class="section-number-2">4.</span> Example: importing with neo4j</h2>
 <div class="outline-text-2" id="text-4">
 <div class="org-src-container">
 <pre class="src src-bash"><span style="color: #37474F; font-weight: bold;">import_file</span>=example/importpubmed.sh
@@ -730,7 +740,7 @@ chmod +x $<span style="color: #37474F; font-weight: bold;">import_file</span>
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: David R. Connell</p>
-<p class="date">Created: 2022-04-20 Wed 20:08</p>
+<p class="date">Created: 2022-04-21 Thu 23:08</p>
 </div>
 </body>
 </html>
