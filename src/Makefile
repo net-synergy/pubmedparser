@@ -7,6 +7,7 @@ CACHE_DIR = ../cache
 LIBS = z
 READXML := $(OUT_DIR)/read_xml
 YAMLCONTENTS := $(OUT_DIR)/yaml_get_key_component
+OVERLAP := $(OUT_DIR)/overlap
 
 debug: CFLAGS += -g
 profile: CFLAGS += -pg
@@ -29,6 +30,9 @@ yaml_get_key_component.o: yaml_get_key_component.c yaml_reader.h
 $(YAMLCONTENTS): yaml_get_key_component.o yaml_reader.o
 	$(CC) $(CFLAGS) $^ -o $@
 
+$(OVERLAP): overlap.o
+	$(CC) $(CFLAGS) -O3 $^ -o $@
+
 debug: $(READXML)
 
 profile: $(READXML)
@@ -41,7 +45,7 @@ run: $(READXML)
 run-get-content: $(YAMLCONTENTS)
 	$^ --structure-file=../example/structure.yml nodes
 
-all: $(READXML) $(YAMLCONTENTS)
+all: $(READXML) $(YAMLCONTENTS) $(OVERLAP)
 
 clean:
 	-rm *.o
