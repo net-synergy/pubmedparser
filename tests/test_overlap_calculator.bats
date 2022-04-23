@@ -42,7 +42,6 @@ teardown_file() {
 @test "Test overlap calculator" {
     overlap $cache_dir/normal_edges.tsv > $cache_dir/overlap.tsv
     diff $cache_dir/overlap.tsv <(cat<<EOF
-NODE1	NODE1	weight
 1	2	2
 1	3	2
 1	4	1
@@ -66,7 +65,6 @@ EOF
     overlap -k2 $cache_dir/overlap_resorted.tsv > $cache_dir/overlap.tsv
 
     diff $cache_dir/overlap.tsv <(cat<<EOF
-NODE2	NODE2	weight
 1	2	2
 1	3	2
 2	3	1

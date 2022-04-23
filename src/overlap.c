@@ -92,11 +92,9 @@ int main(int argc, char **argv)
     }
   }
 
-  char header[2][100];
-  if (fscanf(fptr, "%s\t%s", header[0], header[1]) != 2) {
-    fprintf(stderr, "Error: could not read header\n");
-    return EXIT_FAILURE;
-  }
+  // Skip header
+  char c;
+  while ((c = getc(fptr)) != '\n');
 
   int current_line = 0;
   int outer[] = { 0, 0 };
@@ -115,7 +113,6 @@ int main(int argc, char **argv)
     fseek(fptr, current_line, SEEK_SET);
   }
 
-  printf("%s\t%s\tweight\n", header[primary_column], header[primary_column]);
   for (int i = 0; i < n_nodes; i++) {
     for (int j = i + 1; j < n_nodes; j++) {
       if (overlap[i][j] > 0) {
