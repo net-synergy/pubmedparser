@@ -58,3 +58,18 @@ EOF
     [ "$status" -eq 1 ]
     [ "$output" = "Error: primary column is not sorted." ]
 }
+
+@test "Test setting primary column" {
+    head -n1 $cache_dir/normal_edges.tsv > $cache_dir/overlap_resorted.tsv
+    tail -n+2 $cache_dir/normal_edges.tsv | sort -k2 >> $cache_dir/overlap_resorted.tsv
+
+    overlap -k2 $cache_dir/overlap_resorted.tsv > $cache_dir/overlap.tsv
+
+    diff $cache_dir/overlap.tsv <(cat<<EOF
+NODE2	NODE2	weight
+1	2	2
+1	3	2
+2	3	1
+EOF
+				 )
+}
