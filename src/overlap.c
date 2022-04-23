@@ -85,11 +85,9 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
 
-  int overlap[n_nodes][n_nodes];
+  int **overlap = calloc(n_nodes, sizeof overlap);
   for (int i = 0; i < n_nodes; i++) {
-    for (int j = 0; j < n_nodes; j++) {
-      overlap[i][j] = 0;
-    }
+    overlap[i] = calloc(n_nodes, sizeof *overlap);
   }
 
   // Skip header
@@ -122,6 +120,10 @@ int main(int argc, char **argv)
   }
 
   fclose(fptr);
+  for (int i = 0; i < n_nodes; i++) {
+    free(overlap[i]);
+  }
+  free(overlap);
 
   return EXIT_SUCCESS;
 }
