@@ -135,3 +135,13 @@ done <<< "$(components nodes)"
 header=":START_ID($key)\t:END_ID($key)"
 cat <(echo -e $header) $import_dir/${key}_${key}_edges.tsv > \
     tmp && mv tmp $import_dir/${key}_${key}_edges.tsv
+
+while IFS=': ' read node value; do
+    [[ $node == "Reference" ]] && node=$key
+    echo -e ":START_ID(${key})\t:END_ID(${key})\tweight" > \
+        $import_dir/${key}_${node}_overlap.tsv
+
+    PATH="$bin_dir:$PATH" overlap $import_dir/${key}_${node}_edges.tsv >> \
+        $import_dir/${key}_${node}_overlap.tsv &
+done <<< "$(components nodes)"
+wait

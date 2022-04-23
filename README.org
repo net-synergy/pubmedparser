@@ -336,10 +336,30 @@ For the special case of references, both IDs should be publications:
       tmp && mv tmp $import_dir/${key}_${key}_edges.tsv
 #+end_src
 
-* TODO Example: calculating overlap
+* Example: calculating overlap
 :PROPERTIES:
 :CUSTOM_ID: example-overlap
 :END:
+
+Here overlap between all pairs of publications will be calculated.
+This can be done with any node type (i.e. with authors it's the number of authors two publications have in common, using the chemical nodes it's the overlap in chemical used).
+
+First add a header to the overlap files, which will always be the same when looking at overlap between two publications.
+To calculate the overlap edges, just run the ~overlap~ program on each set of publication--node edges.
+
+NOTE: The reference edges are stored in "Publication_Publication_edges.tsv" so node most be changed from ~Reference~ to ~Publication~. "Publication_Reference_overlap.tsv" would be a clearer name though so maybe "Publication_Publication_edges.tsv" should be renamed to indicate it's referencing to references.
+
+#+begin_src bash :tangle ./example/process.sh
+  while IFS=': ' read node value; do
+      [[ $node == "Reference" ]] && node=$key
+      echo -e ":START_ID(${key})\t:END_ID(${key})\tweight" > \
+          $import_dir/${key}_${node}_overlap.tsv
+
+      PATH="$bin_dir:$PATH" overlap $import_dir/${key}_${node}_edges.tsv >> \
+          $import_dir/${key}_${node}_overlap.tsv &
+  done <<< "$(components nodes)"
+  wait
+#+end_src
 
 * Example: importing with neo4j
 #+begin_src bash
@@ -366,10 +386,12 @@ For the special case of references, both IDs should be publications:
       [[ $node == "Reference" ]] && continue
       echo "    --nodes=${node}=\$import_dir/${node}_nodes.tsv \\" >> $import_file
       echo "    --relationships=${key}-${node}=\$import_dir/${key}_${node}_edges.tsv \\" >> $import_file
+      echo "    --relationships=${node}-overlap=\$import_dir/${key}_${node}_overlap.tsv \\" >> $import_file
   done <<< "$(components nodes)"
 
   echo "    --nodes=${key}=\$import_dir/${key}_nodes.tsv \\" >> $import_file
-  echo "    --relationships=${key}-${key}=\$import_dir/${key}_${key}_edges.tsv" >> $import_file
+  echo "    --relationships=${key}-${key}=\$import_dir/${key}_${key}_edges.tsv \\" >> $import_file
+  echo "    --relationships=${key}-overlap=\$import_dir/${key}_${key}_overlap.tsv" >> $import_file
 
   chmod +x $import_file
 #+end_src
