@@ -26,10 +26,14 @@ else
 fi
 
 # Assuming the executables are in this directory and not installed globally.
+echo "Reading XML files..."
+
 PATH="$bin_dir:$PATH" OMP_NUM_THREADS="$nthreads" read_xml \
     --structure-file=$structure_file \
     --cache-dir=$cache_dir \
     $files
+
+echo "Finished reading XML files."
 
 $top_dir/cat_results.sh $cache_dir
 
@@ -56,6 +60,8 @@ gen_node() {
         cat -n | sed 's/^\s*//' > $import_dir/${key}_nodes.tsv
 }
 
+echo "Generating node files..."
+
 while IFS=': ' read key value; do
     [[ $key == "Reference" ]] && continue
     gen_node $key &
@@ -66,6 +72,10 @@ key_value=$(components key)
 key=${key_value%%:*}
 cat <(cut -f1 $cache_dir/$key.tsv) <(cut -f2 $cache_dir/Reference.tsv) \
     | sort -u | cat -n | sed 's/^\s*//' > $import_dir/${key}_nodes.tsv
+
+echo "Finished generating node files."
+
+echo "Generating edge files..."
 
 while IFS=': ' read node value; do
     [[ $node == "Reference" ]] && continue
@@ -95,6 +105,8 @@ while IFS=': ' read key_feature value; do
 done <<< "$(components key_features)"
 sed 's/\s/\t/g' < $import_dir/${key}_nodes.tsv | cut -f 2- > tmp && \
     mv tmp $import_dir/${key}_nodes.tsv
+
+echo "Finished generating edge files."
 
 while IFS=': ' read node value; do
     sed -e 's/ /\t/g' -e "s/$tabsep/\t/g" -e "s/$spcsep/ /g" < $import_dir/${node}_nodes.tsv > tmp_${node} && \
@@ -136,6 +148,8 @@ header=":START_ID($key)\t:END_ID($key)"
 cat <(echo -e $header) $import_dir/${key}_${key}_edges.tsv > \
     tmp && mv tmp $import_dir/${key}_${key}_edges.tsv
 
+echo "Calculating overlap between publications..."
+
 while IFS=': ' read node value; do
     [[ $node == "Reference" ]] && node=$key
     echo -e ":START_ID(${key})\t:END_ID(${key})\tweight" > \
@@ -145,3 +159,5 @@ while IFS=': ' read node value; do
         $import_dir/${key}_${node}_overlap.tsv &
 done <<< "$(components nodes)"
 wait
+
+echo "Finished calculating overlap."

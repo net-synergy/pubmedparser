@@ -165,10 +165,14 @@ Then read the files.
 
 #+begin_src bash :tangle ./example/process.sh
   # Assuming the executables are in this directory and not installed globally.
+  echo "Reading XML files..."
+
   PATH="$bin_dir:$PATH" OMP_NUM_THREADS="$nthreads" read_xml \
       --structure-file=$structure_file \
       --cache-dir=$cache_dir \
       $files
+
+  echo "Finished reading XML files."
 #+end_src
 
 If ~read_xml~ was run across multiple files, the files are read in parallel and each thread will print to it's own set of files, distinguished by their thread number.
@@ -211,6 +215,8 @@ To generate nodes we will remove remove the ~PMID~ column, sort, keep the unique
           cat -n | sed 's/^\s*//' > $import_dir/${key}_nodes.tsv
   }
 
+  echo "Generating node files..."
+
   while IFS=': ' read key value; do
       [[ $key == "Reference" ]] && continue
       gen_node $key &
@@ -232,6 +238,8 @@ But before making the edge files, we'll generate IDs for the key file too.
   key=${key_value%%:*}
   cat <(cut -f1 $cache_dir/$key.tsv) <(cut -f2 $cache_dir/Reference.tsv) \
       | sort -u | cat -n | sed 's/^\s*//' > $import_dir/${key}_nodes.tsv
+
+  echo "Finished generating node files."
 #+end_src
 
 The resulting file has the new IDs in column one and the PMIDs in column two.
@@ -239,6 +247,8 @@ The resulting file has the new IDs in column one and the PMIDs in column two.
 Now we need to join the cache files with their node files to add the node ID columns to the cache files.
 
 #+begin_src bash :tangle ./example/process.sh
+  echo "Generating edge files..."
+
   while IFS=': ' read node value; do
       [[ $node == "Reference" ]] && continue
       join -j 2 $cache_dir/${node}.tsv $import_dir/${node}_nodes.tsv | \
@@ -278,6 +288,8 @@ Now replace the PMIDs in the reference file to the new publication IDs by both c
   done <<< "$(components key_features)"
   sed 's/\s/\t/g' < $import_dir/${key}_nodes.tsv | cut -f 2- > tmp && \
       mv tmp $import_dir/${key}_nodes.tsv
+
+  echo "Finished generating edge files."
 #+end_src
 
 ** Cleaning up (replacing temporary separators)
@@ -350,6 +362,8 @@ To calculate the overlap edges, just run the ~overlap~ program on each set of pu
 NOTE: The reference edges are stored in "Publication_Publication_edges.tsv" so node most be changed from ~Reference~ to ~Publication~. "Publication_Reference_overlap.tsv" would be a clearer name though so maybe "Publication_Publication_edges.tsv" should be renamed to indicate it's referencing to references.
 
 #+begin_src bash :tangle ./example/process.sh
+  echo "Calculating overlap between publications..."
+
   while IFS=': ' read node value; do
       [[ $node == "Reference" ]] && node=$key
       echo -e ":START_ID(${key})\t:END_ID(${key})\tweight" > \
@@ -359,6 +373,8 @@ NOTE: The reference edges are stored in "Publication_Publication_edges.tsv" so n
           $import_dir/${key}_${node}_overlap.tsv &
   done <<< "$(components nodes)"
   wait
+
+  echo "Finished calculating overlap."
 #+end_src
 
 * Example: importing with neo4j
