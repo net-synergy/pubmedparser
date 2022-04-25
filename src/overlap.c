@@ -96,17 +96,27 @@ int read_edge_file(char *f, char delim, int *edges[2])
   return n_edges;
 }
 
-void flush_cache(int **cache, int n_rows, int node_offset)
+int is_sorted(int *primary_nodes, int n_nodes)
 {
-  for (int i = 0; i < (n_rows - 1); i++) {
-    for (int j = (i + 1); j < n_rows; j++) {
-      if (cache[i][j] > 0) {
-        printf("%d\t%d\t%d\n",
-               i + node_offset,
-               j + node_offset,
-               cache[i][j]);
-        cache[i][j] = 0;
-      }
+  for (int i = 0; i < (n_nodes - 1); i++) {
+    if (primary_nodes[i + 1] < primary_nodes[i]) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+
+void flush_overlap(int *overlap, int node_number, int n_nodes,
+                   int node_offset)
+{
+  for (int i = (node_number + 1); i < n_nodes; i++) {
+    if (overlap[i] > 0) {
+      printf("%d\t%d\t%d\n",
+             node_number + node_offset,
+             i + node_offset,
+             overlap[i]);
+      overlap[i] = 0;
     }
   }
 }
@@ -155,37 +165,39 @@ int main(int argc, char **argv)
   int min_node = 0;
   int n_edges = 0;
   int *edges[] = { NULL, NULL };
-  n_edges = read_edge_file(f, delim, edges);
+  if ((n_edges = read_edge_file(f, delim, edges)) == EXIT_FAILURE) {
+    return EXIT_FAILURE;
+  }
+
   min_node = edges[primary_column][0];
   for (int i = 0; i < n_edges; i++) {
     edges[primary_column][i] -= min_node;
   }
-  n_nodes = edges[primary_column][n_edges - 1] + 1;
 
-  int **overlap = malloc(n_nodes * sizeof * overlap);
-  for (int i = 0; i < n_nodes; i++) {
-    overlap[i] = calloc(n_nodes, sizeof * overlap[i]);
+  n_nodes = edges[primary_column][n_edges - 1] + 1;
+  if (!is_sorted(edges[primary_column], n_nodes)) {
+    fprintf(stderr, "Error: primary column is not sorted.\n");
+    return EXIT_FAILURE;
   }
 
+  int *overlap = calloc(n_nodes, sizeof * overlap);
+  int node = edges[primary_column][0];
   for (int i = 0; i < (n_edges - 1); i++) {
+    if (edges[primary_column][i] > node) {
+      flush_overlap(overlap, node, n_nodes, min_node);
+      node = edges[primary_column][i];
+    }
     for (int j = (i + 1); j < n_edges; j++) {
       if (edges[secondary_column][i] == edges[secondary_column][j]) {
-        if (edges[primary_column][i] > edges[primary_column][j]) {
-          fprintf(stderr, "Error: primary column is not sorted.\n");
-          return EXIT_FAILURE;
-        }
-        overlap[edges[primary_column][i]][edges[primary_column][j]]++;
+        overlap[edges[primary_column][j]]++;
       }
     }
   }
-  flush_cache(overlap, n_nodes, min_node);
+  flush_overlap(overlap, node, n_nodes, min_node);
 
   free(edges[0]);
   free(edges[1]);
 
-  for (int i = 0; i < n_nodes; i++) {
-    free(overlap[i]);
-  }
   free(overlap);
 
   return EXIT_SUCCESS;
