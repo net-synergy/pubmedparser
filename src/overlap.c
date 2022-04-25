@@ -15,29 +15,75 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/sysinfo.h>
 
-int get_n_nodes(FILE *fptr, int col)
+#define total_ram sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE)
+#define available_ram sysconf(_SC_AVPHYS_PAGES) * sysconf(_SC_PAGESIZE)
+#define used_ram total_ram - available_ram
+
+/* Move forward in file one line. */
+char fskipl(FILE *fptr)
 {
-  int vals[] = { 0, 0 };
-  char c = EOF;
+  char c = '\0';
+  while (((c = getc(fptr)) != '\n') && (c != EOF));
 
-  fseek(fptr, 0, SEEK_END);
-  while (c != '\n') {
-    fseek(fptr, -2, SEEK_CUR);
-    c = getc(fptr);
+  return c;
+}
+
+int read_edge_file(char *f, int *edges[2])
+{
+  FILE *fptr;
+  if (!(fptr = fopen(f, "r"))) {
+    fprintf(stderr, "Error: could not open file %s\n", f);
+    return EXIT_FAILURE;
   }
 
-  if (fscanf(fptr, "%d\t%d", &vals[0], &vals[1])) {
-    rewind(fptr);
-    return vals[col];
-  } else {
-    return -1;
+  char c = '\0';
+  int n_edges = 0;
+  fskipl(fptr); // Skip header
+  while ((c = fskipl(fptr)) != EOF) n_edges++;
+
+  edges[0] = malloc(n_edges * sizeof * edges[0]);
+  edges[1] = malloc(n_edges * sizeof * edges[1]);
+  rewind(fptr);
+  fskipl(fptr); // Skip header
+  int i = 0;
+  while ((fscanf(fptr, "%d\t%d", &edges[0][i], &edges[1][i])) == 2) i++;
+  fclose(fptr);
+
+  if (i != n_edges) {
+    fprintf(stderr, "Error: %s.%s\n.",
+            "could not read all edges in edge file.",
+            "Ensure all lines after the header are of the form \%d\t\%d.");
+    return EXIT_FAILURE;
   }
 
+  return n_edges;
+}
+
+void flush_cache(int **cache, int *offset, int n_cache_rows, int node_offset)
+{
+  for (int i = 0; i < (n_cache_rows - 1); i++) {
+    for (int j = (i + 1); j < n_cache_rows; j++) {
+      if (cache[i][j] > 0) {
+        printf("%d\t%d\t%d\n",
+               i + *offset + node_offset,
+               j + node_offset,
+               cache[i][j]);
+        cache[i][j] = 0;
+      }
+    }
+  }
+  *offset += n_cache_rows;
 }
 
 int main(int argc, char **argv)
 {
+  double max_ram = 0.5;
+  if (max_ram < 1.0) {
+    max_ram *= total_ram;
+  }
+
   int primary_column = 0;
   int secondary_column = 1;
   int option;
@@ -71,56 +117,46 @@ int main(int argc, char **argv)
   }
 
   char *f = argv[optind];
-  FILE *fptr;
-  if (!(fptr = fopen(f, "r"))) {
-    fprintf(stderr, "Error: could not open file %s\n", f);
-    return EXIT_FAILURE;
-  }
 
   int n_nodes = 0;
-  if ((n_nodes = get_n_nodes(fptr, primary_column)) == -1) {
-    fprintf(stderr, "Error: %s.\n%s.\n",
-            "could not get number of nodes",
-            "Last line of input file should have two columns of IDs.");
-    return EXIT_FAILURE;
+  int min_node = 0;
+  int n_edges = 0;
+  int *edges[] = { NULL, NULL };
+  n_edges = read_edge_file(f, edges);
+  min_node = edges[primary_column][0];
+  for (int i = 0; i < n_edges; i++) {
+    edges[primary_column][i] -= min_node;
+  }
+  n_nodes = edges[primary_column][n_edges - 1] + 1;
+
+  int **overlap = malloc(n_nodes * sizeof * overlap);
+  int n_cache_rows = 0;
+  while ((used_ram < (long int)max_ram) && (n_cache_rows < n_nodes)) {
+    overlap[n_cache_rows] = calloc(n_nodes, sizeof * overlap[n_cache_rows]);
+    n_cache_rows++;
   }
 
-  int **overlap = calloc(n_nodes, sizeof overlap);
-  for (int i = 0; i < n_nodes; i++) {
-    overlap[i] = calloc(n_nodes, sizeof * overlap);
-  }
-
-  // Skip header
-  char c;
-  while ((c = getc(fptr)) != '\n');
-
-  int current_line = 0;
-  int outer[] = { 0, 0 };
-  int inner[] = { 0, 0 };
-  while (fscanf(fptr, "%d\t%d", &outer[0], &outer[1]) == 2) {
-    current_line = ftell(fptr);
-    while (fscanf(fptr, "%d\t%d", &inner[0], &inner[1]) == 2) {
-      if (outer[secondary_column] == inner[secondary_column]) {
-        if (outer[primary_column] > inner[primary_column]) {
+  int offset = 0;
+  for (int i = 0; i < (n_edges - 1); i++) {
+    if (edges[primary_column][i] > (n_cache_rows - 1 + offset)) {
+      flush_cache(overlap, &offset, n_cache_rows, min_node);
+    }
+    for (int j = (i + 1); j < n_edges; j++) {
+      if (edges[secondary_column][i] == edges[secondary_column][j]) {
+        if (edges[primary_column][i] > edges[primary_column][j]) {
           fprintf(stderr, "Error: primary column is not sorted.\n");
           return EXIT_FAILURE;
         }
-        overlap[outer[primary_column] - 1][inner[primary_column] - 1]++;
-      }
-    }
-    fseek(fptr, current_line, SEEK_SET);
-  }
-
-  for (int i = 0; i < n_nodes; i++) {
-    for (int j = i + 1; j < n_nodes; j++) {
-      if (overlap[i][j] > 0) {
-        printf("%d\t%d\t%d\n", i + 1, j + 1, overlap[i][j]);
+        overlap[edges[primary_column][i] - offset][edges[primary_column][j]]++;
       }
     }
   }
+  flush_cache(overlap, &offset, n_cache_rows, min_node);
 
-  fclose(fptr);
-  for (int i = 0; i < n_nodes; i++) {
+  free(edges[0]);
+  free(edges[1]);
+
+  for (int i = 0; i < n_cache_rows; i++) {
     free(overlap[i]);
   }
   free(overlap);
