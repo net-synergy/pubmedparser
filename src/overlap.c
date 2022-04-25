@@ -46,18 +46,18 @@ int main(int argc, char **argv)
     case 'k':
       primary_column = atoi(optarg) - 1;
       if ((primary_column != 0) && (primary_column != 1)) {
-	fprintf(stderr, "Error: %s.\n\n%s%d.\n",
-		"primary column must be 1 or 2",
-		"Recieved \"-k \".", primary_column + 1);
-	return EXIT_FAILURE;
+        fprintf(stderr, "Error: %s.\n\n%s%d.\n",
+                "primary column must be 1 or 2",
+                "Recieved \"-k \".", primary_column + 1);
+        return EXIT_FAILURE;
       }
       secondary_column = !primary_column;
       break;
     case '?':
       if (optopt == 'k') {
-	fprintf(stderr, "Option -k requires an argument.\n");
+        fprintf(stderr, "Option -k requires an argument.\n");
       } else {
-	fprintf(stderr, "Option -%c unknown.\n", optopt);
+        fprintf(stderr, "Option -%c unknown.\n", optopt);
       }
       return EXIT_FAILURE;
     default:
@@ -80,14 +80,14 @@ int main(int argc, char **argv)
   int n_nodes = 0;
   if ((n_nodes = get_n_nodes(fptr, primary_column)) == -1) {
     fprintf(stderr, "Error: %s.\n%s.\n",
-	    "could not get number of nodes",
-	    "Last line of input file should have two columns of IDs.");
+            "could not get number of nodes",
+            "Last line of input file should have two columns of IDs.");
     return EXIT_FAILURE;
   }
 
   int **overlap = calloc(n_nodes, sizeof overlap);
   for (int i = 0; i < n_nodes; i++) {
-    overlap[i] = calloc(n_nodes, sizeof *overlap);
+    overlap[i] = calloc(n_nodes, sizeof * overlap);
   }
 
   // Skip header
@@ -101,10 +101,10 @@ int main(int argc, char **argv)
     current_line = ftell(fptr);
     while (fscanf(fptr, "%d\t%d", &inner[0], &inner[1]) == 2) {
       if (outer[secondary_column] == inner[secondary_column]) {
-	if (outer[primary_column] > inner[primary_column]) {
-	  fprintf(stderr, "Error: primary column is not sorted.\n");
-	  return EXIT_FAILURE;
-	}
+        if (outer[primary_column] > inner[primary_column]) {
+          fprintf(stderr, "Error: primary column is not sorted.\n");
+          return EXIT_FAILURE;
+        }
         overlap[outer[primary_column] - 1][inner[primary_column] - 1]++;
       }
     }
