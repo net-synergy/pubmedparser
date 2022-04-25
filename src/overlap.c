@@ -56,6 +56,19 @@ int fget_cols(FILE *fptr, char delim, int *col1, int *col2)
   return coli;
 }
 
+void skip_header(FILE *fptr, char delim)
+{
+  int buff[2];
+  int pos = ftell(fptr);
+  while (fget_cols(fptr, delim, &buff[0], &buff[1]) == 2) {
+    if ((buff[0] > 0) && (buff[1] > 0)) {
+      break;
+    }
+    pos = ftell(fptr);
+  }
+  fseek(fptr, pos, SEEK_SET);
+}
+
 int read_edge_file(char *f, char delim, int *edges[2])
 {
   FILE *fptr;
@@ -66,13 +79,13 @@ int read_edge_file(char *f, char delim, int *edges[2])
 
   char c = '\0';
   int n_edges = 0;
-  fskipl(fptr); // Skip header
+  skip_header(fptr, delim);
   while ((c = fskipl(fptr)) != EOF) n_edges++;
 
   edges[0] = malloc(n_edges * sizeof * edges[0]);
   edges[1] = malloc(n_edges * sizeof * edges[1]);
   rewind(fptr);
-  fskipl(fptr); // Skip header
+  skip_header(fptr, delim);
   int i = 0;
   while ((fget_cols(fptr, delim, &edges[0][i], &edges[1][i])) == 2) i++;
 
