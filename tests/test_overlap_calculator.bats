@@ -10,27 +10,27 @@ setup_file() {
     _common_file_setup
 
     cat <<-EOF > $cache_dir/normal_edges.tsv
-NODE1 NODE2
-1     1
-1     2
-1     3
-2     1
-2     2
-3     1
-3     3
-4     3
+NODE1	NODE2
+1	1
+1	2
+1	3
+2	1
+2	2
+3	1
+3	3
+4	3
 EOF
 
     cat <<-EOF > $cache_dir/disordered_edges.tsv
-NODE1 NODE2
-2     1
-2     2
-1     1
-1     2
-1     3
-3     1
-3     3
-4     3
+NODE1	NODE2
+2	1
+2	2
+1	1
+1	2
+1	3
+3	1
+3	3
+4	3
 EOF
 }
 
@@ -70,4 +70,12 @@ EOF
 2	3	1
 EOF
 				 )
+}
+
+@test "Test setting delimiter" {
+    tr '\t' ',' < $cache_dir/normal_edges.tsv > $cache_dir/normal_edges.csv
+    overlap $cache_dir/normal_edges.tsv > $cache_dir/overlap.tsv
+    overlap -d, $cache_dir/normal_edges.csv > $cache_dir/overlap_comma.tsv
+
+    diff $cache_dir/overlap.tsv $cache_dir/overlap_comma.tsv
 }

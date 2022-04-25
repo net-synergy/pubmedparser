@@ -30,7 +30,33 @@ char fskipl(FILE *fptr)
   return c;
 }
 
-int read_edge_file(char *f, int *edges[2])
+int fget_cols(FILE *fptr, char delim, int *col1, int *col2)
+{
+  char c = '\0';
+  char buff[20];
+  int i = 0;
+  int coli = 0;
+
+  while ((c = getc(fptr)) != '\n' && c != EOF) {
+    if (c == delim) {
+      buff[i] = '\0';
+      *col1 = atoi(buff);
+      coli++;
+      i = 0;
+    } else {
+      buff[i] = c;
+      i++;
+    }
+  }
+
+  buff[i] = '\0';
+  *col2 = atoi(buff);
+  coli++;
+
+  return coli;
+}
+
+int read_edge_file(char *f, char delim, int *edges[2])
 {
   FILE *fptr;
   if (!(fptr = fopen(f, "r"))) {
@@ -48,7 +74,8 @@ int read_edge_file(char *f, int *edges[2])
   rewind(fptr);
   fskipl(fptr); // Skip header
   int i = 0;
-  while ((fscanf(fptr, "%d\t%d", &edges[0][i], &edges[1][i])) == 2) i++;
+  while ((fget_cols(fptr, delim, &edges[0][i], &edges[1][i])) == 2) i++;
+
   fclose(fptr);
 
   if (i != n_edges) {
@@ -79,15 +106,16 @@ void flush_cache(int **cache, int *offset, int n_cache_rows, int node_offset)
 
 int main(int argc, char **argv)
 {
-  double max_ram = 0.5;
+  double max_ram = 0.8;
   if (max_ram < 1.0) {
     max_ram *= total_ram;
   }
 
   int primary_column = 0;
   int secondary_column = 1;
+  char delim = '\t';
   int option;
-  while ((option = getopt(argc, argv, "k:")) != -1) {
+  while ((option = getopt(argc, argv, "k:d:")) != -1) {
     switch (option) {
     case 'k':
       primary_column = atoi(optarg) - 1;
@@ -98,6 +126,9 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
       }
       secondary_column = !primary_column;
+      break;
+    case 'd':
+      delim = optarg[0];
       break;
     case '?':
       if (optopt == 'k') {
@@ -122,7 +153,7 @@ int main(int argc, char **argv)
   int min_node = 0;
   int n_edges = 0;
   int *edges[] = { NULL, NULL };
-  n_edges = read_edge_file(f, edges);
+  n_edges = read_edge_file(f, delim, edges);
   min_node = edges[primary_column][0];
   for (int i = 0; i < n_edges; i++) {
     edges[primary_column][i] -= min_node;
@@ -131,7 +162,7 @@ int main(int argc, char **argv)
 
   int **overlap = malloc(n_nodes * sizeof * overlap);
   int n_cache_rows = 0;
-  while ((used_ram < (long int)max_ram) && (n_cache_rows < n_nodes)) {
+  while ((n_cache_rows < n_nodes)) {
     overlap[n_cache_rows] = calloc(n_nodes, sizeof * overlap[n_cache_rows]);
     n_cache_rows++;
   }
