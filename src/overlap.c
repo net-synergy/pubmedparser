@@ -15,11 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/sysinfo.h>
-
-#define total_ram sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE)
-#define available_ram sysconf(_SC_AVPHYS_PAGES) * sysconf(_SC_PAGESIZE)
-#define used_ram total_ram - available_ram
 
 /* Move forward in file one line. */
 char fskipl(FILE *fptr)
@@ -101,29 +96,23 @@ int read_edge_file(char *f, char delim, int *edges[2])
   return n_edges;
 }
 
-void flush_cache(int **cache, int *offset, int n_cache_rows, int node_offset)
+void flush_cache(int **cache, int n_rows, int node_offset)
 {
-  for (int i = 0; i < (n_cache_rows - 1); i++) {
-    for (int j = (i + 1); j < n_cache_rows; j++) {
+  for (int i = 0; i < (n_rows - 1); i++) {
+    for (int j = (i + 1); j < n_rows; j++) {
       if (cache[i][j] > 0) {
         printf("%d\t%d\t%d\n",
-               i + *offset + node_offset,
+               i + node_offset,
                j + node_offset,
                cache[i][j]);
         cache[i][j] = 0;
       }
     }
   }
-  *offset += n_cache_rows;
 }
 
 int main(int argc, char **argv)
 {
-  double max_ram = 0.8;
-  if (max_ram < 1.0) {
-    max_ram *= total_ram;
-  }
-
   int primary_column = 0;
   int secondary_column = 1;
   char delim = '\t';
@@ -174,33 +163,27 @@ int main(int argc, char **argv)
   n_nodes = edges[primary_column][n_edges - 1] + 1;
 
   int **overlap = malloc(n_nodes * sizeof * overlap);
-  int n_cache_rows = 0;
-  while ((n_cache_rows < n_nodes)) {
-    overlap[n_cache_rows] = calloc(n_nodes, sizeof * overlap[n_cache_rows]);
-    n_cache_rows++;
+  for (int i = 0; i < n_nodes; i++) {
+    overlap[i] = calloc(n_nodes, sizeof * overlap[i]);
   }
 
-  int offset = 0;
   for (int i = 0; i < (n_edges - 1); i++) {
-    if (edges[primary_column][i] > (n_cache_rows - 1 + offset)) {
-      flush_cache(overlap, &offset, n_cache_rows, min_node);
-    }
     for (int j = (i + 1); j < n_edges; j++) {
       if (edges[secondary_column][i] == edges[secondary_column][j]) {
         if (edges[primary_column][i] > edges[primary_column][j]) {
           fprintf(stderr, "Error: primary column is not sorted.\n");
           return EXIT_FAILURE;
         }
-        overlap[edges[primary_column][i] - offset][edges[primary_column][j]]++;
+        overlap[edges[primary_column][i]][edges[primary_column][j]]++;
       }
     }
   }
-  flush_cache(overlap, &offset, n_cache_rows, min_node);
+  flush_cache(overlap, n_nodes, min_node);
 
   free(edges[0]);
   free(edges[1]);
 
-  for (int i = 0; i < n_cache_rows; i++) {
+  for (int i = 0; i < n_nodes; i++) {
     free(overlap[i]);
   }
   free(overlap);
