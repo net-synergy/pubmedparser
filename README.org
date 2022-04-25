@@ -295,6 +295,7 @@ Now replace the PMIDs in the reference file to the new publication IDs by both c
 ** Cleaning up (replacing temporary separators)
 #+begin_src bash :tangle ./example/process.sh
   while IFS=': ' read node value; do
+      [[ $node == "Reference" ]] && continue
       sed -e 's/ /\t/g' -e "s/$tabsep/\t/g" -e "s/$spcsep/ /g" < $import_dir/${node}_nodes.tsv > tmp_${node} && \
           mv tmp_${node} $import_dir/${node}_nodes.tsv &
   done <<< "$(components nodes)"
