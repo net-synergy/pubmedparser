@@ -56,7 +56,7 @@ void skip_header(FILE *fptr, char delim)
   int buff[2];
   int pos = ftell(fptr);
   while (fget_cols(fptr, delim, &buff[0], &buff[1]) == 2) {
-    if ((buff[0] > 0) && (buff[1] > 0)) {
+    if ((buff[0] > 0) || (buff[1] > 0)) {
       break;
     }
     pos = ftell(fptr);
