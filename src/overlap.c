@@ -79,6 +79,7 @@ int read_edge_file(char *f, char delim, int *edges[2])
 
   edges[0] = malloc(n_edges * sizeof * edges[0]);
   edges[1] = malloc(n_edges * sizeof * edges[1]);
+
   rewind(fptr);
   skip_header(fptr, delim);
   int i = 0;
@@ -87,23 +88,25 @@ int read_edge_file(char *f, char delim, int *edges[2])
   fclose(fptr);
 
   if (i != n_edges) {
-    fprintf(stderr, "Error: %s.%s\n.",
-            "could not read all edges in edge file.",
-            "Ensure all lines after the header are of the form \%d\t\%d.");
+    fprintf(stderr,
+            ("Error: could not read all edges in edge file."
+             "Ensure all lines after the header are of the form %%d%c%%d."),
+            delim);
     return EXIT_FAILURE;
   }
 
   return n_edges;
 }
 
-int is_sorted(int *primary_nodes, int n_nodes)
+/* Return first unsorted edge, or n_edges if fully sorted*/
+int is_sorted(int *primary_nodes, int n_edges)
 {
-  for (int i = 0; i < (n_nodes - 1); i++) {
+  for (int i = 0; i < (n_edges - 1); i++) {
     if (primary_nodes[i + 1] < primary_nodes[i]) {
-      return 0;
+      return (i + 1);
     }
   }
-  return 1;
+  return n_edges;
 }
 
 
@@ -165,7 +168,13 @@ int main(int argc, char **argv)
   int min_node = 0;
   int n_edges = 0;
   int *edges[] = { NULL, NULL };
+  int rs = 0;
   if ((n_edges = read_edge_file(f, delim, edges)) == EXIT_FAILURE) {
+    return EXIT_FAILURE;
+  } else if ((rs = is_sorted(edges[primary_column], n_edges)) != n_edges) {
+    fprintf(stderr, ("Error: primary column is not sorted.\n"
+                     "\tFirst unsorted edge on line %d.\n"),
+            rs);
     return EXIT_FAILURE;
   }
 
@@ -173,12 +182,7 @@ int main(int argc, char **argv)
   for (int i = 0; i < n_edges; i++) {
     edges[primary_column][i] -= min_node;
   }
-
   n_nodes = edges[primary_column][n_edges - 1] + 1;
-  if (!is_sorted(edges[primary_column], n_nodes)) {
-    fprintf(stderr, "Error: primary column is not sorted.\n");
-    return EXIT_FAILURE;
-  }
 
   int *overlap = calloc(n_nodes, sizeof * overlap);
   int node = edges[primary_column][0];

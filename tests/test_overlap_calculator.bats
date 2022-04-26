@@ -55,7 +55,8 @@ EOF
     run overlap $cache_dir/disordered_edges.tsv
 
     [ "$status" -eq 1 ]
-    [ "$output" = "Error: primary column is not sorted." ]
+    [ "$output" = "Error: primary column is not sorted.
+	First unsorted edge on line 2." ]
 }
 
 @test "Test setting primary column" {
