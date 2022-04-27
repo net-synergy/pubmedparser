@@ -30,8 +30,11 @@ yaml_get_key_component.o: yaml_get_key_component.c yaml_reader.h
 $(YAMLCONTENTS): yaml_get_key_component.o yaml_reader.o
 	$(CC) $(CFLAGS) $^ -o $@
 
+overlap.o: overlap.c
+	$(CC) -fopenmp -c $*.c
+
 $(OVERLAP): overlap.o
-	$(CC) $(CFLAGS) -O3 $^ -o $@
+	$(CC) $(CFLAGS) -fopenmp -O3 $^ -o $@
 
 debug: $(READXML)
 

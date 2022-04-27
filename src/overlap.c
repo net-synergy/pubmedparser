@@ -16,6 +16,17 @@
 #include <string.h>
 #include <unistd.h>
 
+#define flush_overlap(overlap, node_number)			\
+  for (int fi = (node_number + 1); fi < n_nodes; fi++) {	\
+    if (overlap[fi] > 0) {					\
+      printf("%d\t%d\t%d\n",					\
+	     node_number + min_node,				\
+	     fi + min_node,					\
+	     overlap[fi]);					\
+      overlap[fi] = 0;						\
+    }								\
+  }								\
+
 /* Move forward in file one line. */
 char fskipl(FILE *fptr)
 {
@@ -109,19 +120,19 @@ int is_sorted(int *primary_nodes, int n_edges)
   return n_edges;
 }
 
-
-void flush_overlap(int *overlap, int node_number, int n_nodes,
-                   int node_offset)
+/* Find initial edge for each node. */
+void find_nodes(int *primary_nodes, int n_edges, int *indices)
 {
-  for (int i = (node_number + 1); i < n_nodes; i++) {
-    if (overlap[i] > 0) {
-      printf("%d\t%d\t%d\n",
-             node_number + node_offset,
-             i + node_offset,
-             overlap[i]);
-      overlap[i] = 0;
+  int node_idx = 0;
+  int node_val = -1;
+  for (int edge_idx = 0; edge_idx < n_edges; edge_idx++) {
+    if (primary_nodes[edge_idx] != node_val) {
+      indices[node_idx] = edge_idx;
+      node_val = primary_nodes[edge_idx];
+      node_idx++;
     }
   }
+  indices[node_idx] = n_edges;
 }
 
 int main(int argc, char **argv)
@@ -184,25 +195,33 @@ int main(int argc, char **argv)
   }
   n_nodes = edges[primary_column][n_edges - 1] + 1;
 
-  int *overlap = calloc(n_nodes, sizeof * overlap);
-  int node = edges[primary_column][0];
-  for (int i = 0; i < (n_edges - 1); i++) {
-    if (edges[primary_column][i] > node) {
-      flush_overlap(overlap, node, n_nodes, min_node);
-      node = edges[primary_column][i];
-    }
-    for (int j = (i + 1); j < n_edges; j++) {
-      if (edges[secondary_column][i] == edges[secondary_column][j]) {
-        overlap[edges[primary_column][j]]++;
+  int *node_indices = calloc(n_nodes + 1, sizeof * node_indices);
+  find_nodes(edges[primary_column], n_edges, node_indices);
+  int *overlap = NULL;
+
+  #pragma omp parallel private(overlap)
+  {
+    overlap = calloc(n_nodes, sizeof * overlap);
+    #pragma omp for
+    for (int ni = 0; ni < n_nodes; ni++) {
+      for (int ei = node_indices[ni]; ei < node_indices[ni + 1]; ei++) {
+        for (int ej = (ei + 1); ej < n_edges; ej++) {
+          if (edges[secondary_column][ei] == edges[secondary_column][ej]) {
+            overlap[edges[primary_column][ej]]++;
+          }
+        }
+      }
+      #pragma omp critical
+      {
+        flush_overlap(overlap, edges[primary_column][node_indices[ni]]);
       }
     }
   }
-  flush_overlap(overlap, node, n_nodes, min_node);
-
-  free(edges[0]);
-  free(edges[1]);
 
   free(overlap);
+  free(edges[0]);
+  free(edges[1]);
+  free(node_indices);
 
   return EXIT_SUCCESS;
 }
