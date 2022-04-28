@@ -20,7 +20,7 @@ $(OUT_DIR)/read_xml: \
 		$(SRC_DIR)/query.o $(SRC_DIR)/yaml_reader.o
 	@cd $(SRC_DIR); $(MAKE) $(OUT_DIR)/read_xml
 
-$(OUT_DIR)/overlap: $(SRC_DIR)/overlap.o
+$(OUT_DIR)/overlap: $(SRC_DIR)/overlap.c
 	@cd $(SRC_DIR); $(MAKE) $(OUT_DIR)/overlap
 
 test_yaml_reader: test_yaml_reader.c $(SRC_DIR)/yaml_reader.o
