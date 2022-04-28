@@ -16,14 +16,13 @@
 #include <string.h>
 #include <unistd.h>
 
-#define flush_overlap(overlap, node_number)			\
+#define flush_overlap(node_number, overlap)			\
   for (int fi = (node_number + 1); fi < n_nodes; fi++) {	\
     if (overlap[fi] > 0) {					\
       printf("%d\t%d\t%d\n",					\
-	     node_number + min_node,				\
-	     fi + min_node,					\
+	     edges[primary_column][node_indices[node_number]],	\
+	     edges[primary_column][node_indices[fi]],		\
 	     overlap[fi]);					\
-      overlap[fi] = 0;						\
     }								\
   }								\
 
@@ -121,7 +120,7 @@ int is_sorted(int *primary_nodes, int n_edges)
 }
 
 /* Find initial edge for each node. */
-void find_nodes(int *primary_nodes, int n_edges, int *indices)
+int find_nodes(int *primary_nodes, int n_edges, int *indices)
 {
   int node_idx = 0;
   int node_val = -1;
@@ -133,6 +132,8 @@ void find_nodes(int *primary_nodes, int n_edges, int *indices)
     }
   }
   indices[node_idx] = n_edges;
+
+  return node_idx;
 }
 
 int main(int argc, char **argv)
@@ -176,7 +177,6 @@ int main(int argc, char **argv)
   char *f = argv[optind];
 
   int n_nodes = 0;
-  int min_node = 0;
   int n_edges = 0;
   int *edges[] = { NULL, NULL };
   int rs = 0;
@@ -189,36 +189,31 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
 
-  min_node = edges[primary_column][0];
-  for (int i = 0; i < n_edges; i++) {
-    edges[primary_column][i] -= min_node;
-  }
-  n_nodes = edges[primary_column][n_edges - 1] + 1;
+  /* Guess of number of nodes based on largest node id - smallest node id. */
+  n_nodes = edges[primary_column][n_edges - 1] - edges[primary_column][0] + 1;
 
   int *node_indices = calloc(n_nodes + 1, sizeof * node_indices);
-  find_nodes(edges[primary_column], n_edges, node_indices);
+  n_nodes = find_nodes(edges[primary_column], n_edges, node_indices);
   int *overlap = NULL;
 
-  #pragma omp parallel private(overlap)
-  {
+  #pragma omp parallel for private(overlap) schedule(dynamic)
+  for (int ni = 0; ni < n_nodes; ni++) {
     overlap = calloc(n_nodes, sizeof * overlap);
-    #pragma omp for
-    for (int ni = 0; ni < n_nodes; ni++) {
+    for (int nj = (ni + 1); nj < n_nodes; nj++) {
       for (int ei = node_indices[ni]; ei < node_indices[ni + 1]; ei++) {
-        for (int ej = (ei + 1); ej < n_edges; ej++) {
-          if (edges[secondary_column][ei] == edges[secondary_column][ej]) {
-            overlap[edges[primary_column][ej]]++;
-          }
+        #pragma omp simd
+        for (int ej = node_indices[nj]; ej < node_indices[nj + 1]; ej++) {
+          overlap[nj] += (edges[secondary_column][ei] == edges[secondary_column][ej]);
         }
       }
-      #pragma omp critical
-      {
-        flush_overlap(overlap, edges[primary_column][node_indices[ni]]);
-      }
     }
+    #pragma omp critical
+    {
+      flush_overlap(ni, overlap);
+    }
+    free(overlap);
   }
 
-  free(overlap);
   free(edges[0]);
   free(edges[1]);
   free(node_indices);
