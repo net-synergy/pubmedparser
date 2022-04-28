@@ -103,22 +103,29 @@ This example structure file can be found in the example directory of this projec
 The resulting values can be used to generate node and edge files that work with ~neo4j~.
 First step is to set up the environment:
 
-#+begin_src bash :exports none :tangle ./example/process.sh
+#+begin_src bash :exports none :tangle ./example/env.sh
   #! /usr/bin/env bash
-  # Processes Pubmed XML files with read_xml then converts those into
-  # node and edge files for use with neo4j.
+  # Setup variables for file paths and running code related to
+  # generating neo4j db.
 #+end_src
 
-#+begin_src bash :tangle ./example/process.sh :eval no
-  top_dir=../$(dirname $0)
-  bin_dir=$top_dir/bin
-  cache_dir=~/Documents/david/data/synergy/cache
-  data_dir=~/Documents/david/data/pubmed
-  structure_file=$top_dir/example/structure.yml
-  import_dir=~/Documents/david/data/synergy/import
-  delete_cache=false # If true clear cache.
-  nthreads=64
+#+begin_src bash :tangle ./example/env.sh :eval no
+  export top_dir=../$(dirname $0)
+  export bin_dir=$top_dir/bin
+  export cache_dir=~/Documents/david/data/synergy/cache
+  export data_dir=~/Documents/david/data/pubmed
+  export structure_file=$top_dir/example/structure.yml
+  export import_dir=~/Documents/david/data/synergy/import
+  export delete_cache=true # If true clear cache.
+  export nthreads=64
+#+end_src
 
+#+begin_src bash :exports none :tangle ./example/read_xml_files.sh :eval no
+  #! /usr/bin/env bash
+  # Read all files in \$data_dir using READ_XML.
+#+end_src
+
+#+begin_src bash :tangle ./example/read_xml_files.sh :eval no
   $delete_cache && \
       [ -d $cache_dir ] && \
       rm -r $cache_dir
@@ -148,22 +155,17 @@ First step is to set up the environment:
 Within the cache directory is a ~processed.txt~ file which contains a list of all files that have been read.
 We can use this to filter out files that have already been read in the case the program has been stopped:
 
-#+begin_src bash :eval no :tangle ./example/process.sh
-  if [[ -f $cache_dir/processed.txt ]]; then
-      files=$(cat $cache_dir/processed.txt <(ls "$data_dir/*.xml.gz") \
-          | sort | uniq -u)
-  else
-      files="$data_dir/*.xml.gz"
-  fi
+#+begin_src bash :eval no :tangle ./example/read_xml_files.sh
+  files="$data_dir/*.xml.gz"
 #+end_src
 
 #+begin_src bash :exports none
-  files="$top_dir/data/*.xml.gz"
+  files="$data_dir/pubmed21n0001.xml.gz"
 #+end_src
 
 Then read the files.
 
-#+begin_src bash :tangle ./example/process.sh
+#+begin_src bash :tangle ./example/read_xml_files.sh
   # Assuming the executables are in this directory and not installed globally.
   echo "Reading XML files..."
 
@@ -178,7 +180,7 @@ Then read the files.
 If ~read_xml~ was run across multiple files, the files are read in parallel and each thread will print to it's own set of files, distinguished by their thread number.
 The script ~cat_resuts.sh~ can be used to combine the results across threads so there is one file for each node type.
 
-#+begin_src bash :tangle ./example/process.sh
+#+begin_src bash :tangle ./example/read_xml_files.sh
   $top_dir/cat_results.sh $cache_dir
 #+end_src
 
@@ -186,40 +188,51 @@ Now using the ~yaml_get_key_components~ executable, we can read the contents of 
 
 First, the ~yaml_get_key_components~ can be written into a wrapper function so we don't have to keep passing the same arguments.
 
-#+begin_src bash :tangle ./example/process.sh :results none
+#+begin_src bash :tangle ./example/env.sh :results none
   components() {
       local name=$1
       PATH="$bin_dir:$PATH" yaml_get_key_component \
           --structure-file=$structure_file $name
   }
+
+  key_value=$(components key)
+  export key=${key_value%%:*}
+#+end_src
+
+#+begin_src bash :exports none :tangle ./example/convert_for_neo4j.sh :eval no
+  #!/usr/bin/env bash
+  # Convert outputs from READ_XML_FILES to node and edge files for
+  # importing to neo4j.
+
+  source env.sh
 #+end_src
 
 ** Generating node files
 To generate nodes we will remove remove the ~PMID~ column, sort, keep the unique rows, then print with line numbers (which will be used as IDs).
 
-#+begin_src bash :tangle ./example/process.sh
+#+begin_src bash :tangle ./example/convert_for_neo4j.sh
   tabsep="=+=t=+=" # Key to keep non-id columns together
   spcsep="=+s+="
 
   gen_node() {
-      local key=$1
+      local node=$1
 
-      key_file=$cache_dir/$key.tsv
-      paste <(cut -f1 $key_file) \
-          <(cut -f1 --complement $key_file | \
+      node_file=$cache_dir/$node.tsv
+      paste <(cut -f1 $node_file) \
+          <(cut -f1 --complement $node_file | \
           sed -e "s/\\t/$tabsep/g" -e  "s/\\s/$spcsep/g") | \
           sort -k 2 > \
-          tmp_${key} && mv tmp_${key} $key_file
+          tmp_${node} && mv tmp_${node} $node_file
 
-      cut -f1 --complement $key_file | sort -u | \
-          cat -n | sed 's/^\s*//' > $import_dir/${key}_nodes.tsv
+      cut -f1 --complement $node_file | sort -u | \
+          cat -n | sed 's/^\s*//' > $import_dir/${node}_nodes.tsv
   }
 
   echo "Generating node files..."
 
-  while IFS=': ' read key value; do
-      [[ $key == "Reference" ]] && continue
-      gen_node $key &
+  while IFS=': ' read node value; do
+      [[ $node == "Reference" ]] && continue
+      gen_node $node &
   done <<< "$(components nodes)"
   wait
 #+end_src
@@ -233,9 +246,7 @@ But before making the edge files, we'll generate IDs for the key file too.
 
 *Note*: The publications may reference files outside of the database leading to values in the second column of the reference file to not be included in the publication node file so we have to add them to the cache publication file.
 
-#+begin_src bash :tangle ./example/process.sh
-  key_value=$(components key)
-  key=${key_value%%:*}
+#+begin_src bash :tangle ./example/convert_for_neo4j.sh
   cat <(cut -f1 $cache_dir/$key.tsv) <(cut -f2 $cache_dir/Reference.tsv) \
       | sort -u | cat -n | sed 's/^\s*//' > $import_dir/${key}_nodes.tsv
 
@@ -246,7 +257,7 @@ The resulting file has the new IDs in column one and the PMIDs in column two.
 ** Generating edge files
 Now we need to join the cache files with their node files to add the node ID columns to the cache files.
 
-#+begin_src bash :tangle ./example/process.sh
+#+begin_src bash :tangle ./example/convert_for_neo4j.sh
   echo "Generating edge files..."
 
   while IFS=': ' read node value; do
@@ -259,7 +270,7 @@ Now we need to join the cache files with their node files to add the node ID col
 
 Then to create the edge files, join the publication node file with the cached files on PMID and remove the features so only the IDs are left.
 
-#+begin_src bash :tangle ./example/process.sh
+#+begin_src bash :tangle ./example/convert_for_neo4j.sh
   while IFS=': ' read node value; do
       [[ $node == "Reference" ]] && continue
       join -j 2 $cache_dir/${node}_tmp.tsv $import_dir/${key}_nodes.tsv | \
@@ -271,14 +282,14 @@ Then to create the edge files, join the publication node file with the cached fi
 
 Now replace the PMIDs in the reference file to the new publication IDs by both columns with the publication nodes file.
 
-#+begin_src bash :tangle ./example/process.sh
+#+begin_src bash :tangle ./example/convert_for_neo4j.sh
   paste <(join -1 2 -2 1 $import_dir/${key}_nodes.tsv <(sort -k 1 $cache_dir/Reference.tsv) | cut -d" " -f2) \
       <(join -j 2 $import_dir/${key}_nodes.tsv <(sort -k 2 $cache_dir/Reference.tsv) | cut -d" " -f2) > \
       $import_dir/${key}_${key}_edges.tsv
 #+end_src
 
 ** Joining key's features to key
-#+begin_src bash :tangle ./example/process.sh
+#+begin_src bash :tangle ./example/convert_for_neo4j.sh
   awk '{ print $2,$1 }' < $import_dir/${key}_nodes.tsv > tmp && \
       mv tmp $import_dir/${key}_nodes.tsv
   while IFS=': ' read key_feature value; do
@@ -293,7 +304,7 @@ Now replace the PMIDs in the reference file to the new publication IDs by both c
 #+end_src
 
 ** Cleaning up (replacing temporary separators)
-#+begin_src bash :tangle ./example/process.sh
+#+begin_src bash :tangle ./example/convert_for_neo4j.sh
   while IFS=': ' read node value; do
       [[ $node == "Reference" ]] && continue
       sed -e 's/ /\t/g' -e "s/$tabsep/\t/g" -e "s/$spcsep/ /g" < $import_dir/${node}_nodes.tsv > tmp_${node} && \
@@ -304,9 +315,7 @@ Now replace the PMIDs in the reference file to the new publication IDs by both c
 
 ** Adding headers
 For the key nodes:
-#+begin_src bash :tangle ./example/process.sh
-  key_value=$(components key)
-  key=${key_value%%:*}
+#+begin_src bash :tangle ./example/convert_for_neo4j.sh
   header="${key}Id:ID($key)"
   while IFS=': ' read node value; do
       header="${header}\t${node}"
@@ -317,7 +326,7 @@ For the key nodes:
 #+end_src
 
 For other nodes:
-#+begin_src bash :tangle ./example/process.sh
+#+begin_src bash :tangle ./example/convert_for_neo4j.sh
   while IFS=': ' read node value; do
       [[ $node == "Reference" ]] && continue
       header="${node}Id:ID(${node})"
@@ -331,7 +340,7 @@ For other nodes:
 #+end_src
 
 For edges (excluding references):
-#+begin_src bash :tangle ./example/process.sh
+#+begin_src bash :tangle ./example/convert_for_neo4j.sh
   while IFS=': ' read node value; do
       [[ $node == "Reference" ]] && continue
       header=":START_ID(${key})"
@@ -343,7 +352,7 @@ For edges (excluding references):
 #+end_src
 
 For the special case of references, both IDs should be publications:
-#+begin_src bash :tangle ./example/process.sh
+#+begin_src bash :tangle ./example/convert_for_neo4j.sh
   header=":START_ID($key)\t:END_ID($key)"
   cat <(echo -e $header) $import_dir/${key}_${key}_edges.tsv > \
       tmp && mv tmp $import_dir/${key}_${key}_edges.tsv
@@ -352,6 +361,7 @@ For the special case of references, both IDs should be publications:
 * Example: calculating overlap
 :PROPERTIES:
 :CUSTOM_ID: example-overlap
+:header-args:bash: :eval no
 :END:
 
 Here overlap between all pairs of publications will be calculated.
@@ -362,24 +372,53 @@ To calculate the overlap edges, just run the ~overlap~ program on each set of pu
 
 NOTE: The reference edges are stored in "Publication_Publication_edges.tsv" so node most be changed from ~Reference~ to ~Publication~. "Publication_Reference_overlap.tsv" would be a clearer name though so maybe "Publication_Publication_edges.tsv" should be renamed to indicate it's referencing to references.
 
-#+begin_src bash :tangle ./example/process.sh
+#+begin_src bash :exports none :tangle ./example/calculate_overlap.sh :eval no
+  #!/usr/bin/env bash
+  # Calculate overlap using OVERLAP for the provided nodes
+  # Usage: calculate_overlap node1 node2 ...
+  # Resulting file names will be generated based on node names.
+
+  source env.sh
+#+end_src
+
+#+begin_src bash :tangle ./example/calculate_overlap.sh
+  declare -a overlap_nodes
+
+  count=0
+  while [[ "$#" -gt 0 ]]; do
+      overlap_nodes[count] = "$1"
+      count=(( $count + 1 ));
+      shift
+  done
+
   echo "Calculating overlap between publications..."
 
-  while IFS=': ' read node value; do
+  for node in "${overlap_nodes[@]}"; do
       [[ $node == "Reference" ]] && node=$key
       echo -e ":START_ID(${key})\t:END_ID(${key})\tweight" > \
           $import_dir/${key}_${node}_overlap.tsv
 
       PATH="$bin_dir:$PATH" overlap $import_dir/${key}_${node}_edges.tsv >> \
-          $import_dir/${key}_${node}_overlap.tsv &
-  done <<< "$(components nodes)"
-  wait
+          $import_dir/${key}_${node}_overlap.tsv
 
-  echo "Finished calculating overlap."
+      echo "Finished calculating overlap for ${node}."
+  done
+
+  echo "Finished calculating overlap for all nodes."
 #+end_src
 
 * Example: importing with neo4j
-#+begin_src bash
+#+begin_src bash :exports none :tangle ./example/generate_importer.sh :eval no
+  #!/usr/bin/env bash
+  # Create a neo4j importer for files in \$import_dir, defined in
+  # env.sh.
+
+  source env.sh
+#+end_src
+
+# TODO: generate based on files in $import_dir instead of all nodes
+# since I may not be calculating overlap for mesh terms.
+#+begin_src bash :tangle ./example/generate_importer.sh
   import_file=example/importpubmed.sh
   cat > $import_file <<_EOF_
   #!/usr/bin/env bash

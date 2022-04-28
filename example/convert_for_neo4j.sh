@@ -1,75 +1,34 @@
-#! /usr/bin/env bash
-# Processes Pubmed XML files with read_xml then converts those into
-# node and edge files for use with neo4j.
+#!/usr/bin/env bash
+# Convert outputs from READ_XML_FILES to node and edge files for
+# importing to neo4j.
 
-top_dir=../$(dirname $0)
-bin_dir=$top_dir/bin
-cache_dir=~/Documents/david/data/synergy/cache
-data_dir=~/Documents/david/data/pubmed
-structure_file=$top_dir/example/structure.yml
-import_dir=~/Documents/david/data/synergy/import
-delete_cache=false # If true clear cache.
-nthreads=64
-
-$delete_cache && \
-    [ -d $cache_dir ] && \
-    rm -r $cache_dir
-
-[ -d $import_dir ] && rm -r $import_dir
-mkdir -p $import_dir
-
-if [[ -f $cache_dir/processed.txt ]]; then
-    files=$(cat $cache_dir/processed.txt <(ls "$data_dir/*.xml.gz") \
-        | sort | uniq -u)
-else
-    files="$data_dir/*.xml.gz"
-fi
-
-# Assuming the executables are in this directory and not installed globally.
-echo "Reading XML files..."
-
-PATH="$bin_dir:$PATH" OMP_NUM_THREADS="$nthreads" read_xml \
-    --structure-file=$structure_file \
-    --cache-dir=$cache_dir \
-    $files
-
-echo "Finished reading XML files."
-
-$top_dir/cat_results.sh $cache_dir
-
-components() {
-    local name=$1
-    PATH="$bin_dir:$PATH" yaml_get_key_component \
-        --structure-file=$structure_file $name
-}
+source env.sh
 
 tabsep="=+=t=+=" # Key to keep non-id columns together
 spcsep="=+s+="
 
 gen_node() {
-    local key=$1
+    local node=$1
 
-    key_file=$cache_dir/$key.tsv
-    paste <(cut -f1 $key_file) \
-        <(cut -f1 --complement $key_file | \
+    node_file=$cache_dir/$node.tsv
+    paste <(cut -f1 $node_file) \
+        <(cut -f1 --complement $node_file | \
         sed -e "s/\\t/$tabsep/g" -e  "s/\\s/$spcsep/g") | \
         sort -k 2 > \
-        tmp_${key} && mv tmp_${key} $key_file
+        tmp_${node} && mv tmp_${node} $node_file
 
-    cut -f1 --complement $key_file | sort -u | \
-        cat -n | sed 's/^\s*//' > $import_dir/${key}_nodes.tsv
+    cut -f1 --complement $node_file | sort -u | \
+        cat -n | sed 's/^\s*//' > $import_dir/${node}_nodes.tsv
 }
 
 echo "Generating node files..."
 
-while IFS=': ' read key value; do
-    [[ $key == "Reference" ]] && continue
-    gen_node $key &
+while IFS=': ' read node value; do
+    [[ $node == "Reference" ]] && continue
+    gen_node $node &
 done <<< "$(components nodes)"
 wait
 
-key_value=$(components key)
-key=${key_value%%:*}
 cat <(cut -f1 $cache_dir/$key.tsv) <(cut -f2 $cache_dir/Reference.tsv) \
     | sort -u | cat -n | sed 's/^\s*//' > $import_dir/${key}_nodes.tsv
 
@@ -109,13 +68,12 @@ sed 's/\s/\t/g' < $import_dir/${key}_nodes.tsv | cut -f 2- > tmp && \
 echo "Finished generating edge files."
 
 while IFS=': ' read node value; do
+    [[ $node == "Reference" ]] && continue
     sed -e 's/ /\t/g' -e "s/$tabsep/\t/g" -e "s/$spcsep/ /g" < $import_dir/${node}_nodes.tsv > tmp_${node} && \
         mv tmp_${node} $import_dir/${node}_nodes.tsv &
 done <<< "$(components nodes)"
 wait
 
-key_value=$(components key)
-key=${key_value%%:*}
 header="${key}Id:ID($key)"
 while IFS=': ' read node value; do
     header="${header}\t${node}"
@@ -147,17 +105,3 @@ done <<< "$(components nodes)"
 header=":START_ID($key)\t:END_ID($key)"
 cat <(echo -e $header) $import_dir/${key}_${key}_edges.tsv > \
     tmp && mv tmp $import_dir/${key}_${key}_edges.tsv
-
-echo "Calculating overlap between publications..."
-
-while IFS=': ' read node value; do
-    [[ $node == "Reference" ]] && node=$key
-    echo -e ":START_ID(${key})\t:END_ID(${key})\tweight" > \
-        $import_dir/${key}_${node}_overlap.tsv
-
-    PATH="$bin_dir:$PATH" overlap $import_dir/${key}_${node}_edges.tsv >> \
-        $import_dir/${key}_${node}_overlap.tsv &
-done <<< "$(components nodes)"
-wait
-
-echo "Finished calculating overlap."
