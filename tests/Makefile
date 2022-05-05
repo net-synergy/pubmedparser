@@ -38,6 +38,9 @@ test_sort_performance: test_sort_performance.bats $(OUT_DIR)/read_xml
 test_overlap: test_overlap_calculator.bats $(OUT_DIR)/overlap
 	./test_overlap_calculator.bats
 
+test_overlap_performance: test_overlap_performance.bats $(OUT_DIR)/overlap
+	./test_overlap_performance.bats
+
 test: test_yaml_reader test_xml_reader test_overlap
 
 clean:
