@@ -207,10 +207,7 @@ int main(int argc, char **argv)
         }
       }
     }
-    #pragma omp critical
-    {
-      flush_overlap(ni, overlap);
-    }
+    flush_overlap(ni, overlap);
     free(overlap);
   }
 
