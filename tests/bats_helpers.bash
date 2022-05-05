@@ -5,6 +5,7 @@ _common_file_setup() {
     export PATH="$BATS_DIR/../bin:$PATH"
     export cache_dir=$BATS_DIR/cache
     export structure_file=$BATS_DIR/data/test_xml_reader_structure.yml
+    export import_dir=$HOME/data/synergy/import
     export OMP_NUM_THREADS=4
     mkdir -p $cache_dir
 }
