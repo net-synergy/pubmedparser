@@ -384,18 +384,9 @@ NOTE: The reference edges are stored in "Publication_Publication_edges.tsv" so n
 #+end_src
 
 #+begin_src bash :tangle ./example/calculate_overlap.sh
-  declare -a overlap_nodes
-
-  count=0
-  while [[ "$#" -gt 0 ]]; do
-      overlap_nodes[count] = "$1"
-      count=(( $count + 1 ));
-      shift
-  done
-
   echo "Calculating overlap between publications..."
 
-  for node in "${overlap_nodes[@]}"; do
+  for node in "$@"; do
       [[ $node == "Reference" ]] && node=$key
       echo -e ":START_ID(${key})\t:END_ID(${key})\tweight" > \
           $import_dir/${key}_${node}_overlap.tsv
