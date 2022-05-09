@@ -16,6 +16,27 @@
 #include <string.h>
 #include <unistd.h>
 
+#define PROG_WIDTH 25
+#define PROG_CHAR '#'
+char prog_buff[PROG_WIDTH + 1];
+
+#define print_progress(node_number, n_nodes)				\
+  double perc_complete = 0;						\
+  int n_chars = 0;							\
+									\
+  perc_complete = (double)node_number / (double)n_nodes;		\
+  n_chars = perc_complete * PROG_WIDTH;					\
+  prog_buff[(int)n_chars] = PROG_CHAR;					\
+									\
+  fprintf(stderr, "[%s] %0.3f%%\r", prog_buff, perc_complete * 100);	\
+
+#define initialize_progress_bar(n_nodes)	\
+  for (int ci = 0; ci < PROG_WIDTH; ci++) {	\
+    prog_buff[ci] = ' ';			\
+  }						\
+  prog_buff[PROG_WIDTH] = '\0';			\
+  print_progress(0, n_nodes)			\
+
 #define flush_overlap(node_number, overlap)			\
   for (int fi = (node_number + 1); fi < n_nodes; fi++) {	\
     if (overlap[fi] > 0) {					\
@@ -196,6 +217,8 @@ int main(int argc, char **argv)
   n_nodes = find_nodes(edges[primary_column], n_edges, node_indices);
   int *overlap = NULL;
 
+  initialize_progress_bar(n_nodes);
+
   #pragma omp parallel for private(overlap) schedule(dynamic)
   for (int ni = 0; ni < n_nodes; ni++) {
     overlap = calloc(n_nodes, sizeof * overlap);
@@ -208,8 +231,10 @@ int main(int argc, char **argv)
       }
     }
     flush_overlap(ni, overlap);
+    print_progress(ni, n_nodes);
     free(overlap);
   }
+  fprintf(stderr, "[%s] %0.3f%%\n", prog_buff, (double)100);
 
   free(edges[0]);
   free(edges[1]);
