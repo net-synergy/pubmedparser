@@ -2,7 +2,7 @@
 # Create a neo4j importer for files in \$import_dir, defined in
 # env.sh.
 
-source env.sh
+source ./env.sh
 
 import_file=example/importpubmed.sh
 cat > $import_file <<_EOF_

@@ -1,6 +1,8 @@
 #! /usr/bin/env bash
 # Read all files in \$data_dir using READ_XML.
 
+source ./env.sh
+
 $delete_cache && \
     [ -d $cache_dir ] && \
     rm -r $cache_dir

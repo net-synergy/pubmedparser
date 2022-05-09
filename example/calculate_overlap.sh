@@ -3,7 +3,6 @@
 # Usage: calculate_overlap node1 node2 ...
 # Resulting file names will be generated based on node names.
 
-source env.sh
 
 declare -a overlap_nodes
 
@@ -13,6 +12,7 @@ while [[ "$#" -gt 0 ]]; do
     count=(( $count + 1 ));
     shift
 done
+source ./env.sh
 
 echo "Calculating overlap between publications..."
 

@@ -123,6 +123,8 @@ First step is to set up the environment:
 #+begin_src bash :exports none :tangle ./example/read_xml_files.sh :eval no
   #! /usr/bin/env bash
   # Read all files in \$data_dir using READ_XML.
+
+  source ./env.sh
 #+end_src
 
 #+begin_src bash :tangle ./example/read_xml_files.sh :eval no
@@ -204,7 +206,7 @@ First, the ~yaml_get_key_components~ can be written into a wrapper function so w
   # Convert outputs from READ_XML_FILES to node and edge files for
   # importing to neo4j.
 
-  source env.sh
+  source ./env.sh
 #+end_src
 
 ** Generating node files
@@ -378,7 +380,7 @@ NOTE: The reference edges are stored in "Publication_Publication_edges.tsv" so n
   # Usage: calculate_overlap node1 node2 ...
   # Resulting file names will be generated based on node names.
 
-  source env.sh
+  source ./env.sh
 #+end_src
 
 #+begin_src bash :tangle ./example/calculate_overlap.sh
@@ -413,7 +415,7 @@ NOTE: The reference edges are stored in "Publication_Publication_edges.tsv" so n
   # Create a neo4j importer for files in \$import_dir, defined in
   # env.sh.
 
-  source env.sh
+  source ./env.sh
 #+end_src
 
 # TODO: generate based on files in $import_dir instead of all nodes

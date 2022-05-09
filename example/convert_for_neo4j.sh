@@ -2,7 +2,7 @@
 # Convert outputs from READ_XML_FILES to node and edge files for
 # importing to neo4j.
 
-source env.sh
+source ./env.sh
 
 tabsep="=+=t=+=" # Key to keep non-id columns together
 spcsep="=+s+="
