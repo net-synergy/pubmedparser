@@ -234,7 +234,10 @@ int main(int argc, char **argv)
       res = 0;
     }
     flush_overlap(ni, overlap);
-    print_progress(ni, n_nodes);
+
+    if ((ni % 100) == 0) {
+      print_progress(ni, n_nodes);
+    }
     free(overlap);
   }
   fprintf(stderr, "[%s] %0.3f%%\n", prog_buff, (double)100);
