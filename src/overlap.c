@@ -32,7 +32,7 @@ char prog_buff[PROG_WIDTH + 1];
 
 #define initialize_progress_bar(n_nodes)	\
   for (int ci = 0; ci < PROG_WIDTH; ci++) {	\
-    prog_buff[ci] = ' ';			\
+    prog_buff[ci] = '-';			\
   }						\
   prog_buff[PROG_WIDTH] = '\0';			\
   print_progress(0, n_nodes)			\
