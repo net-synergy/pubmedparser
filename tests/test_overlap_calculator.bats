@@ -40,7 +40,7 @@ teardown_file() {
 }
 
 @test "Test overlap calculator" {
-    overlap $cache_dir/normal_edges.tsv > $cache_dir/overlap.tsv
+    overlap $cache_dir/normal_edges.tsv | sort -n -k1,2 > $cache_dir/overlap.tsv
     diff $cache_dir/overlap.tsv <(cat<<EOF
 1	2	2
 1	3	2
@@ -63,7 +63,7 @@ EOF
     head -n1 $cache_dir/normal_edges.tsv > $cache_dir/overlap_resorted.tsv
     tail -n+2 $cache_dir/normal_edges.tsv | sort -k2 >> $cache_dir/overlap_resorted.tsv
 
-    overlap -k2 $cache_dir/overlap_resorted.tsv > $cache_dir/overlap.tsv
+    overlap -k2 $cache_dir/overlap_resorted.tsv | sort -n -k1,2 > $cache_dir/overlap.tsv
 
     diff $cache_dir/overlap.tsv <(cat<<EOF
 1	2	2
@@ -75,8 +75,8 @@ EOF
 
 @test "Test setting delimiter" {
     tr '\t' ',' < $cache_dir/normal_edges.tsv > $cache_dir/normal_edges.csv
-    overlap $cache_dir/normal_edges.tsv > $cache_dir/overlap.tsv
-    overlap -d, $cache_dir/normal_edges.csv > $cache_dir/overlap_comma.tsv
+    overlap $cache_dir/normal_edges.tsv | sort -n -k1,2 > $cache_dir/overlap.tsv
+    overlap -d, $cache_dir/normal_edges.csv | sort -n -k1,2 > $cache_dir/overlap_comma.tsv
 
     diff $cache_dir/overlap.tsv $cache_dir/overlap_comma.tsv
 }
