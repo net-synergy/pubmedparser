@@ -41,8 +41,8 @@ char prog_buff[PROG_WIDTH + 1];
   for (int fi = (node_number + 1); fi < n_nodes; fi++) {	\
     if (overlap[fi] > 0) {					\
       printf("%d\t%d\t%d\n",					\
-	     from[node_indices[node_number]],			\
-	     from[node_indices[fi]],				\
+	     edges[primary_column][node_indices[node_number]],	\
+	     edges[primary_column][node_indices[fi]],		\
 	     overlap[fi]);					\
     }								\
   }								\
@@ -157,34 +157,6 @@ int find_nodes(int *primary_nodes, int n_edges, int *indices)
   return node_idx;
 }
 
-int calculate_overlap(int *from, int *to, int *node_indices, int n_nodes)
-{
-  int *overlap = NULL;
-
-  initialize_progress_bar(n_nodes);
-
-  #pragma omp parallel for private(overlap) schedule(dynamic)
-  for (int ni = 0; ni < n_nodes; ni++) {
-    overlap = calloc(n_nodes, sizeof * overlap);
-    for (int nj = (ni + 1); nj < n_nodes; nj++) {
-      for (int ei = node_indices[ni]; ei < node_indices[ni + 1]; ei++) {
-        #pragma omp simd
-        for (int ej = node_indices[nj]; ej < node_indices[nj + 1]; ej++) {
-          overlap[nj] += (to[ei] == to[ej]);
-        }
-      }
-    }
-
-    flush_overlap(ni, overlap);
-    print_progress(ni, n_nodes);
-    free(overlap);
-  }
-
-  fprintf(stderr, "[%s] %0.3f%%\n", prog_buff, (double)100);
-
-  return EXIT_SUCCESS;
-}
-
 int main(int argc, char **argv)
 {
   int primary_column = 0;
@@ -243,13 +215,30 @@ int main(int argc, char **argv)
 
   int *node_indices = calloc(n_nodes + 1, sizeof * node_indices);
   n_nodes = find_nodes(edges[primary_column], n_edges, node_indices);
+  int *overlap = NULL;
 
-  rs = calculate_overlap(edges[primary_column], edges[secondary_column],
-                         node_indices, n_nodes);
+  initialize_progress_bar(n_nodes);
+
+  #pragma omp parallel for private(overlap) schedule(dynamic)
+  for (int ni = 0; ni < n_nodes; ni++) {
+    overlap = calloc(n_nodes, sizeof * overlap);
+    for (int nj = (ni + 1); nj < n_nodes; nj++) {
+      for (int ei = node_indices[ni]; ei < node_indices[ni + 1]; ei++) {
+        #pragma omp simd
+        for (int ej = node_indices[nj]; ej < node_indices[nj + 1]; ej++) {
+          overlap[nj] += (edges[secondary_column][ei] == edges[secondary_column][ej]);
+        }
+      }
+    }
+    flush_overlap(ni, overlap);
+    print_progress(ni, n_nodes);
+    free(overlap);
+  }
+  fprintf(stderr, "[%s] %0.3f%%\n", prog_buff, (double)100);
 
   free(edges[0]);
   free(edges[1]);
   free(node_indices);
 
-  return rs;
+  return EXIT_SUCCESS;
 }
