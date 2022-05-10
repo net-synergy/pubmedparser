@@ -216,19 +216,22 @@ int main(int argc, char **argv)
   int *node_indices = calloc(n_nodes + 1, sizeof * node_indices);
   n_nodes = find_nodes(edges[primary_column], n_edges, node_indices);
   int *overlap = NULL;
+  int res = 0;
 
   initialize_progress_bar(n_nodes);
 
-  #pragma omp parallel for private(overlap) schedule(dynamic)
+  #pragma omp parallel for private(overlap, res) schedule(dynamic)
   for (int ni = 0; ni < n_nodes; ni++) {
     overlap = calloc(n_nodes, sizeof * overlap);
     for (int nj = (ni + 1); nj < n_nodes; nj++) {
       for (int ei = node_indices[ni]; ei < node_indices[ni + 1]; ei++) {
-        #pragma omp simd
+        #pragma omp simd reduction(+:res)
         for (int ej = node_indices[nj]; ej < node_indices[nj + 1]; ej++) {
-          overlap[nj] += (edges[secondary_column][ei] == edges[secondary_column][ej]);
+          res += (edges[secondary_column][ei] == edges[secondary_column][ej]);
         }
       }
+      overlap[nj] = res;
+      res = 0;
     }
     flush_overlap(ni, overlap);
     print_progress(ni, n_nodes);
