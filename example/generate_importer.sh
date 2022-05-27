@@ -27,11 +27,9 @@ while IFS=': ' read node value; do
     [[ $node == "Reference" ]] && continue
     echo "    --nodes=${node}=\$import_dir/${node}_nodes.tsv \\" >> $import_file
     echo "    --relationships=${key}-${node}=\$import_dir/${key}_${node}_edges.tsv \\" >> $import_file
-    echo "    --relationships=${node}-overlap=\$import_dir/${key}_${node}_overlap.tsv \\" >> $import_file
 done <<< "$(components nodes)"
 
 echo "    --nodes=${key}=\$import_dir/${key}_nodes.tsv \\" >> $import_file
 echo "    --relationships=${key}-${key}=\$import_dir/${key}_${key}_edges.tsv \\" >> $import_file
-echo "    --relationships=${key}-overlap=\$import_dir/${key}_${key}_overlap.tsv" >> $import_file
 
 chmod +x $import_file

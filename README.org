@@ -244,7 +244,7 @@ Additionally, since both of it's columns are PMIDs they should not be renumbered
 
 The ~key_features~ files will be added to the ~key~ file as another node file but that will be done later to prevent them from getting in the way of joins while creating the edge files.
 But before making the edge files, we'll generate IDs for the key file too.
-~PMID~ would work as a unique identifier, but by creating a IDs we can ensure the values are a range from 1--~n_publications~ which will make it possible to use as indices for other applications (See [[#example-overlap]]).
+~PMID~ would work as a unique identifier, but by creating a IDs we can ensure the values are a range from 1--~n_publications~ which will make it possible to use as indices for other applications.
 
 *Note*: The publications may reference files outside of the database leading to values in the second column of the reference file to not be included in the publication node file so we have to add them to the cache publication file.
 
@@ -360,46 +360,6 @@ For the special case of references, both IDs should be publications:
       tmp && mv tmp $import_dir/${key}_${key}_edges.tsv
 #+end_src
 
-* Example: calculating overlap
-:PROPERTIES:
-:CUSTOM_ID: example-overlap
-:header-args:bash: :eval no
-:END:
-
-Here overlap between all pairs of publications will be calculated.
-This can be done with any node type (i.e. with authors it's the number of authors two publications have in common, using the chemical nodes it's the overlap in chemical used).
-
-First add a header to the overlap files, which will always be the same when looking at overlap between two publications.
-To calculate the overlap edges, just run the ~overlap~ program on each set of publication--node edges.
-
-NOTE: The reference edges are stored in "Publication_Publication_edges.tsv" so node most be changed from ~Reference~ to ~Publication~. "Publication_Reference_overlap.tsv" would be a clearer name though so maybe "Publication_Publication_edges.tsv" should be renamed to indicate it's referencing to references.
-
-#+begin_src bash :exports none :tangle ./example/calculate_overlap.sh :eval no
-  #!/usr/bin/env bash
-  # Calculate overlap using OVERLAP for the provided nodes
-  # Usage: calculate_overlap node1 node2 ...
-  # Resulting file names will be generated based on node names.
-
-  source ./env.sh
-#+end_src
-
-#+begin_src bash :tangle ./example/calculate_overlap.sh
-  echo "Calculating overlap between publications..."
-
-  for node in "$@"; do
-      [[ $node == "Reference" ]] && node=$key
-      echo -e ":START_ID(${key})\t:END_ID(${key})\tweight" > \
-          $import_dir/${key}_${node}_overlap.tsv
-
-      PATH="$bin_dir:$PATH" overlap $import_dir/${key}_${node}_edges.tsv >> \
-          $import_dir/${key}_${node}_overlap.tsv
-
-      echo "Finished calculating overlap for ${node}."
-  done
-
-  echo "Finished calculating overlap for all nodes."
-#+end_src
-
 * Example: importing with neo4j
 #+begin_src bash :exports none :tangle ./example/generate_importer.sh :eval no
   #!/usr/bin/env bash
@@ -435,12 +395,10 @@ NOTE: The reference edges are stored in "Publication_Publication_edges.tsv" so n
       [[ $node == "Reference" ]] && continue
       echo "    --nodes=${node}=\$import_dir/${node}_nodes.tsv \\" >> $import_file
       echo "    --relationships=${key}-${node}=\$import_dir/${key}_${node}_edges.tsv \\" >> $import_file
-      echo "    --relationships=${node}-overlap=\$import_dir/${key}_${node}_overlap.tsv \\" >> $import_file
   done <<< "$(components nodes)"
 
   echo "    --nodes=${key}=\$import_dir/${key}_nodes.tsv \\" >> $import_file
   echo "    --relationships=${key}-${key}=\$import_dir/${key}_${key}_edges.tsv \\" >> $import_file
-  echo "    --relationships=${key}-overlap=\$import_dir/${key}_${key}_overlap.tsv" >> $import_file
 
   chmod +x $import_file
 #+end_src

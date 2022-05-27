@@ -2,15 +2,12 @@ CC = gcc
 SRC_DIR = src
 TEST_DIR = tests
 
-.PHONY: all clean run test
+.PHONY: all clean check
 all:
 	@cd $(SRC_DIR); $(MAKE) all
 
 clean:
 	@cd $(SRC_DIR); $(MAKE) clean
 
-# run: all
-# 	./process.sh --cache-dir=cache
-
-test:
-	@cd $(TEST_DIR); $(MAKE) test
+check:
+	@cd $(TEST_DIR); $(MAKE) check

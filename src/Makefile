@@ -2,16 +2,11 @@ CC = gcc
 CFLAGS = -Wall -Wextra -O3 -march=native
 
 TOP_DIR = ..
-OUT_DIR = ../bin
+BIN_DIR = ../bin
 CACHE_DIR = ../cache
-LIBS = z
-READXML := $(OUT_DIR)/read_xml
-YAMLCONTENTS := $(OUT_DIR)/yaml_get_key_component
-OVERLAP := $(OUT_DIR)/overlap
 
 debug: CFLAGS += -g
-profile_readxml: CFLAGS += -pg
-profile_overlap: CFLAGS += -pg
+profile: CFLAGS += -pg
 
 .PHONY: debug profile run all clean
 paths.o: paths.c paths.h yaml_reader.h
@@ -20,38 +15,29 @@ paths.o: paths.c paths.h yaml_reader.h
 read_xml.o: read_xml.c paths.h query.h yaml_reader.h
 	$(CC) -fopenmp -c $*.c
 
-$(READXML): read_xml.o paths.o query.o yaml_reader.o
-	$(CC) $(CFLAGS) -fopenmp $^ -o $@ -l$(LIBS)
+$(BIN_DIR)/read_xml: read_xml.o paths.o query.o yaml_reader.o
+	$(CC) $(CFLAGS) -fopenmp $^ -o $@ -lz
 
 yaml_get_key_component.o: yaml_get_key_component.c yaml_reader.h
 	$(CC) -c $*.c
 
-$(YAMLCONTENTS): yaml_get_key_component.o yaml_reader.o
+$(BIN_DIR)/yaml_get_key_component: yaml_get_key_component.o yaml_reader.o
 	$(CC) $(CFLAGS) $^ -o $@
 
-$(OVERLAP): overlap.c
-	$(CC) $(CFLAGS) -fopenmp -fopt-info -fopt-info-missed $^ -o $@
+debug: $(BIN_DIR)/read_xml
 
-debug: $(READXML) $(OVERLAP)
-
-profile_readxml: $(READXML)
+profile: $(BIN_DIR)/read_xml
 	$^ --cache-dir=$(CACHE_DIR) --structure-file=../example/structure.yml ~/data/pubmed/pubmed21n0001.xml.gz
 	gprof -b $^
 
-profile_overlap: $(OVERLAP)
-	$^ ~/data/synergy/import/Publication_Author_edges.tsv > /dev/null
-	gprof -b $^
-
-run: $(READXML)
+run: $(BIN_DIR)/read_xml
 	$^ --cache-dir=$(CACHE_DIR) --structure-file=../example/structure.yml ../data/pubmed21n0001.xml.gz
 
-run-get-content: $(YAMLCONTENTS)
+run-get-content: $(BIN_DIR)/yaml_get_key_component
 	$^ --structure-file=../example/structure.yml nodes
 
-all: $(READXML) $(YAMLCONTENTS) $(OVERLAP)
+all: $(BIN_DIR)/read_xml $(BIN_DIR)/yaml_get_key_component
 
 clean:
 	-rm *.o
-	-rm -rf $(OUT_DIR) $(CACHE_DIR)
-	@mkdir -p $(CACHE_DIR)
-	@mkdir -p $(OUT_DIR)
+	-rm -rf $(BIN_DIR) $(CACHE_DIR)

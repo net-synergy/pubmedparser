@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2022-05-09 Mon 12:40 -->
+<!-- 2022-05-27 Fri 12:46 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Pubmed parser</title>
@@ -270,15 +270,14 @@
 <li><a href="#structure-file">1. Structure file</a></li>
 <li><a href="#example-creating-node-and-edges">2. Example: creating node and edge files for importing with neo4j</a>
 <ul>
-<li><a href="#org16cb773">2.1. Generating node files</a></li>
-<li><a href="#org63caa48">2.2. Generating edge files</a></li>
-<li><a href="#orga19894b">2.3. Joining key's features to key</a></li>
-<li><a href="#org1d90c2a">2.4. Cleaning up (replacing temporary separators)</a></li>
-<li><a href="#org2903950">2.5. Adding headers</a></li>
+<li><a href="#orgbbfd346">2.1. Generating node files</a></li>
+<li><a href="#orgd151761">2.2. Generating edge files</a></li>
+<li><a href="#org0ac3666">2.3. Joining key's features to key</a></li>
+<li><a href="#orgb69717a">2.4. Cleaning up (replacing temporary separators)</a></li>
+<li><a href="#orgcc33786">2.5. Adding headers</a></li>
 </ul>
 </li>
-<li><a href="#example-overlap">3. Example: calculating overlap</a></li>
-<li><a href="#org83a394a">4. Example: importing with neo4j</a></li>
+<li><a href="#org4471a13">3. Example: importing with neo4j</a></li>
 </ul>
 </div>
 </div>
@@ -497,8 +496,8 @@ First, the <code>yaml_get_key_components</code> can be written into a wrapper fu
 </div>
 </div>
 
-<div id="outline-container-org16cb773" class="outline-3">
-<h3 id="org16cb773"><span class="section-number-3">2.1.</span> Generating node files</h3>
+<div id="outline-container-orgbbfd346" class="outline-3">
+<h3 id="orgbbfd346"><span class="section-number-3">2.1.</span> Generating node files</h3>
 <div class="outline-text-3" id="text-2-1">
 <p>
 To generate nodes we will remove remove the <code>PMID</code> column, sort, keep the unique rows, then print with line numbers (which will be used as IDs).
@@ -540,7 +539,7 @@ Additionally, since both of it's columns are PMIDs they should not be renumbered
 <p>
 The <code>key_features</code> files will be added to the <code>key</code> file as another node file but that will be done later to prevent them from getting in the way of joins while creating the edge files.
 But before making the edge files, we'll generate IDs for the key file too.
-<code>PMID</code> would work as a unique identifier, but by creating a IDs we can ensure the values are a range from 1--<code>n_publications</code> which will make it possible to use as indices for other applications (See <a href="#example-overlap">3</a>).
+<code>PMID</code> would work as a unique identifier, but by creating a IDs we can ensure the values are a range from 1--<code>n_publications</code> which will make it possible to use as indices for other applications.
 </p>
 
 <p>
@@ -560,8 +559,8 @@ The resulting file has the new IDs in column one and the PMIDs in column two.
 </p>
 </div>
 </div>
-<div id="outline-container-org63caa48" class="outline-3">
-<h3 id="org63caa48"><span class="section-number-3">2.2.</span> Generating edge files</h3>
+<div id="outline-container-orgd151761" class="outline-3">
+<h3 id="orgd151761"><span class="section-number-3">2.2.</span> Generating edge files</h3>
 <div class="outline-text-3" id="text-2-2">
 <p>
 Now we need to join the cache files with their node files to add the node ID columns to the cache files.
@@ -607,8 +606,8 @@ Now replace the PMIDs in the reference file to the new publication IDs by both c
 </div>
 </div>
 
-<div id="outline-container-orga19894b" class="outline-3">
-<h3 id="orga19894b"><span class="section-number-3">2.3.</span> Joining key's features to key</h3>
+<div id="outline-container-org0ac3666" class="outline-3">
+<h3 id="org0ac3666"><span class="section-number-3">2.3.</span> Joining key's features to key</h3>
 <div class="outline-text-3" id="text-2-3">
 <div class="org-src-container">
 <pre class="src src-bash">awk <span style="color: #FFAB91;">'{ print $2,$1 }'</span> &lt; $<span style="color: #37474F; font-weight: bold;">import_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">key</span><span style="color: #000000;">}</span>_nodes.tsv &gt; tmp &amp;&amp; <span style="color: #FFAB91;">\</span>
@@ -627,8 +626,8 @@ sed <span style="color: #FFAB91;">'s/\s/\t/g'</span> &lt; $<span style="color: #
 </div>
 </div>
 
-<div id="outline-container-org1d90c2a" class="outline-3">
-<h3 id="org1d90c2a"><span class="section-number-3">2.4.</span> Cleaning up (replacing temporary separators)</h3>
+<div id="outline-container-orgb69717a" class="outline-3">
+<h3 id="orgb69717a"><span class="section-number-3">2.4.</span> Cleaning up (replacing temporary separators)</h3>
 <div class="outline-text-3" id="text-2-4">
 <div class="org-src-container">
 <pre class="src src-bash"><span style="color: #673AB7;">while</span> <span style="color: #37474F; font-weight: bold;">IFS</span>=<span style="color: #FFAB91;">': '</span> read node value; <span style="color: #673AB7;">do</span>
@@ -642,8 +641,8 @@ sed <span style="color: #FFAB91;">'s/\s/\t/g'</span> &lt; $<span style="color: #
 </div>
 </div>
 
-<div id="outline-container-org2903950" class="outline-3">
-<h3 id="org2903950"><span class="section-number-3">2.5.</span> Adding headers</h3>
+<div id="outline-container-orgcc33786" class="outline-3">
+<h3 id="orgcc33786"><span class="section-number-3">2.5.</span> Adding headers</h3>
 <div class="outline-text-3" id="text-2-5">
 <p>
 For the key nodes:
@@ -704,46 +703,9 @@ cat &lt;<span style="color: #000000;">(</span><span style="color: #673AB7;">echo
 </div>
 </div>
 
-<div id="outline-container-example-overlap" class="outline-2">
-<h2 id="example-overlap"><span class="section-number-2">3.</span> Example: calculating overlap</h2>
-<div class="outline-text-2" id="text-example-overlap">
-<p>
-Here overlap between all pairs of publications will be calculated.
-This can be done with any node type (i.e. with authors it's the number of authors two publications have in common, using the chemical nodes it's the overlap in chemical used).
-</p>
-
-<p>
-First add a header to the overlap files, which will always be the same when looking at overlap between two publications.
-To calculate the overlap edges, just run the <code>overlap</code> program on each set of publication&#x2013;node edges.
-</p>
-
-<p>
-NOTE: The reference edges are stored in "Publication_Publication_edges.tsv" so node most be changed from <code>Reference</code> to <code>Publication</code>. "Publication_Reference_overlap.tsv" would be a clearer name though so maybe "Publication_Publication_edges.tsv" should be renamed to indicate it's referencing to references.
-</p>
-
-<div class="org-src-container">
-<pre class="src src-bash"><span style="color: #673AB7;">echo</span> <span style="color: #FFAB91;">"Calculating overlap between publications..."</span>
-
-<span style="color: #673AB7;">for</span> node<span style="color: #673AB7;"> in</span> <span style="color: #FFAB91;">"$@"</span>; <span style="color: #673AB7;">do</span>
-    <span style="color: #000000;">[</span><span style="color: #a8007f;">[</span> $<span style="color: #37474F; font-weight: bold;">node</span> == <span style="color: #FFAB91;">"Reference"</span> <span style="color: #a8007f;">]</span><span style="color: #000000;">]</span> &amp;&amp; <span style="color: #37474F; font-weight: bold;">node</span>=$<span style="color: #37474F; font-weight: bold;">key</span>
-    <span style="color: #673AB7;">echo</span> -e <span style="color: #FFAB91;">":START_ID(${key})\t:END_ID(${key})\tweight"</span> &gt; <span style="color: #FFAB91;">\</span>
-        $<span style="color: #37474F; font-weight: bold;">import_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">key</span><span style="color: #000000;">}</span>_$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">node</span><span style="color: #000000;">}</span>_overlap.tsv
-
-    <span style="color: #37474F; font-weight: bold;">PATH</span>=<span style="color: #FFAB91;">"$bin_dir:$PATH"</span> overlap $<span style="color: #37474F; font-weight: bold;">import_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">key</span><span style="color: #000000;">}</span>_$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">node</span><span style="color: #000000;">}</span>_edges.tsv &gt;&gt; <span style="color: #FFAB91;">\</span>
-        $<span style="color: #37474F; font-weight: bold;">import_dir</span>/$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">key</span><span style="color: #000000;">}</span>_$<span style="color: #000000;">{</span><span style="color: #37474F; font-weight: bold;">node</span><span style="color: #000000;">}</span>_overlap.tsv
-
-    <span style="color: #673AB7;">echo</span> <span style="color: #FFAB91;">"Finished calculating overlap for ${node}."</span>
-<span style="color: #673AB7;">done</span>
-
-<span style="color: #673AB7;">echo</span> <span style="color: #FFAB91;">"Finished calculating overlap for all nodes."</span>
-</pre>
-</div>
-</div>
-</div>
-
-<div id="outline-container-org83a394a" class="outline-2">
-<h2 id="org83a394a"><span class="section-number-2">4.</span> Example: importing with neo4j</h2>
-<div class="outline-text-2" id="text-4">
+<div id="outline-container-org4471a13" class="outline-2">
+<h2 id="org4471a13"><span class="section-number-2">3.</span> Example: importing with neo4j</h2>
+<div class="outline-text-2" id="text-3">
 <div class="org-src-container">
 <pre class="src src-bash"><span style="color: #37474F; font-weight: bold;">import_file</span>=example/importpubmed.sh
 cat &gt; $<span style="color: #37474F; font-weight: bold;">import_file</span> &lt;&lt;_EOF_
@@ -768,12 +730,10 @@ cat &gt; $<span style="color: #37474F; font-weight: bold;">import_file</span> &l
     <span style="color: #000000;">[</span><span style="color: #a8007f;">[</span> $<span style="color: #37474F; font-weight: bold;">node</span> == <span style="color: #FFAB91;">"Reference"</span> <span style="color: #a8007f;">]</span><span style="color: #000000;">]</span> &amp;&amp; <span style="color: #673AB7;">continue</span>
     <span style="color: #673AB7;">echo</span> <span style="color: #FFAB91;">"    --nodes=${node}=\$import_dir/${node}_nodes.tsv \\"</span> &gt;&gt; $<span style="color: #37474F; font-weight: bold;">import_file</span>
     <span style="color: #673AB7;">echo</span> <span style="color: #FFAB91;">"    --relationships=${key}-${node}=\$import_dir/${key}_${node}_edges.tsv \\"</span> &gt;&gt; $<span style="color: #37474F; font-weight: bold;">import_file</span>
-    <span style="color: #673AB7;">echo</span> <span style="color: #FFAB91;">"    --relationships=${node}-overlap=\$import_dir/${key}_${node}_overlap.tsv \\"</span> &gt;&gt; $<span style="color: #37474F; font-weight: bold;">import_file</span>
 <span style="color: #673AB7;">done</span> &lt;&lt;&lt; <span style="color: #FFAB91;">"$(components nodes)"</span>
 
 <span style="color: #673AB7;">echo</span> <span style="color: #FFAB91;">"    --nodes=${key}=\$import_dir/${key}_nodes.tsv \\"</span> &gt;&gt; $<span style="color: #37474F; font-weight: bold;">import_file</span>
 <span style="color: #673AB7;">echo</span> <span style="color: #FFAB91;">"    --relationships=${key}-${key}=\$import_dir/${key}_${key}_edges.tsv \\"</span> &gt;&gt; $<span style="color: #37474F; font-weight: bold;">import_file</span>
-<span style="color: #673AB7;">echo</span> <span style="color: #FFAB91;">"    --relationships=${key}-overlap=\$import_dir/${key}_${key}_overlap.tsv"</span> &gt;&gt; $<span style="color: #37474F; font-weight: bold;">import_file</span>
 
 chmod +x $<span style="color: #37474F; font-weight: bold;">import_file</span>
 </pre>
@@ -783,7 +743,7 @@ chmod +x $<span style="color: #37474F; font-weight: bold;">import_file</span>
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: David R. Connell</p>
-<p class="date">Created: 2022-05-09 Mon 12:40</p>
+<p class="date">Created: 2022-05-27 Fri 12:46</p>
 </div>
 </body>
 </html>
