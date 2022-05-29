@@ -31,8 +31,7 @@ test_xml_reader: test_xml_reader_argument_parsing.bats test_xml_reader_output.ba
 test_sort_performance: test_sort_performance.bats read_xml
 	bats ./test_sort_performance.bats
 
-# check: test_yaml_reader test_xml_reader
-check: test_xml_reader
+check: test_yaml_reader test_xml_reader
 
 clean:
 	-rm test_yaml_reader
