@@ -15,7 +15,7 @@ usage() {
 		Useage: $(basename $0) OPTION... FILE[S]
 		Downloads publication data files from pubmed and checks against md5s.
 
-		The FILE argument can be the number of a file or a range of file numbers (i.e. {0001..0010}).
+		The FILE argument can be the number of a file, a range of file numbers (i.e. {0001..0010}), or file numbers from stdin. Using stdin allows for piping in values obtained by running with the list option or cating a file with a list of files.
 
 		  -s    source directory, which pubmed directory to get data from (baseline|updatefiles).
 		  -d    destination directory, where to save files to (defaults to \$PWD).
@@ -59,10 +59,13 @@ download_files() {
 		xargs -I {} sh -c "echo {} failed md5sum check, deleting && rm {}* >&2"
 }
 
+find_file_numbers() {
+	sed -n s/".*${name_prefix}\([0-9]\+\)\.xml\.gz$"/"\1"/p
+}
+
 list_files() {
 	local src_dir=$1
-	curl --silent "${base_url}/${src_dir}/" |
-		sed -n s/".*${name_prefix}\([0-9]\+\)\.xml\.gz$"/"\1"/p
+	curl --silent "${base_url}/${src_dir}/" | find_file_numbers
 }
 
 src_dir="baseline"
@@ -91,8 +94,19 @@ if $list_flag; then
 fi
 
 if [[ "$#" -eq 0 ]]; then
-	usage >&2
-	exit 1
+	declare -a files
+	i=0
+	while read num; do
+		i+=1
+		files[$i]=$num
+	done
+
+	if [[ $i -eq 0 ]]; then
+		usage >&2
+		exit 1
+	fi
+else
+	files="$@"
 fi
 
 [ -d $dest_dir ] || mkdir -p $dest_dir
@@ -102,6 +116,6 @@ cd $dest_dir
 # exist.
 if [ $(ls $PWD | wc -w) -eq 0 ]; then
 	echo "Downloading files..."
-	download_files $src_dir "$@"
+	download_files $src_dir "$files"
 	echo "Finished downloading files."
 fi
