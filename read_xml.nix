@@ -3,7 +3,7 @@
 stdenv.mkDerivation {
     src = ./.;
     pname = "pubmedparser";
-    version = "1.0.0";
+    version = "1.1.0";
 
     nativeBuildInputs = [ zlib ];
     preBuild = "mkdir bin";

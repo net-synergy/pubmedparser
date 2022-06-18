@@ -13,11 +13,11 @@
     flake-utils.lib.eachDefaultSystem (system:
       let pkgs = nixpkgs.legacyPackages.${system};
       in {
-        packages.pubmedparser = pkgs.callPackage ./pubmedparser.nix { };
-        defaultPackage = self.packages.${system}.pubmedparser;
+        packages.read_xml = pkgs.callPackage ./read_xml.nix { };
+        defaultPackage = self.packages.${system}.read_xml;
         devShell = pkgs.mkShell {
-          buildInputs =
-            (with pkgs; [ gcc gdb astyle zlib ]);
+          buildInputs = (with pkgs; [ gcc gdb astyle zlib ])
+            ++ [ self.packages.${system}.read_xml ];
         };
       });
 }
