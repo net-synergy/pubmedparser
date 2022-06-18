@@ -142,6 +142,6 @@ cd $dest_dir
 files=($(missing_files ${desired_files[@]}))
 if [ ${#files[@]} -gt 0 ]; then
 	echo "Downloading files..."
-	download_files $src_dir "$files"
+	download_files $src_dir "${files[@]}"
 	echo "Finished downloading files."
 fi
