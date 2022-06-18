@@ -15,12 +15,15 @@ usage() {
 		  -s    source directory, which pubmed directory to get data from (baseline|updatefiles).
 		  -d    destination directory, where to save files to (defaults to \$PWD).
 		  -l    list files in source directory, if source directory is unset, show both.
+		  -a    download all files from the source directory.
 		  -h    Show this help.
 
 		  Examples:
 		      download_pubmed_data.sh 0001
 		      download_pubmed_data.sh -d destination {0001..0005}
 		      # Will only download new files.
+		      download_pubmed_data.sh -d destination -s updatefiles -a
+		      # Equivalent to above
 		      download_pubmed_data.sh -s updatefiles -l |
 		               download_pubmed_data.sh -d destination -s updatefiles
 
@@ -88,11 +91,13 @@ missing_files() {
 src_dir="baseline"
 dest_dir=$PWD
 list_flag=false
-while getopts "d:s:lh" arg; do
+all_flag=false
+while getopts "d:s:lha" arg; do
 	case $arg in
 	s) src_dir="$OPTARG" ;;
 	d) dest_dir="$OPTARG" ;;
 	l) list_flag=true ;;
+	a) all_flag=true ;;
 	h)
 		usage
 		exit 0
@@ -110,12 +115,17 @@ if $list_flag; then
 	exit 0
 fi
 
+if $all_flag; then
+	$0 -s $src_dir -l | $0 -s $src_dir -d $dest_dir
+	exit 0
+fi
+
 declare -a desired_files
 if [[ "$#" -eq 0 ]]; then
 	i=0
 	while read num; do
 		desired_files[$i]=$num
-		i+=1
+		i=$(($i + 1))
 	done
 
 	if [[ $i -eq 0 ]]; then
@@ -132,6 +142,6 @@ cd $dest_dir
 files=($(missing_files ${desired_files[@]}))
 if [ ${#files[@]} -gt 0 ]; then
 	echo "Downloading files..."
-	# download_files $src_dir "$files"
+	download_files $src_dir "$files"
 	echo "Finished downloading files."
 fi
