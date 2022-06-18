@@ -1,12 +1,5 @@
 #!/usr/bin/env bash
 
-# Example usage:
-#     download_pubmed_data.sh 1110
-#     download_pubmed_data.sh {1110..1114}
-#
-# Find pubmed files:
-#     ftp://ftp.ncbi.nlm.nih.gov/pubmed/{baseline,updatefiles}
-
 base_url="ftp://ftp.ncbi.nlm.nih.gov/pubmed"
 name_prefix="pubmed22n"
 
@@ -17,18 +10,25 @@ usage() {
 
 		The FILE argument can be the number of a file, a range of file numbers (i.e. {0001..0010}), or file numbers from stdin. Using stdin allows for piping in values obtained by running with the list option or cating a file with a list of files.
 
+		If some desired FILES already exist in the destination directory, they will be skipped.
+
 		  -s    source directory, which pubmed directory to get data from (baseline|updatefiles).
 		  -d    destination directory, where to save files to (defaults to \$PWD).
 		  -l    list files in source directory, if source directory is unset, show both.
 		  -h    Show this help.
+
+		  Examples:
+		      download_pubmed_data.sh 0001
+		      download_pubmed_data.sh -d destination {0001..0005}
+		      # Will only download new files.
+		      download_pubmed_data.sh -s updatefiles -l |
+		               download_pubmed_data.sh -d destination -s updatefiles
 
 		TODO:
 		- Should accept baseline/updatefiles/all flags to
 		download all files in either baseline, updatefiles
 		or both directories.
 		- Should accept a directory to save the files to.
-		- Should check the save directory to look for files
-		that are already present and skip those.
 	_EOF_
 }
 
@@ -68,6 +68,23 @@ list_files() {
 	curl --silent "${base_url}/${src_dir}/" | find_file_numbers
 }
 
+missing_files() {
+	local desired_files=("$@")
+	local local_files=($(ls $PWD | find_file_numbers))
+	local intersect=($(
+		echo ${desired_files[@]} ${local_files[@]} |
+			tr ' ' '\n' |
+			sort |
+			uniq -d |
+			tr '\n' ' '
+	))
+	echo ${desired_files[@]} ${intersect[@]} |
+		tr ' ' '\n' |
+		sort |
+		uniq -u |
+		tr '\n' ' '
+}
+
 src_dir="baseline"
 dest_dir=$PWD
 list_flag=false
@@ -93,12 +110,12 @@ if $list_flag; then
 	exit 0
 fi
 
+declare -a desired_files
 if [[ "$#" -eq 0 ]]; then
-	declare -a files
 	i=0
 	while read num; do
+		desired_files[$i]=$num
 		i+=1
-		files[$i]=$num
 	done
 
 	if [[ $i -eq 0 ]]; then
@@ -106,16 +123,15 @@ if [[ "$#" -eq 0 ]]; then
 		exit 1
 	fi
 else
-	files="$@"
+	desired_files=("$@")
 fi
 
 [ -d $dest_dir ] || mkdir -p $dest_dir
 cd $dest_dir
 
-# Potentially make smarter check to see if the requested files already
-# exist.
-if [ $(ls $PWD | wc -w) -eq 0 ]; then
+files=($(missing_files ${desired_files[@]}))
+if [ ${#files[@]} -gt 0 ]; then
 	echo "Downloading files..."
-	download_files $src_dir "$files"
+	# download_files $src_dir "$files"
 	echo "Finished downloading files."
 fi
