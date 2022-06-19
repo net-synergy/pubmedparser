@@ -238,11 +238,14 @@ int main(int argc, char **argv)
   if (optind == argc) {
     status = parse_file("-", ns);
   } else {
+    /* omp_get_num_threads() returns 1 outside of parallel blocks so
+    this is a work around to get the real number of threads ahead of
+    time. */
     int n_threads = 0;
-    if (!(getenv("OMP_NUM_THREADS"))) {
-      fputs("Error: environment variable \"OMP_NUM_THREADS\" not set.", stderr);
-    } else {
-      n_threads = atoi(getenv("OMP_NUM_THREADS"));
+    #pragma omp parallel
+    {
+      #pragma omp single
+      n_threads = omp_get_num_threads();
     }
 
     node_set *ns_dup[n_threads];
