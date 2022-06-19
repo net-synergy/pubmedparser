@@ -263,6 +263,19 @@ int main(int argc, char **argv)
 
       fprintf(progress_ptr, "%s\n", argv[i]);
     }
+
+    char cmd[STR_MAX];
+    #pragma omp parallel for private (cmd)
+    for (int n = 0; n < ns->n; n++) {
+      /* TODO: Could remove duplication between here and creating file
+      name in node construction. */
+      sprintf(cmd, "cat %s%s_*.tsv > %s%s.tsv", cache_dir, ns->nodes[n]->name,
+              cache_dir,
+              ns->nodes[n]->name);
+      system(cmd);
+      sprintf(cmd, "rm %s%s_*.tsv", cache_dir, ns->nodes[n]->name);
+      system(cmd);
+    }
   }
 
   fclose(progress_ptr);

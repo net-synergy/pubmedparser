@@ -179,13 +179,6 @@ Then read the files.
   echo "Finished reading XML files."
 #+end_src
 
-If ~read_xml~ was run across multiple files, the files are read in parallel and each thread will print to it's own set of files, distinguished by their thread number.
-The script ~cat_resuts.sh~ can be used to combine the results across threads so there is one file for each node type.
-
-#+begin_src bash :tangle ./example/read_xml_files.sh
-  $top_dir/cat_results.sh $cache_dir
-#+end_src
-
 Now using the ~yaml_get_key_components~ executable, we can read the contents of the structure file into shell and use those to generate ids, create a list of all nodes for each node type, join the nodes with ~key~ to create edge lists, and generate ~neo4j~ style headers.
 
 First, the ~yaml_get_key_components~ can be written into a wrapper function so we don't have to keep passing the same arguments.
