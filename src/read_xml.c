@@ -203,14 +203,13 @@ int main(int argc, char **argv)
 {
   int optc;
   char *structure_file = "structure.yml";
-  char *cache_dir = "cache";
+  char *cache_dir = "cache/";
   char *program_name = argv[0];
 
   while ((optc = getopt_long(argc, argv, "c:s:h", longopts, NULL)) != EOF) {
     switch (optc) {
     case 'c':
       cache_dir = ensure_path_ends_with_slash(optarg);
-      mkdir(cache_dir, 0777);
       break;
     case 's':
       structure_file = optarg;
@@ -223,6 +222,7 @@ int main(int argc, char **argv)
       return 1;
     }
   }
+  mkdir(cache_dir, 0777);
 
   char *parsed = expandfile("processed.txt", cache_dir);
 
