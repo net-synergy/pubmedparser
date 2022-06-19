@@ -12,11 +12,11 @@ usage() {
 
 		If some desired FILES already exist in the destination directory, they will be skipped.
 
-		  -s    source directory, which pubmed directory to get data from (baseline|updatefiles).
-		  -d    destination directory, where to save files to (defaults to \$PWD).
-		  -l    list files in source directory, if source directory is unset, show both.
-		  -a    download all files from the source directory.
-		  -h    Show this help.
+		  -s, --source       source directory, which pubmed directory to get data from (baseline|updatefiles).
+		  -d, --destination  destination directory, where to save files to (defaults to \$PWD).
+		  -l, --list         list files in source directory, if source directory is unset, show both.
+		  -a, --all          download all files from the source directory.
+		  -h, --help         Show this help.
 
 		  Examples:
 		      download_pubmed_data.sh 0001
@@ -26,12 +26,6 @@ usage() {
 		      # Equivalent to above
 		      download_pubmed_data.sh -s updatefiles -l |
 		               download_pubmed_data.sh -d destination -s updatefiles
-
-		TODO:
-		- Should accept baseline/updatefiles/all flags to
-		download all files in either baseline, updatefiles
-		or both directories.
-		- Should accept a directory to save the files to.
 	_EOF_
 }
 
@@ -87,6 +81,18 @@ missing_files() {
         uniq -u |
         tr '\n' ' '
 }
+
+for arg in "$@"; do
+    shift
+    case "$arg" in
+    '--source') set -- "$@" '-s' ;;
+    '--destination') set -- "$@" '-d' ;;
+    '--list') set -- "$@" '-l' ;;
+    '--all') set -- "$@" '-a' ;;
+    '--help') set -- "$@" '-h' ;;
+    *) set -- "$@" "$arg" ;;
+    esac
+done
 
 src_dir="baseline"
 dest_dir=$PWD
