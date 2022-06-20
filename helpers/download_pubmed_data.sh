@@ -1,32 +1,32 @@
 #!/usr/bin/env bash
 
 base_url="ftp://ftp.ncbi.nlm.nih.gov/pubmed"
-name_prefix="pubmed22n"
+name_prefix="pubmed22n" # Update yearly
 
 usage() {
     cat <<-_EOF_
-		Useage: $(basename $0) OPTION... FILE[S]
-		Downloads publication data files from pubmed and checks against md5s.
+Useage: $(basename $0) OPTION... FILE[S]
+Downloads publication data files from pubmed and checks against md5s.
 
-		The FILE argument can be the number of a file, a range of file numbers (i.e. {0001..0010}), or file numbers from stdin. Using stdin allows for piping in values obtained by running with the list option or cating a file with a list of files.
+The FILE argument can be the number of a file, a range of file numbers (i.e. {0001..0010}), or file numbers from stdin. Using stdin allows for piping in values obtained by running with the list option or cating a file with a list of files.
 
-		If some desired FILES already exist in the destination directory, they will be skipped.
+If some desired FILES already exist in the destination directory, they will be skipped.
 
-		  -s, --source       source directory, which pubmed directory to get data from (baseline|updatefiles).
-		  -d, --destination  destination directory, where to save files to (defaults to \$PWD).
-		  -l, --list         list files in source directory, if source directory is unset, show both.
-		  -a, --all          download all files from the source directory.
-		  -h, --help         Show this help.
+  -s, --source       source directory, which pubmed directory to get data from (baseline|updatefiles).
+  -d, --destination  destination directory, where to save files to (defaults to \$PWD).
+  -l, --list         list files in source directory, if source directory is unset, show both.
+  -a, --all          download all files from the source directory.
+  -h, --help         Show this help.
 
-		  Examples:
-		      download_pubmed_data.sh 0001
-		      download_pubmed_data.sh -d destination {0001..0005}
-		      # Will only download new files.
-		      download_pubmed_data.sh -d destination -s updatefiles -a
-		      # Equivalent to above
-		      download_pubmed_data.sh -s updatefiles -l |
-		               download_pubmed_data.sh -d destination -s updatefiles
-	_EOF_
+  Examples:
+      download_pubmed_data.sh 0001
+      download_pubmed_data.sh -d destination {0001..0005}
+      # Will only download new files.
+      download_pubmed_data.sh -d destination -s updatefiles -a
+      # Equivalent to above.
+      download_pubmed_data.sh -s updatefiles -l |
+               download_pubmed_data.sh -d destination -s updatefiles
+_EOF_
 }
 
 expand_file_names() {
@@ -98,7 +98,7 @@ src_dir="baseline"
 dest_dir=$PWD
 list_flag=false
 all_flag=false
-while getopts "d:s:lha" arg; do
+while getopts "s:d:lah" arg; do
     case $arg in
     s) src_dir="$OPTARG" ;;
     d) dest_dir="$OPTARG" ;;
