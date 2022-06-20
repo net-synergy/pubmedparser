@@ -220,12 +220,14 @@ static void release_node(node *node)
   fclose(node->out);
 }
 
-#define N_NAMES 3
+#define N_NAMES 4
 node_set *construct_node_set(char *structure_file, char *cache_dir,
                              int str_max)
 {
   char root[str_max];
-  char *keys[N_NAMES] = { "key", "key_features", "nodes" };
+  /* FIXME: Expects all keys to be in structure file. Should be able
+  to handle excluded keys. */
+  char *keys[N_NAMES] = { "key", "key_features", "nodes", "edges" };
   size_t n_keys[N_NAMES];
   char **key_values_pairs[N_NAMES][2];
   int rc = 0;

@@ -65,19 +65,22 @@ For instance, the date of publication is specific to the publication, all public
 These make up distinct node type (i.e. a given author is a node of type author which can be connected to various other nodes such as the publications that author contributed to).
 
 #+begin_src sh :tangle ./example/structure.yml
-  key_features: {
-    Year: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
-    Language: "/PubmedArticle/MedlineCitation/Article/Language"
-  }
+    key_features: {
+      Year: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
+      Language: "/PubmedArticle/MedlineCitation/Article/Language"
+    }
 
-  nodes: {
-    Author: "/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
-    Grant: "/PubmedArticle/MedlineCitation/Article/GrantList/Grant/GrantID",
-    Chemical: "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
-    Qualifier: "/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/QualifierName/@UI",
-    Descriptor: "/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/DescriptorName/@UI",
-    Reference: "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
-  }
+    nodes: {
+      Author: "/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
+      Grant: "/PubmedArticle/MedlineCitation/Article/GrantList/Grant/GrantID",
+      Chemical: "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
+      Qualifier: "/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/QualifierName/@UI",
+      Descriptor: "/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/DescriptorName/@UI",
+    }
+
+    edges: {
+        Reference: "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
+    }
 #+end_src
 
 In the above example there is some special syntax.
@@ -92,6 +95,8 @@ Whenever a path ends with an attribute ~xml_read~ will collect both the attribut
 
 Lastly, ~[@attribute='value']~ filters for attributes with the supplied values.
 In the case of ~reference~ above this will ensure all references are identified by ~PMID~ as opposed to other IDs, such as DOI, so ~references~ can be linked with ~publication~ nodes.
+
+Notice that ~Reference~ is an edge because a reference is a link between two publications. The ~read_xml~ executable does not differentiate between the two, the distinction is for the benefit of post-processing using the same structure template.
 
 This example structure file can be found in the example directory of this project at: [[file:./example/structure.yml]]
 
