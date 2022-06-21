@@ -11,13 +11,14 @@
 
   outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
-      let pkgs = nixpkgs.legacyPackages.${system};
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+        src = self;
+        version = "1.1.0";
       in {
-        packages.read_xml = pkgs.callPackage ./read_xml.nix { };
-        defaultPackage = self.packages.${system}.read_xml;
-        devShell = pkgs.mkShell {
-          buildInputs = (with pkgs; [ gcc gdb astyle zlib ])
-            ++ [ self.packages.${system}.read_xml ];
-        };
+        packages.pubmedparser = pkgs.callPackage ./. { inherit src version; };
+        defaultPackage = self.packages.${system}.pubmedparser;
+        devShell =
+          pkgs.mkShell { buildInputs = (with pkgs; [ gcc gdb astyle zlib ]); };
       });
 }
