@@ -125,7 +125,8 @@ while IFS=': ' read node value; do
     join -j 2 $src_dir/${node}.tsv $dest_dir/${node}_nodes.tsv |
         sort -k2n | # output of join is: node_name key_id node_id
         tr ' ' '\t' |
-        cut --complement -f1 >$dest_dir/${key}_${node}_edges.tsv &
+        cut --complement -f1 |
+        sort -u >$dest_dir/${key}_${node}_edges.tsv &
 done <<<"$(components nodes)"
 wait
 
