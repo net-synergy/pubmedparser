@@ -14,7 +14,7 @@ static int yaml_get_key(char *buffer, const size_t max_size, FILE *fptr)
   char c;
 
   do c = fgetc(fptr);
-  while (!ISALPHA(c));
+  while (!ISALPHA(c) && c != EOF);
 
   int i;
   for (i = 0; (c != EOF) && (i < (int)max_size); i++) {
@@ -110,13 +110,21 @@ int yaml_get_keys(const char *structure_file, char ***keys, int *n_keys,
     (*n_keys)++;
     do (c = fgetc(fptr));
     while (ISWHITESPACE(c));
+
     if (c == '{') {
-      while ((c = fgetc(fptr)) != '}' && c != EOF);
-      if (c == EOF) {
-        fprintf(stderr,
-                "End of file while parsing key value in %s\n. Possibly a missing \"}\"",
-                structure_file);
-        return YAML__ERROR_KEY;
+      int depth = 1;
+      while (depth > 0) {
+        c = fgetc(fptr);
+        if (c == '{') {
+          depth++;
+        } else if (c == '}') {
+          depth--;
+        } else if (c == EOF) {
+          fprintf(stderr,
+                  "End of file while parsing key value in %s\n. Possibly a missing \"}\"",
+                  structure_file);
+          return YAML__ERROR_KEY;
+        }
       }
     };
   }
@@ -128,17 +136,26 @@ int yaml_get_keys(const char *structure_file, char ***keys, int *n_keys,
     (*keys)[k] = strdup(buff);
     do (c = fgetc(fptr));
     while (ISWHITESPACE(c));
+
     if (c == '{') {
-      while ((c = fgetc(fptr)) != '}' && c != EOF);
-      if (c == EOF) {
-        fprintf(stderr,
-                "End of file while parsing key value in %s\n. Possibly a missing \"}\"",
-                structure_file);
-        return YAML__ERROR_KEY;
+      int depth = 1;
+      while (depth > 0) {
+        c = fgetc(fptr);
+        if (c == '{') {
+          depth++;
+        } else if (c == '}') {
+          depth--;
+        } else if (c == EOF) {
+          fprintf(stderr,
+                  "End of file while parsing key value in %s\n. Possibly a missing \"}\"",
+                  structure_file);
+          return YAML__ERROR_KEY;
+        }
       }
     };
   }
 
+  fclose(fptr);
   return EXIT_SUCCESS;
 }
 
