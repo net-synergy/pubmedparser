@@ -11,6 +11,19 @@
 #define STRUCTURE_FILE "./data/test_yaml_reader_structure.yml"
 #define STR_MAX 100
 
+static void test_yaml_reads_key_names(void **state)
+{
+  (void) state;
+  char *keys[STR_MAX];
+  int n_keys = 0;
+  int rc;
+
+  rc = yaml_get_keys(STRUCTURE_FILE, keys, &n_keys, STR_MAX);
+  assert_int_equal(rc, 0);
+  assert_int_equal(n_keys, 8);
+  assert_string_equal(keys[0], "placeholder");
+}
+
 static void test_yaml_finds_key_value(void **state)
 {
   (void) state;
@@ -49,7 +62,8 @@ static void test_yaml_handles_string_literals(void **state)
   char value[STR_MAX];
   int rc;
 
-  rc = yaml_get_map_value(STRUCTURE_FILE, "test_handles_string_literals", value, STR_MAX);
+  rc = yaml_get_map_value(STRUCTURE_FILE, "test_handles_string_literals", value,
+                          STR_MAX);
   assert_int_equal(rc, 0);
   assert_string_equal(value, "/test/this/{path,syntax}");
 }
@@ -114,6 +128,7 @@ static void test_yaml_finds_map_contents_inline(void **state)
 int main(void)
 {
   const struct CMUnitTest tests[] = {
+    cmocka_unit_test(test_yaml_reads_key_names),
     cmocka_unit_test(test_yaml_finds_key_value),
     cmocka_unit_test(test_yaml_errors_on_missing_key),
     cmocka_unit_test(test_yaml_errors_on_missing_value),
