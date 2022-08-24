@@ -10,7 +10,7 @@ enum {
   YAML__WARN_BUFFER_OVERFLOW,
 };
 
-int yaml_get_keys(const char *structure_file, char **keys, int *n_keys,
+int yaml_get_keys(const char *structure_file, char ***keys, int *n_keys,
                   const size_t str_max);
 int yaml_get_map_value(const char *structure_file, const char *key,
                        char *value, const size_t str_max);
