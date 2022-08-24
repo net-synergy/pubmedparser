@@ -1,0 +1,9 @@
+root: "PubmedArticleSet"
+
+key: {
+  Publication: "/PubmedArticle/MedlineCitation/PMID"
+}
+
+key_features: {
+  Year: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year"
+}

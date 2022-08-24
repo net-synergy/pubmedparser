@@ -220,20 +220,33 @@ static void release_node(node *node)
   fclose(node->out);
 }
 
-#define N_NAMES 4
 node_set *construct_node_set(char *structure_file, char *cache_dir,
                              int str_max)
 {
   char root[str_max];
-  /* FIXME: Expects all keys to be in structure file. Should be able
-  to handle excluded keys. */
-  char *keys[N_NAMES] = { "key", "key_features", "nodes", "edges" };
-  size_t n_keys[N_NAMES];
-  char **key_values_pairs[N_NAMES][2];
+  int n_names = 0;
+  char **keys = NULL;
   int rc = 0;
 
+  rc = yaml_get_keys(structure_file, &keys, &n_names, str_max);
+
+  if (strcmp(keys[0], "root") != 0) {
+    fprintf(stderr, "Structure file must contain a key named \"root\"");
+    exit(1);
+  }
+  keys++;
+  n_names--;
+
+  if (strcmp(keys[0], "key") != 0) {
+    fprintf(stderr, "Structuer file must contain a key named \"key\"");
+    exit(1);
+  }
+
+  size_t n_keys[n_names];
+  char **key_values_pairs[n_names][2];
+
   yaml_get_map_value(structure_file, "root", root, str_max);
-  for (int i = 0; i < N_NAMES; i++) {
+  for (int i = 0; i < n_names; i++) {
     rc &= yaml_get_map_contents(structure_file, keys[i],
                                 key_values_pairs[i], &n_keys[i]);
   }
@@ -250,7 +263,7 @@ node_set *construct_node_set(char *structure_file, char *cache_dir,
   }
 
   size_t n_nodes = 0;
-  for (int i = 0; i < N_NAMES; i++) {
+  for (int i = 0; i < n_names; i++) {
     n_nodes += n_keys[i];
   }
 
@@ -258,7 +271,7 @@ node_set *construct_node_set(char *structure_file, char *cache_dir,
   char *xpaths[n_nodes];
 
   int pos = 0;
-  for (int i = 0; i < N_NAMES; i++) {
+  for (int i = 0; i < n_names; i++) {
     for (int j = 0; j < (int)n_keys[i]; j++) {
       names[pos] = key_values_pairs[i][0][j];
       xpaths[pos] = key_values_pairs[i][1][j];
@@ -286,7 +299,7 @@ node_set *construct_node_set(char *structure_file, char *cache_dir,
   node_set *ns = malloc(sizeof * ns);
   memcpy(ns, &ns_init, sizeof * ns);
 
-  for (int i = 0; i < N_NAMES; i++) {
+  for (int i = 0; i < n_names; i++) {
     for (int j = 0; j < (int)n_keys[i]; j++) {
       free(key_values_pairs[i][0][j]);
       free(key_values_pairs[i][1][j]);
