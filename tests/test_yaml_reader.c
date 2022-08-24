@@ -20,7 +20,7 @@ static void test_yaml_reads_key_names(void **state)
 
   rc = yaml_get_keys(STRUCTURE_FILE, &keys, &n_keys, STR_MAX);
   assert_int_equal(rc, 0);
-  assert_int_equal(n_keys, 8);
+  assert_int_equal(n_keys, 9);
   assert_string_equal(keys[0], "placeholder");
 }
 

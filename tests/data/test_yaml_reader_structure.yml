@@ -12,4 +12,9 @@ test_get_contents_multiline: {
 }
 test_get_contents_inline: { a: 1, b: 2, c: 3 }
 test_handles_string_literals: "/test/this/{path,syntax}"
+test_handles_nested_curly_brackets: {
+  a: "1",
+  b: "/test/this/{path,syntax}",
+  c: "3"
+}
 test_malformed_value: "Does not have end quatiation mark.
