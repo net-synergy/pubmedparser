@@ -161,7 +161,7 @@ static char *ensure_path_ends_with_slash(char *p)
   str_len--;
 
   if (p[str_len] != '/') {
-    char temp_dir[500];
+    char temp_dir[STR_MAX];
     strcpy(temp_dir, p);
     strcat(temp_dir, "/");
     p = strdup(temp_dir);
@@ -172,7 +172,7 @@ static char *ensure_path_ends_with_slash(char *p)
 
 static char *expandfile(char *filename, char *dirname)
 {
-  char temp[500];
+  char temp[STR_MAX];
   strcpy(temp, dirname);
   strcat(temp, filename);
   return strdup(temp);
