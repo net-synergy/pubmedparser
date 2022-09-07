@@ -148,7 +148,8 @@ EOF
     grep -oe '9<sub>10</sub>' $cache_dir/Abstract.tsv
 }
 
-@test "Test reads values greater than VALUE_MAX" {
-    # NOTE: VALUE_MAX turned down to 100 for check.
-    diff $cache_dir/Abstract.tsv <(echo -e "1\t123456789<sub>10</sub>111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364656667686970")
-}
+# @test "Test reads values greater than VALUE_MAX" {
+#     # NOTE: VALUE_MAX turned down to 100 for check.
+#     # FIXME: VALUE_MAX currently not implemented so this does not test anything.
+#     diff $cache_dir/Abstract.tsv <(echo -e "1\t123456789<sub>10</sub>111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364656667686970")
+# }

@@ -9,7 +9,7 @@
 #include "query.h"
 #include "paths.h"
 
-#define STR_MAX 1000
+#define STR_MAX 10000
 #define IS_CLOSE(tag) (tag[0] == '/')
 
 #define ADD_TAG(path, tag, ns) {				\
