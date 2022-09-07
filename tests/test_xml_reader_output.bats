@@ -22,6 +22,9 @@ setup_file() {
 	    </PubDate>
 	  </JournalIssue>
 	</Journal>
+	<Abstract>
+	  <AbstractText>123456789<sub>10</sub>111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364656667686970</AbstractText>
+	</Abstract>
 	<AuthorList CompleteYN="Y">
 	  <Author ValidYN="Y">
 	    <LastName>John</LastName>
@@ -140,4 +143,12 @@ EOF
     # there will be more entries i.e. 10.000 and 10.001.
     diff $cache_dir/Reference.tsv <(echo -e "1\t2")
 }
+
+@test "Test reads values with HTML tags in them" {
+    grep -oe '9<sub>10</sub>' $cache_dir/Abstract.tsv
+}
+
+@test "Test reads values greater than VALUE_MAX" {
+    # NOTE: VALUE_MAX turned down to 100 for check.
+    diff $cache_dir/Abstract.tsv <(echo -e "1\t123456789<sub>10</sub>111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364656667686970")
 }
