@@ -95,16 +95,13 @@ teardown_file() {
 }
 
 @test "Test key nodes file" {
-    # NOTE: Don't know why `echo` is passing a literal '\n' instead of a
-    # tab character. Using `tr` to get around.
-
-    diff $cache_dir/Publication.tsv <(echo "1 2" | tr ' ' '\n')
+    diff $cache_dir/Publication.tsv <(echo -e "1\n2")
 }
 
 @test "Test tag mismatch causes error" {
     run read_xml \
-	--structure-file=$structure_file \
-	--cache-dir=$cache_dir <<EOF
+        --structure-file=$structure_file \
+        --cache-dir=$cache_dir <<EOF
 <PubmedArticleSet>
  <PubmedArticle>
 </PubmedArticleSet>
@@ -117,8 +114,8 @@ EOF
 @test "Test handle empty tag" {
     # Would return a tag mismatch error if `<blah />` is not skipped.
     read_xml \
-	--structure-file=$structure_file \
-	--cache-dir=$cache_dir <<EOF
+        --structure-file=$structure_file \
+        --cache-dir=$cache_dir <<EOF
 <PubmedArticleSet>
  <PubmedArticle>
   <blah />
@@ -129,17 +126,18 @@ EOF
 
 @test "Test handle missing fore name" {
     diff <(cut -f1 -c $cache_dir/Author.tsv | sort) \
-	<(cat "Smith\tJohn\nDoe\tJane\n\tJake\nSmith\tJohn\n" | \
-	sort)
+        <(cat "Smith\tJohn\nDoe\tJane\n\tJake\nSmith\tJohn\n" |
+            sort)
 }
 
 @test "Test collects attributes" {
     diff $cache_dir/Chemical.tsv \
-	<(echo "1 D1 Molecule_1 D2 Solution" | tr ' ' '\t' | tr '_' '\n')
+        <(echo -e "1\tD1\tMolecule\n1\tD2\tSolution")
 }
 
 @test "Test filtering by attribute value" {
     # If it collects references with doi attribute as well as pubmed,
     # there will be more entries i.e. 10.000 and 10.001.
-    diff $cache_dir/Reference.tsv  <(echo "1 2" | tr ' ' '\t')
+    diff $cache_dir/Reference.tsv <(echo -e "1\t2")
+}
 }
