@@ -199,6 +199,27 @@ static struct option const longopts[] = {
   {NULL, 0, NULL, 0}
 };
 
+void cat(const char *node_name, const char *cache_dir, const int n_threads)
+{
+  char file_name[1000];
+  sprintf(file_name, "%s%s.tsv", cache_dir, node_name);
+  FILE *aggregate_file = fopen(file_name, "w");
+
+  for (int i = 0; i < n_threads; i++) {
+    sprintf(file_name, "%s%s_%d.tsv", cache_dir, node_name, i);
+    FILE *processor_file = fopen(file_name, "r");
+    char c = '\0';
+    while ((c = getc(processor_file)) != EOF) {
+      putc(c, aggregate_file);
+    }
+    /* putc('\n', aggregate_file); */
+    fclose(processor_file);
+    remove(file_name);
+  }
+
+  fclose(aggregate_file);
+}
+
 int main(int argc, char **argv)
 {
   int optc;
@@ -263,22 +284,16 @@ int main(int argc, char **argv)
 
       fprintf(progress_ptr, "%s\n", argv[i]);
     }
+    for (int i = 0; i < n_threads; i++) {
+      release_clone(ns_dup[i]);
+    }
+    fclose(progress_ptr);
 
-    char cmd[STR_MAX];
-    #pragma omp parallel for private (cmd)
+    #pragma omp parallel for
     for (int n = 0; n < ns->n; n++) {
-      /* TODO: Could remove duplication between here and creating file
-      name in node construction. */
-      sprintf(cmd, "cat %s%s_*.tsv > %s%s.tsv", cache_dir, ns->nodes[n]->name,
-              cache_dir,
-              ns->nodes[n]->name);
-      system(cmd);
-      sprintf(cmd, "rm %s%s_*.tsv", cache_dir, ns->nodes[n]->name);
-      system(cmd);
+      cat(ns->nodes[n]->name, cache_dir, n_threads);
     }
   }
-
-  fclose(progress_ptr);
 
   return status;
 }
