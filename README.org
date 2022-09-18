@@ -18,8 +18,10 @@ Usage:
 
 The cache directory is where the results are stored.
 
-Build:
-Requires ~zlib~
+** Building
+Requires ~zlib~.
+
+Clone the repository and in the directory run:
 #+begin_src sh :eval no
   make all
 #+end_src
@@ -28,8 +30,6 @@ or using nix:
 #+begin_src sh :eval no
   nix shell "gitlab:DavidRConnell/pubmedparser"
 #+end_src
-
-Has a runtime dependency on ~cat~ found in ~coreutils~.
 
 * Structure file
 :PROPERTIES:
