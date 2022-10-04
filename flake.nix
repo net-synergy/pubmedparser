@@ -14,7 +14,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         src = self;
-        version = "1.1.3";
+        version = "1.1.4";
       in {
         packages.pubmedparser = pkgs.callPackage ./. { inherit src version; };
         defaultPackage = self.packages.${system}.pubmedparser;

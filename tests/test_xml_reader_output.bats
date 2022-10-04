@@ -127,6 +127,26 @@ EOF
 EOF
 }
 
+@test "Test handle empty tag in value field" {
+    # Would return a tag mismatch error if `<blah />` is not skipped.
+    read_xml \
+        --structure-file=$structure_file \
+        --cache-dir=$cache_dir <<EOF
+<PubmedArticleSet>
+ <PubmedArticle>
+    <MedlineCitation Status="PubMed-not-MEDLINE" Owner="NLM">
+      <PMID Version="1">1</PMID>
+      <Article PubModel="Electronic-eCollection">
+	<Abstract>
+	  <AbstractText>123456789<sub>10</sub>1112131<blah/>70</AbstractText>
+	</Abstract>
+      </Article>
+    </MedlineCitation>
+ </PubmedArticle>
+</PubmedArticleSet>
+EOF
+}
+
 @test "Test handle missing fore name" {
     diff <(cut -f1 -c $cache_dir/Author.tsv | sort) \
         <(cat "Smith\tJohn\nDoe\tJane\n\tJake\nSmith\tJohn\n" |

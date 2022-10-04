@@ -49,6 +49,19 @@ int get_value(gzFile fptr, char c, char s[], int str_max)
         tag_level--;
       } else {
         tag_level++;
+
+        s[i] = c;
+        i++;
+        while (((c = gzgetc(fptr)) != '>') && i < (str_max - 1)) {
+          if (c == '/') {
+            if ((look_ahead = gzgetc(fptr)) == '>') {
+              tag_level--;
+            }
+            gzungetc(look_ahead, fptr);
+          }
+          s[i] = c;
+          i++;
+        }
       }
 
       if (tag_level < 0) {
