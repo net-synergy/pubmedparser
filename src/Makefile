@@ -16,12 +16,14 @@ read_xml.o: read_xml.c paths.h query.h yaml_reader.h
 	$(CC) -fopenmp -c $*.c
 
 $(BIN_DIR)/read_xml: read_xml.o paths.o query.o yaml_reader.o
+	-[ -d $(BIN_DIR) ] || mkdir $(BIN_DIR)
 	$(CC) $(CFLAGS) -fopenmp $^ -o $@ -lz
 
 yaml_get_key_component.o: yaml_get_key_component.c yaml_reader.h
 	$(CC) -c $*.c
 
 $(BIN_DIR)/yaml_get_key_component: yaml_get_key_component.o yaml_reader.o
+	-[ -d $(BIN_DIR) ] || mkdir $(BIN_DIR)
 	$(CC) $(CFLAGS) $^ -o $@
 
 debug: $(BIN_DIR)/read_xml
