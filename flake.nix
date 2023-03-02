@@ -18,7 +18,8 @@
       in {
         packages.pubmedparser = pkgs.callPackage ./. { inherit src version; };
         defaultPackage = self.packages.${system}.pubmedparser;
-        devShell =
-          pkgs.mkShell { buildInputs = (with pkgs; [ gcc gdb astyle zlib ]); };
+        devShell = pkgs.mkShell {
+          buildInputs = (with pkgs; [ gcc gdb astyle zlib bats cmocka ]);
+        };
       });
 }

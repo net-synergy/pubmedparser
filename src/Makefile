@@ -15,7 +15,7 @@ paths.o: paths.c paths.h yaml_reader.h
 read_xml.o: read_xml.c paths.h query.h yaml_reader.h
 	$(CC) -fopenmp -c $*.c
 
-$(BIN_DIR)/read_xml: read_xml.o paths.o query.o yaml_reader.o
+$(BIN_DIR)/read_xml: read_xml.o paths.o query.o yaml_reader.o read_xml_core.o
 	-[ -d $(BIN_DIR) ] || mkdir $(BIN_DIR)
 	$(CC) $(CFLAGS) -fopenmp $^ -o $@ -lz
 
