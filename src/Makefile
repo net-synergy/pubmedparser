@@ -19,10 +19,9 @@ $(BIN_DIR)/read_xml: read_xml.o paths.o query.o yaml_reader.o read_xml_core.o
 	-[ -d $(BIN_DIR) ] || mkdir $(BIN_DIR)
 	$(CC) $(CFLAGS) -fopenmp $^ -o $@ -lz
 
-yaml_get_key_component.o: yaml_get_key_component.c yaml_reader.h
+read_structure.o: read_structure.c structure.h
 	$(CC) -c $*.c
 
-$(BIN_DIR)/yaml_get_key_component: yaml_get_key_component.o yaml_reader.o
 	-[ -d $(BIN_DIR) ] || mkdir $(BIN_DIR)
 	$(CC) $(CFLAGS) $^ -o $@
 
@@ -35,10 +34,7 @@ profile: $(BIN_DIR)/read_xml
 run: $(BIN_DIR)/read_xml
 	$^ --cache-dir=$(CACHE_DIR) --structure-file=../example/structure.yml ../data/pubmed21n0001.xml.gz
 
-run-get-content: $(BIN_DIR)/yaml_get_key_component
-	$^ --structure-file=../example/structure.yml nodes
-
-all: $(BIN_DIR)/read_xml $(BIN_DIR)/yaml_get_key_component
+all: $(BIN_DIR)/read_xml
 
 clean:
 	-rm *.o

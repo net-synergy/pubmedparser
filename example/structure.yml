@@ -1,23 +1,36 @@
-root: "PubmedArticleSet"
+root: "//PubmedArticleSet"
 
-key: {
-  Publication: "/PubmedArticle/MedlineCitation/PMID"
+key: "/PubmedArticle/MedlineCitation/PMID"
+
+DOI: "/PubmedArticle/PubmedData/ArticleIdList/ArticleId/[@IdType='doi']"
+Date: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/{Year,Month,Day}"
+Journal: "/PubmedArticle/MedlineCitation/Journal/{Title,ISOAbbreviation}"
+Language: "/PubmedArticle/MedlineCitation/Article/Language"
+
+Author: {
+  root: "/PubmedArticle/MedlineCitation/Article/AuthorList/Author",
+  key: "//index",
+  LastName: "/LastName",
+  ForeName: "/ForeName",
+  Affiliation: "/AffiliationInfo/Affiliation",
+  Orcid: "/Identifier/[@Source='ORCID']"
 }
 
-key_features: {
-  Year: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
-  Language: "/PubmedArticle/MedlineCitation/Article/Language"
+Grant: {
+  root: "/PubmedArticle/MedlineCitation/Article/GrantList/Grant"
+  key: "//index",
+  ID: "/GrantID"
+  Agency: "/Agency"
 }
 
-nodes: {
-  Author: "/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
-  Grant: "/PubmedArticle/MedlineCitation/Article/GrantList/Grant/GrantID",
-  Chemical: "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
-  Qualifier: "/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/QualifierName/@UI",
-  Descriptor: "/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/DescriptorName/@UI",
-  Abstract: "/PubmedArticle/MedlineCitation/Article/Abstract/AbstractText"
-}
+Chemical: "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI"
+Qualifier: "/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/QualifierName/@UI"
+Descriptor: "/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/DescriptorName/@UI"
+Keywords: "/PubmedArticle/MedlineCitation/KeywordList/Keyword"
 
-edges: {
-  Reference: "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
+Reference: {
+  root: "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId"
+  key: "//index"
+  PMID: "/[@IdType='pubmed']"
+  DOI: "/[@IdType='doi']"
 }

@@ -1,13 +1,23 @@
 #include "yaml_reader.h"
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 
-#define STR_MAX 1000
 #define BLOCK_MAX 50000
 #define ISWHITESPACE(c) ((c == ' ') || (c == '\n') || (c == '\t'))
 #define ISALPHA(c) (((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')))
+
+static void yaml_rewind_to_start_of_line(FILE *fptr)
+{
+  int pos = ftell(fptr);
+  if (pos == 0) {
+    return;
+  }
+
+  for (char c = fgetc(fptr); c != '\n' && pos >= 0; pos--) {
+    c = fgetc(fptr);
+    fseek(fptr, pos, SEEK_SET);
+  };
+}
 
 static int yaml_get_key(char *buffer, const size_t max_size, FILE *fptr)
 {
@@ -16,8 +26,8 @@ static int yaml_get_key(char *buffer, const size_t max_size, FILE *fptr)
   do c = fgetc(fptr);
   while (!ISALPHA(c) && c != EOF);
 
-  int i;
-  for (i = 0; (c != EOF) && (i < (int)max_size); i++) {
+  size_t i;
+  for (i = 0; (c != EOF) && (i < max_size); i++, c = fgetc(fptr)) {
     if (c == ':') {
       buffer[i] = '\0';
       break;
@@ -26,10 +36,9 @@ static int yaml_get_key(char *buffer, const size_t max_size, FILE *fptr)
     } else {
       buffer[i] = c;
     }
-    c = fgetc(fptr);
   }
 
-  if (i == (int)max_size) {
+  if (i == max_size) {
     buffer[i - 1] = '\0';
     fprintf(stderr,
             "Warning: buffer too small to fit key. \
@@ -56,7 +65,7 @@ static int yaml_get_value(char *buffer, const size_t max_size, FILE *fptr)
     while (ISWHITESPACE(c));
   }
 
-  int i = 0;
+  size_t i = 0;
   char delim = EOF;
   if (c == '"' || c == '\'') {
     delim = c;
@@ -66,7 +75,7 @@ static int yaml_get_value(char *buffer, const size_t max_size, FILE *fptr)
     }
   } else {
     while (c != ',' && c != '\n' && c != '}' &&
-           i < (int)max_size && c != EOF) {
+           i < max_size && c != EOF) {
       buffer[i] = c;
       i++;
       c = fgetc(fptr);
@@ -77,7 +86,7 @@ static int yaml_get_value(char *buffer, const size_t max_size, FILE *fptr)
     return YAML__ERROR_VALUE;
   }
 
-  if (i == (int)max_size) {
+  if (i == max_size) {
     buffer[i - 1] = '\0';
     fprintf(stderr, "Warning: value was larger than value buffer. \
 Increase buffer size to get full value.\n");
@@ -94,173 +103,126 @@ Increase buffer size to get full value.\n");
   return c;
 }
 
-int yaml_get_keys(const char *structure_file, char ***keys, int *n_keys,
-                  const size_t str_max)
+static size_t next_line_depth(FILE *fptr)
 {
-  FILE *fptr;
-  if (!(fptr = fopen(structure_file, "r"))) {
-    fprintf(stderr, "Could not open %s\n", structure_file);
-    return YAML__ERROR_FILE;
+  char c = fgetc(fptr);
+  size_t depth = 0;
+
+  while (c != '\n' && c != EOF) c = fgetc(fptr);
+
+  if (c == EOF) {
+    fprintf(stderr,
+            "End of file while parsing key value in structure file\n. Possibly a missing \"}\"");
+    return YAML__ERROR_KEY;
   }
 
+  while (ISWHITESPACE(c)) {
+    depth++;
+    if (c == '\n') {
+      depth = 0;
+    }
+    c = fgetc(fptr);
+  }
+
+  if (c == EOF) {
+    fprintf(stderr,
+            "End of file while parsing key value in structure file\n. Possibly a missing \"}\"");
+    return YAML__ERROR_KEY;
+  }
+
+  ungetc(c, fptr);
+  return depth;
+}
+
+int yaml_get_keys(FILE *fptr, char ***keys, size_t *n_keys, const int start,
+                  const size_t str_max)
+{
+  fseek(fptr, start, SEEK_SET);
   char buff[str_max];
   char c;
+  *n_keys = 0;
 
-  while ((c = yaml_get_key(buff, str_max, fptr)) != EOF) {
+  size_t initial_depth = 0;
+  yaml_rewind_to_start_of_line(fptr);
+  for (c = fgetc(fptr); ISWHITESPACE(c); c = fgetc(fptr), initial_depth++);
+  yaml_rewind_to_start_of_line(fptr);
+
+  size_t depth = initial_depth;
+  while (((c = yaml_get_key(buff, str_max, fptr)) != EOF) &&
+         (depth >= initial_depth)) {
     (*n_keys)++;
-    do (c = fgetc(fptr));
-    while (ISWHITESPACE(c));
 
-    if (c == '{') {
-      int depth = 1;
-      while (depth > 0) {
-        c = fgetc(fptr);
-        if (c == '{') {
-          depth++;
-        } else if (c == '}') {
-          depth--;
-        } else if (c == EOF) {
-          fprintf(stderr,
-                  "End of file while parsing key value in %s\n. Possibly a missing \"}\"",
-                  structure_file);
-          return YAML__ERROR_KEY;
-        }
-      }
-    };
+    do (depth = next_line_depth(fptr));
+    while ((depth > initial_depth) && (depth != YAML__ERROR_KEY));
   }
 
   *keys = malloc(sizeof **keys * (*n_keys));
-  rewind(fptr);
-  for (int k = 0; k < (*n_keys); k++) {
+  fseek(fptr, start, SEEK_SET);
+  for (size_t k = 0; k < (*n_keys); k++) {
     c = yaml_get_key(buff, str_max, fptr);
     (*keys)[k] = strdup(buff);
+
     do (c = fgetc(fptr));
     while (ISWHITESPACE(c));
 
-    if (c == '{') {
-      int depth = 1;
-      while (depth > 0) {
-        c = fgetc(fptr);
-        if (c == '{') {
-          depth++;
-        } else if (c == '}') {
-          depth--;
-        } else if (c == EOF) {
-          fprintf(stderr,
-                  "End of file while parsing key value in %s\n. Possibly a missing \"}\"",
-                  structure_file);
-          return YAML__ERROR_KEY;
-        }
-      }
-    };
+    do (depth = next_line_depth(fptr));
+    while ((depth > initial_depth) && (depth != YAML__ERROR_KEY));
   }
 
-  fclose(fptr);
   return EXIT_SUCCESS;
 }
 
-int yaml_get_map_value(const char *structure_file, const char *key,
-                       char *value, const size_t str_max)
+static int yaml_ff_to_key(FILE *fptr, const char *key, const int start,
+                          const size_t str_max)
 {
-  FILE *fptr;
-  if (!(fptr = fopen(structure_file, "r"))) {
-    fprintf(stderr, "Could not open %s\n", structure_file);
-    return YAML__ERROR_FILE;
-  }
-
-  char buff[STR_MAX];
+  fseek(fptr, start, SEEK_SET);
+  char buff[str_max];
   char c;
 
-  do c = yaml_get_key(buff, STR_MAX, fptr);
+  do c = yaml_get_key(buff, str_max, fptr);
   while (strcmp(buff, key) != 0 && c != EOF);
 
   if (c == EOF) {
-    fprintf(stderr, "Could not find key %s in %s\n", key, structure_file);
+    fprintf(stderr, "Could not find key %s in structure file\n", key);
     return YAML__ERROR_KEY;
   }
 
+  return EXIT_SUCCESS;
+}
+
+int yaml_get_map_value(FILE *fptr, const char *key, char *value,
+                       const int start, const size_t str_max)
+{
+  yaml_ff_to_key(fptr, key, start, str_max);
+
+  char c;
   c = yaml_get_value(value, str_max, fptr);
 
   if (c == YAML__ERROR_VALUE) {
-    fprintf(stderr, "Could not find value for key %s in %s\n", key,
-            structure_file);
+    fprintf(stderr, "Could not find value for key %s in structure file\n", key);
     return c;
   }
 
-  fclose(fptr);
   return 0;
 }
 
-int yaml_get_map_contents(const char *structure_file, const char *key,
-                          char ***key_value_pairs, size_t *n_items)
+int yaml_map_value_is_singleton(FILE *fptr, const char *key, const int start,
+                                const size_t str_max)
 {
-  FILE *fptr;
-  if (!(fptr = fopen(structure_file, "r"))) {
-    fprintf(stderr, "Could not open %s\n", structure_file);
-    return YAML__ERROR_FILE;
-  }
+  yaml_ff_to_key(fptr, key, start, str_max);
 
-  char buff[STR_MAX];
   char c;
-
-  do c = yaml_get_key(buff, STR_MAX, fptr);
-  while (strcmp(buff, key) != 0 && c != EOF);
-
-  if (c == EOF) {
-    fprintf(stderr, "Could not find key %s in %s.\n", key, structure_file);
-    return YAML__ERROR_KEY;
-  }
-
   do c = fgetc(fptr);
-  while (c != '{' && c != EOF);
+  while (ISWHITESPACE(c));
 
   if (c == EOF) {
-    fprintf(stderr, "Could not find values for key %s in %s.\n", key,
-            structure_file);
+    fprintf(stderr, "Could not find values for key %s in structure file.\n", key);
     return YAML__ERROR_VALUE;
   }
 
-  char block_buffer[BLOCK_MAX];
-  int block_i = 0;
-  *n_items = 0;
-  int in_string = 0;
-  while ((c != '}' || in_string) && c != EOF && block_i < BLOCK_MAX) {
-    if (c == ':')
-      (*n_items)++;
-
-    if (c == '\'' || c == '"') in_string = !in_string;
-
-    block_buffer[block_i] = c;
-    block_i++;
-    c = fgetc(fptr);
+  if (c == '{') {
+    return 0;
+  } else {
+    return 1;
   }
-  block_buffer[block_i] = '}';
-  block_buffer[block_i + 1] = '\0';
-
-  if (c == EOF) {
-    fprintf(stderr, "File ended while searching for values for key %s in %s.\n",
-            key, structure_file);
-    return YAML__ERROR_VALUE;
-  }
-
-  if (*n_items == 0) {
-    fprintf(stderr, "Did not find any values for key %s in %s.\n", key,
-            structure_file);
-    return YAML__ERROR_VALUE;
-  }
-
-  key_value_pairs[0] = malloc(sizeof * key_value_pairs[0] * (*n_items));
-  key_value_pairs[1] = malloc(sizeof * key_value_pairs[1] * (*n_items));
-  FILE *block_ptr = fmemopen(block_buffer, BLOCK_MAX, "r");
-  for (int i = 0; i < (int)*n_items; i++) {
-    c = yaml_get_key(buff, STR_MAX, block_ptr);
-    key_value_pairs[0][i] = strdup(buff);
-    c = yaml_get_value(buff, STR_MAX, block_ptr);
-    key_value_pairs[1][i] = strdup(buff);
-  }
-
-  fclose(fptr);
-  fclose(block_ptr);
-
-  return 0;
 }
