@@ -17,7 +17,5 @@ int yaml_map_value_is_singleton(FILE *fptr, const char *key, const int start,
                                 const size_t str_max);
 int yaml_get_map_value(FILE *fptr, const char *key, char *value,
                        const int start, const size_t str_max);
-/* int yaml_get_map_contents(FILE *fptr, const char *key, char ***keys, */
-/*                           char ***values, size_t *n_items, const size_t str_max); */
 
 #endif

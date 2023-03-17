@@ -2,37 +2,23 @@
 #define PATHS_H
 
 #include <stdio.h>
+#include <stdbool.h>
+
+#include "query.h"
 
 typedef struct Path {
   char **components;
-  int length;
-} path;
+  size_t length;
+  const size_t max_path_depth;
+} *path;
 
-typedef struct Node {
-  const char *name;
-  const path *path;
-  char **values;
-  const int n_values;
-  const char **sub_tags;
-  const int n_sub_tags;
-  const char *attribute;
-  const char *expected_attribute;
-  FILE *out;
-} node;
-
-typedef struct NodeSet {
-  const char *root;
-  const int max_path_depth;
-  const int key_idx;
-  node **nodes;
-  const int n;
-} node_set;
-
-node_set *construct_node_set(char *structure_file, char *cache_dir,
-                             int str_max);
-void release_node_set(node_set *ns);
-node_set *clone_node_set(node_set *ns, char *cache_dir, int thread,
-                         int str_max);
-void release_clone(node_set *ns);
+path path_init(const char *xml_path, const size_t str_max);
+path path_init_dynamic(const size_t max_path_size);
+void path_destroy(path p);
+void path_append(path p, const tag *t);
+void path_drop_last_component(path p);
+int path_match(const path p1, const path p2);
+int path_is_empty(const path p);
+void path_print(const path p);
 
 #endif

@@ -6,6 +6,7 @@
 #include <omp.h>
 
 #include "read_xml.h"
+#include "structure.h"
 
 #define STR_MAX 5000
 
@@ -81,7 +82,9 @@ int main(int argc, char **argv)
 
   char *parsed = expand_file("processed.txt", cache_dir);
 
-  node_set *ns = construct_node_set(structure_file, cache_dir, STR_MAX);
+  path_struct structure = parse_structure_file(structure_file, STR_MAX);
+  node_set *ns = node_set_generate(structure, NULL, cache_dir, STR_MAX);
+  path_struct_destroy(structure);
 
   FILE *progress_ptr;
   if (!(progress_ptr = fopen(parsed, "a"))) {

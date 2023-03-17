@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+#include "error.h"
+
 void pubmedparser_error(const int status, const char *msg, ...)
 {
   va_list argp;

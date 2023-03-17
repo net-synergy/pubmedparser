@@ -104,7 +104,6 @@ static void path_struct_print_i(const path_struct ps, const size_t depth)
 
   printf("%s%s: ", tab, ps->name);
   if (ps->path != NULL) {
-    /* path_print(ps->path); */
     printf("%s", ps->path);
   }
   printf("\n");
@@ -134,8 +133,6 @@ path_struct parse_structure_file(const char *structure_file,
   }
 
   read_elements(fptr, &top, 0, str_max);
-
-  path_struct_print(&top);
 
   path_struct ret = malloc(sizeof(*ret));
   memcpy(ret, &top, sizeof(*ret));
