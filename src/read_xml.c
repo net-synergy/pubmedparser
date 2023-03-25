@@ -7,6 +7,7 @@
 
 #include "read_xml.h"
 #include "structure.h"
+#include "error.h"
 
 #define STR_MAX 5000
 
@@ -99,7 +100,7 @@ int main(int argc, char **argv)
     /* omp_get_num_threads() returns 1 outside of parallel blocks so
     this is a work around to get the real number of threads ahead of
     time. */
-    int n_threads = 0;
+    size_t n_threads = 0;
     #pragma omp parallel
     {
       #pragma omp single
@@ -107,28 +108,29 @@ int main(int argc, char **argv)
     }
 
     node_set *ns_dup[n_threads];
-    for (int i = 0; i < n_threads; i++)
-      ns_dup[i] = clone_node_set(ns, cache_dir, i, STR_MAX);
+    for (size_t i = 0; i < n_threads; i++) {
+      ns_dup[i] = node_set_clone(ns, cache_dir, i, STR_MAX);
+    }
 
     #pragma omp parallel for private (status)
     for (int i = optind; i < argc; i++) {
       status = parse_file(argv[i], ns_dup[omp_get_thread_num()]);
 
       if (status != 0) {
-        fprintf(stderr, "Tag mismatch in file: %s\n", argv[i]);
-        exit(1);
+        pubmedparser_error(1,  "Tag mismatch in file: %s\n", argv[i]);
       }
 
       fprintf(progress_ptr, "%s\n", argv[i]);
     }
-    for (int i = 0; i < n_threads; i++) {
-      release_clone(ns_dup[i]);
+
+    for (size_t i = 0; i < n_threads; i++) {
+      node_set_destroy(ns_dup[i]);
     }
     fclose(progress_ptr);
 
     #pragma omp parallel for
-    for (int n = 0; n < ns->n; n++) {
-      cat(ns->nodes[n]->name, cache_dir, n_threads);
+    for (size_t i = 0; i < ns->n_nodes; i++) {
+      cat(ns->nodes[i]->name, cache_dir, n_threads);
     }
   }
 

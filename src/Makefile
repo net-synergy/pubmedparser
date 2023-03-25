@@ -10,19 +10,19 @@ profile: CFLAGS += -pg
 
 .PHONY: debug profile run all clean
 paths.o: paths.c paths.h yaml_reader.h
-	$(CC) -c $*.c
+	$(CC) $(CFLAGS) -c $*.c
 
 nodes.o: nodes.c nodes.h paths.h structure.h error.h
-	$(CC) -c $*.c
+	$(CC) $(CFLAGS) -c $*.c
 
 read_structure.o: read_structure.c structure.h
-	$(CC) -c $*.c
+	$(CC) $(CFLAGS) -c $*.c
 
 read_xml_core.o: read_xml_core.c paths.h query.h read_xml.h error.h
-	$(CC) -fopenmp -c $*.c
+	$(CC) $(CFLAGS) -fopenmp -c $*.c
 
 read_xml.o: read_xml.c paths.h query.h nodes.h read_xml.h error.h yaml_reader.h structure.h
-	$(CC) -fopenmp -c $*.c
+	$(CC) $(CFLAGS) -fopenmp -c $*.c
 
 $(BIN_DIR)/read_xml: read_xml.o paths.o query.o nodes.o error.o yaml_reader.o read_xml_core.o read_structure_file.o
 	-[ -d $(BIN_DIR) ] || mkdir $(BIN_DIR)
@@ -31,7 +31,7 @@ $(BIN_DIR)/read_xml: read_xml.o paths.o query.o nodes.o error.o yaml_reader.o re
 debug: $(BIN_DIR)/read_xml
 
 profile: $(BIN_DIR)/read_xml
-	$^ --cache-dir=$(CACHE_DIR) --structure-file=../example/structure.yml ~/data/pubmed/pubmed21n0001.xml.gz
+	$^ --cache-dir=$(CACHE_DIR) --structure-file=../example/structure.yml ../data/unzip1162.xml.gz
 	gprof -b $^
 
 run: $(BIN_DIR)/read_xml

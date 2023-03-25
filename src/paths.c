@@ -91,18 +91,18 @@ path path_init_dynamic(const size_t max_path_depth)
 
 void path_drop_last_component(path p)
 {
+  p->length--;
   if (p->length < p->max_path_depth) {
     free(p->components[p->length]);
   }
-  p->length--;
 }
 
 void path_append(path p, const tag *t)
 {
-  p->length++;
   if (p->length < p->max_path_depth) {
     p->components[p->length] = strdup(t->value);
   }
+  p->length++;
 }
 
 int path_match(const path p1, const path p2)
@@ -116,15 +116,17 @@ int path_match(const path p1, const path p2)
   return i == 0;
 }
 
-int path_is_empty(const path p)
+inline int path_is_empty(const path p)
 {
-  return p->length == 0;
+  return (int)p->length == -1;
 }
 
 void path_print(const path p)
 {
   char sep = '/';
-  for (size_t i = 0; i < p->length; i++) {
+  size_t len = (p->length < p->max_path_depth) ? p->length : p->max_path_depth;
+  for (size_t i = 0; i < len; i++) {
     printf("%c%s", sep, p->components[i]);
   }
+  printf("\n");
 }

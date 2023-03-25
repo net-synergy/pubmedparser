@@ -1,16 +1,19 @@
 #ifndef QUERY_H
 #define QUERY_H
 
+#include <stdbool.h>
 #include <zlib.h>
 
-enum {
-  EMPTY_TAG = 20,
-  PREV_EMPTY_TAG,
-  NO_ATTRIBUTE,
-};
+typedef struct Tag {
+  char *value;
+  size_t buff_size;
+  bool is_empty;
+  bool was_prev_empty;
+  bool is_close;
+} tag;
 
-int get_tag(gzFile fptr, char c, char s[], int str_max);
-int get_value(gzFile fptr, char c, char s[], int str_max);
-int get_attribute(gzFile fptr, char c, char s[], int str_max);
+void tag_get(gzFile fptr, tag *t);
+void value_get(gzFile fptr, z_off_t pos[2], tag *t);
+void attribute_get(gzFile fptr, z_off_t pos[2], tag *t);
 
 #endif

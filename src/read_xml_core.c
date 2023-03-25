@@ -1,59 +1,83 @@
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <dirent.h>
 #include <zlib.h>
 
 #include "read_xml.h"
 
 #define STR_MAX 10000
-#define IS_CLOSE(tag) (tag[0] == '/')
 
-#define ADD_TAG(path, tag, ns) {				\
-    if (path.length < ns->max_path_depth && path.length >= 0) {	\
-      path.components[path.length] = strdup(tag);		\
-    }								\
-    path.length++;						\
+#define OUT_OF_ROOT_SCOPE(tag, ns) (tag)->is_close && (strcmp((tag)->value, (ns)->root) == 0)
+
+#define CONTINUE_IF_EMPTY_TAG(tag, path) {				\
+    if (tag->is_empty || tag->was_prev_empty) {				\
+      path_drop_last_component(path);					\
+      tag->was_prev_empty = false;					\
+      continue;								\
+    }									\
   }
 
-#define RM_TAG(path, ns) {					\
-    path.length--;						\
-    if (path.length < ns->max_path_depth && path.length >= 0) {	\
-      free(path.components[path.length]);			\
-    }								\
-  }
-
-#define CONTINUE_IF_EMPTY_TAG(c, path, ns) {	\
-    if (c == EMPTY_TAG) {			\
-      RM_TAG(path, ns)				\
-      continue;					\
-    }						\
-  }
-
-/* Assumes key will only ever have 1 value. */
-#define PRINT_NODE(key, node) {				\
-    fprintf(node->out, "%s\t", key->values[0]);		\
-    for (int pi = 0; pi < (node->n_values - 1); pi++) {	\
-      fprintf(node->out,				\
-	      "%s\t", node->values[pi]);		\
-    }							\
-    fprintf(node->out,					\
-	    "%s\n",					\
-	    node->values[node->n_values - 1]);		\
-  }
-
-#define matching_tags(open, close) (strcmp(open, close + 1) == 0)
-
-static int path_match(const path *p1, const path *p2)
+static int parse_file_i(gzFile fptr, node_set *ns, tag *current_tag)
 {
-  if (p1->length != p2->length) return 0;
+  path current_path = path_init_dynamic(ns->max_path_depth);
 
-  int i = p1->length;
-  while ((i > 0) &&
-         (strcmp(p1->components[i - 1], p2->components[i - 1]) == 0)) i--;
+  while ((strcmp(ns->root, current_tag->value) != 0) && (!(gzeof(fptr)))) {
+    tag_get(fptr, current_tag);
+  }
 
-  return i == 0;
+  node *n;
+  while (!(gzeof(fptr)) && !(OUT_OF_ROOT_SCOPE(current_tag, ns))) {
+    tag_get(fptr, current_tag);
+
+    if (current_tag->is_empty) {
+      continue;
+    }
+
+    if (current_tag->is_close || current_tag->was_prev_empty) {
+      path_drop_last_component(current_path);
+      current_tag->was_prev_empty = false;
+    } else {
+      path_append(current_path, current_tag);
+      for (size_t i = 0; i < ns->n_nodes; i++) {
+        n = ns->nodes[i];
+        if (path_match(current_path, n->path)) {
+
+          if (n->child_ns != NULL) {
+            node_set_copy_parents_index(n->child_ns, ns, STR_MAX);
+            parse_file_i(fptr, n->child_ns, current_tag);
+            path_drop_last_component(current_path);
+            node_set_fprintf_condensed_node(n->out, fptr, n->child_ns, STR_MAX);
+            node_set_reset_index(n->child_ns);
+            continue;
+          }
+
+          if (n->value->attribute_name != NULL) {
+            attribute_get(fptr, n->value->att_pos, current_tag);
+            CONTINUE_IF_EMPTY_TAG(current_tag, current_path);
+
+            if ((n->value->required_attribute_value != NULL) &&
+                (!path_attribute_matches_required(fptr, n->value))) {
+              continue;
+            }
+
+          }
+
+          value_get(fptr, n->value->pos, current_tag);
+          CONTINUE_IF_EMPTY_TAG(current_tag, current_path);
+
+          node_set_fprintf_node(n->out, fptr, ns, i, STR_MAX);
+        }
+      }
+    }
+  }
+
+  int tags_matched = path_is_empty(current_path);
+  path_destroy(current_path);
+  return tags_matched;
 }
 
-int parse_file(char *input, node_set *ns)
+int parse_file(const char *input, node_set *ns)
 {
   gzFile fptr;
   if (strcmp(input, "-") == 0) {
@@ -66,82 +90,19 @@ int parse_file(char *input, node_set *ns)
     exit(1);
   }
 
-  path current = {
-    .length = -1,
-    .components = malloc(sizeof(char *) * ns->max_path_depth)
+  char s[STR_MAX];
+  tag current_tag = {
+    .value = s,
+    .buff_size = STR_MAX,
+    .is_close = false,
+    .is_empty = false,
+    .was_prev_empty = false
   };
 
-  int c = 0;
-  char tag[STR_MAX];
-  char extra_element[STR_MAX];
-  int vali = 0;
-
-  while (c != EOF) {
-    c = get_tag(fptr, c, tag, STR_MAX);
-
-    if ((current.length >= 0) && (tag[0] != '?') && (c != EMPTY_TAG)) {
-      if (IS_CLOSE(tag) || (c == PREV_EMPTY_TAG)) {
-        RM_TAG(current, ns);
-      } else {
-        ADD_TAG(current, tag, ns);
-        for (int i = 0; i < ns->n; i++) {
-          if (path_match(&current, ns->nodes[i]->path)) {
-            vali = 0;
-            if (ns->nodes[i]->attribute != NULL &&
-                ns->nodes[i]->expected_attribute == NULL) {
-              c = get_attribute(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
-              CONTINUE_IF_EMPTY_TAG(c, current, ns);
-              vali++;
-            }
-
-            if (ns->nodes[i]->n_sub_tags == 0) {
-              if (ns->nodes[i]->expected_attribute != NULL) {
-                c = get_attribute(fptr, c, extra_element, STR_MAX);
-                CONTINUE_IF_EMPTY_TAG(c, current, ns);
-                if (strcmp(extra_element, ns->nodes[i]->expected_attribute) == 0) {
-                  c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
-                  CONTINUE_IF_EMPTY_TAG(c, current, ns);
-                } else {
-                  continue;
-                }
-              } else {
-                c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
-                CONTINUE_IF_EMPTY_TAG(c, current, ns);
-              }
-            } else {
-              while ((c = get_tag(fptr, c, extra_element, STR_MAX)) != EOF &&
-                     (!matching_tags(tag, extra_element))) {
-                for (int j = 0; j < ns->nodes[i]->n_sub_tags; j++) {
-                  if (!IS_CLOSE(extra_element) &&
-                      (strcmp(extra_element, ns->nodes[i]->sub_tags[j]) == 0)) {
-                    c = get_value(fptr, c, ns->nodes[i]->values[vali], STR_MAX);
-                    vali++;
-                  }
-                }
-              }
-              RM_TAG(current, ns);
-            }
-
-            if (i != ns->key_idx) {
-              PRINT_NODE(ns->nodes[ns->key_idx], ns->nodes[i]);
-              for (int j = 0; j < ns->nodes[i]->n_values; j++)
-                ns->nodes[i]->values[j][0] = '\0';
-            } else {
-              fprintf(ns->nodes[ns->key_idx]->out, "%s\n",
-                      ns->nodes[ns->key_idx]->values[0]);
-            }
-          }
-        }
-      }
-    } else {
-      if (strcmp(ns->root, tag) == 0)
-        ADD_TAG(current, tag, ns);
-    }
-  }
-
-  free(current.components);
+  int status = parse_file_i(fptr, ns, &current_tag);
   gzclose(fptr);
-  if (current.length == -1) {
+
+  if (status) {
     return 0;
   } else {
     fprintf(stderr, "Open and closing tags did not match.\n");
