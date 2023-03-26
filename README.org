@@ -38,74 +38,105 @@ or using nix:
 :END:
 
 The structure file is a YAML file containing key-value pairs for different tags and paths.
-There are four required keys: ~root~, ~key~, ~key_features~, and ~nodes~.
+There are two required keys: ~root~ and ~key~.
 ~Root~ provide the top-level tag, in the case of the pubmed files this will be ~PubmedArticleSet~.
 
 #+begin_src sh :tangle ./example/structure.yml
-  root: "PubmedArticleSet"
+  root: "/PubmedArticleSet"
 #+end_src
 
-Only tags below the root tag will be considered.
+The ~/~ is not strictly required as the program will ignore them, but they are used to conform to the [[https://en.wikipedia.org/wiki/XPath][xpath]] syntax (although this program does not handle all cases for ~xpath~).
+
+Only tags below the root tag will be considered and the parsing will terminate once the program has left the root of the tree.
 
 ~Key~ is a reference tag.
-In the pubmed case all data is with respect to a publication, so the key should identify the publication the values are linked to.
+In the pubmed case, all data is with respect to a publication, so the key should identify the publication the values are linked to.
 The ~PMID~ tag is a suitable candidate.
 
 #+begin_src sh :tangle ./example/structure.yml
-  key: {
-    Publication: "/PubmedArticle/MedlineCitation/PMID"
+  key: "/PubmedArticle/MedlineCitation/PMID"
+#+end_src
+
+After ~root~, all paths are taken as relative to the root node.
+
+The other name-pairs in the file determine what other items to collect.
+These can either be a simple name and path, like the key, such as:
+
+#+begin_src sh :tangle ./example/structure.yml
+  Language: "/PubmedArticle/MedlineCitation/Article/Language"
+  Keywords: "/PubmedArticle/MedlineCitation/KeywordList/Keyword"
+#+end_src
+
+Or they can use a hierarchical representation to get multiple values below a child.
+This is mainly used to handle lists of items where there is an indefinite number of items below the list.
+
+#+begin_src sh :tangle ./example/structure.yml
+  Author: {
+    root: "/PubmedArticle/MedlineCitation/Article/AuthorList",
+    key: "/Author/auto_index",
+    LastName: "/Author/LastName",
+    ForeName: "/Author/ForeName",
+    Affiliation: "/Author/AffiliationInfo/Affiliation",
+    Orcid: "/Author/Identifier/[@Source='ORCID']"
   }
 #+end_src
 
-Unlike ~root~, the value of ~key~ should be a map.
-In the example above, ~key~ is named publication and it's value is an XML path.
-The name is used to determine the file to write ~PMID~ values to.
-This file acts as a reference for all publications seen, even those for which no other value was found.
-Key's value is a path indicating where to find the desired tag in the XML hierarchy.
-All paths start after the root.
+Here, all paths are relative to the sub-structures ~root~ path, which is in turn relative to the parent structure's ~root~.
+This sub-structure uses the same rules as the parent structure, so it needs both a ~root~ and ~key~ name-value pair.
+The results of searching each path are written to separate files.
+Each file gets a column for the parent and child key.
+So in this case, each element of the author is linked by an author key and that is related to the publication they authored through the parent key.
 
-Both ~key_features~ and ~nodes~ determine the other values to collect.
-The ~read_xml~ program does not distinguish between them, but it is useful for post-processing the data if we keep them separate.
-~Key_features~ is for values that are apart of the key's node.
-For instance, the date of publication is specific to the publication, all publications have one, and only one, publication date.
-~Nodes~ handles other values that characterize a publication but are can have any number (including 0) of instances, such as references and authors.
-These make up distinct node type (i.e. a given author is a node of type author which can be connected to various other nodes such as the publications that author contributed to).
+The main parser is called recursively to parse this structure so it's worth thinking about what the root should be under the context that the parser will be called with that root.
+This means if, instead of stopping at ~/AuthorList~, ~/Author~ was added to the end of the root, the parser would be called for each individual author, instead of once per author list, leading to all author's getting the index 0.
+
+There are a number of additional syntax constructs to note in the above example.
+The key uses the special name ~auto_index~, since there is no author ID in the XML data, an index is used to count the authors in the order they appear.
+This resets for each publication and starts at 0.
+Treating the ~auto_index~ as the tail of a path allows you to control when the indexing occurs---the index is incremented whenever it hits a ~/Author~ tag.
+
+In addition to the ~auto_index~ key, there is a second special index name, ~condensed~.
 
 #+begin_src sh :tangle ./example/structure.yml
-    key_features: {
-      Year: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
-      Language: "/PubmedArticle/MedlineCitation/Article/Language"
-    }
-
-    nodes: {
-      Author: "/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
-      Grant: "/PubmedArticle/MedlineCitation/Article/GrantList/Grant/GrantID",
-      Chemical: "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
-      Qualifier: "/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/QualifierName/@UI",
-      Descriptor: "/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/DescriptorName/@UI",
-    }
-
-    edges: {
-        Reference: "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
-    }
+  Reference: {
+    root: "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList"
+    key: "/condensed"
+    PMID: "/ArticleId/[@IdType='pubmed']"
+    DOI: "/ArticleId/[@IdType='doi']"
+  }
 #+end_src
 
-In the above example there is some special syntax.
-For ~author~ multiple values are returned each time the ~author~ tag is found.
-This is expressed by using the ~{child_tag1,child_tag2,...}~ notation.
-Each child tag under the parent tag is collected and returned in a single row, represented multiple node features.
-This notation prevents mismatches between features of a given node if any tags are missing.
-In the case a tag is missing an empty string is printed.
+In the case of ~condensed~, instead of writing the results to separate files, they will printed as columns in the same file, and therefore do not need an additional key for the sub-structure.
+If any of the elements are missing, they will be left blank, for example, if the parser does not find a pubmed ID for a given reference, the row will look like ~"%s\t\t%s"~ where the first string will contain the parent key (the ~PMID~ of the publication citing this reference) and the second string will contain the reference's ~DOI~.
 
-To get an attribute from a tag, the ~@attribute~ notation is used---as in the ~chemical~ node.
-Whenever a path ends with an attribute ~xml_read~ will collect both the attribute and tag value.
+The ~/[@attribute='value']~ syntax at the end of a path tells the parser to only collect an element if it has an attribute and the attribute's value matches the supplied value.
+Similarly the ~/@attribute~ syntax, tells the parser to collect the value of the attribute ~attribute~ along with the element's value.
+Then both values will be written to the output file.
+Currently only a single attribute can be specified.
 
-Lastly, ~[@attribute='value']~ filters for attributes with the supplied values.
-In the case of ~reference~ above this will ensure all references are identified by ~PMID~ as opposed to other IDs, such as DOI, so ~references~ can be linked with ~publication~ nodes.
+Lastly, there is a special syntax for writing condensed sub-structures:
 
-Notice that ~Reference~ is an edge because a reference is a link between two publications. The ~read_xml~ executable does not differentiate between the two, the distinction is for the benefit of post-processing using the same structure template.
+#+begin_src sh :tangle ./example/structure.yml
+  Date: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/{Year,Month,Day}"
+#+end_src
 
-This example structure file can be found in the example directory of this project at: [[file:./example/structure.yml]]
+The ~{child,child,child}~ syntax allows you to select multiple children at the same level to be printed to a single file.
+This is useful when multiple children make up a single piece of information (i.e. the publication date).
 
-* TODO Example: creating a neo4j DB
-Move ~example/creating_graphs.sh~ into this file.
+A similar example structure file can be found in the example directory of this project at: [[file:./example/structure.yml]].
+* Future goals
+** Improve printing logic
+Currently, values are printed as they are read in. Since the results for the different paths are written to separate files, this shouldn't matter, except for the case of the key.
+The key is not printed to its own results file, instead whatever the last seen key was is printed as the key for the current value being printed.
+If the key is not the first element to be read in the subtree, there will be a mismatch between value and publication ID.
+
+In the case of ~PMID~ this is consistently the first element, so there should not be a problem, however, it could be in other scenarios.
+** Error handling
+After refactoring the code, I have started adding some error handling code, however this has not been consistently applied.
+Ideally, the default behavior will be for functions to return error codes.
+Then use an error checking macro to test that the result was not an error.
+I would also like to add a set error strings that would be printed depending on the error code.
+Possibly use a structure to represent errors so that the erroring function could supply an additional string along with the error.
+
+Better error handling like this could also allow the python package to write it's own error handling function in the C API to override the default error mechanism to use python level errors.
+This would be done by testing if an error handler function was defined, if so the error checking macro would use that function, otherwise it would fallback to a default function.
