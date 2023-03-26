@@ -128,11 +128,9 @@ int main(int argc, char **argv)
     }
     fclose(progress_ptr);
 
-    #pragma omp parallel for
-    for (size_t i = 0; i < ns->n_nodes; i++) {
-      cat(ns->nodes[i]->name, cache_dir, n_threads);
-    }
+    cat(ns, cache_dir, n_threads);
   }
+  node_set_destroy(ns);
 
   return status;
 }

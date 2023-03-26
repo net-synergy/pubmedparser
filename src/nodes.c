@@ -17,11 +17,12 @@ static node *node_generate(const path_struct ps, const size_t str_max,
 static FILE *get_file(const char *name, const char *cache_dir)
 {
   FILE *fptr = malloc(sizeof(*fptr));
-  char out[8000];
+  size_t str_max = 8000;
+  char out[str_max + 1];
 
-  strcpy(out, cache_dir);
-  strcat(out, name);
-  strcat(out, ".tsv");
+  strncpy(out, cache_dir, str_max);
+  strncat(out, name, str_max);
+  strncat(out, ".tsv", str_max);
 
   fptr = fopen(out, "a");
   return fptr;
@@ -323,10 +324,10 @@ node_set *node_set_generate(const path_struct ps, const char *name_prefix,
 
   key *ns_key = key_generate(key_type);
 
-  char *root = strdup(ps->children[0]->path);
+  char *root = ps->children[0]->path;
   while (root[0] == '/') root++;
   node_set ns_init = {
-    .root = root,
+    .root = strdup(root),
     .key_idx = 0, // Always 0 since get_names moves it to 0 if it's not.
     .nodes = nodes,
     .n_nodes = ps->n_children - 1,

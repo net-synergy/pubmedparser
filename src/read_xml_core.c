@@ -110,14 +110,23 @@ int parse_file(const char *input, node_set *ns)
   }
 }
 
-void cat(const char *node_name, const char *cache_dir, const int n_threads)
+/* Used after new file has been written to, so should only be at position 0 if
+nothing was written. */
+static inline bool is_empty_file(FILE *f)
 {
-  char file_name[1000];
-  sprintf(file_name, "%s%s.tsv", cache_dir, node_name);
+  return ftell(f) == 0;
+}
+
+void cat_concat_file_i(const char *file_prefix, const char *cache_dir,
+                       const int n_threads)
+{
+  char file_name[STR_MAX];
+  snprintf(file_name, STR_MAX, "%s%s.tsv", cache_dir, file_prefix);
+  char *agg_file_name = strdup(file_name);
   FILE *aggregate_file = fopen(file_name, "w");
 
   for (int i = 0; i < n_threads; i++) {
-    sprintf(file_name, "%s%s_%d.tsv", cache_dir, node_name, i);
+    snprintf(file_name, STR_MAX, "%s%s_%d.tsv", cache_dir, file_prefix, i);
     FILE *processor_file = fopen(file_name, "r");
     char c = '\0';
     while ((c = getc(processor_file)) != EOF) {
@@ -127,5 +136,71 @@ void cat(const char *node_name, const char *cache_dir, const int n_threads)
     remove(file_name);
   }
 
+  if (is_empty_file(aggregate_file)) {
+    remove(agg_file_name);
+  }
+
   fclose(aggregate_file);
+  free(agg_file_name);
+}
+
+static size_t cat_count_flat_nodes_i(const node_set *ns)
+{
+  size_t n_nodes = ns->n_nodes;
+  for (size_t i = 0; i < ns->n_nodes; i++) {
+    if (ns->nodes[i]->child_ns != NULL) {
+      n_nodes += cat_count_flat_nodes_i(ns->nodes[i]->child_ns);
+    }
+  }
+
+  return n_nodes;
+}
+
+static size_t cat_get_nodes_i(const node_set *ns, char **list)
+{
+  size_t count = ns->n_nodes;
+  for (size_t i = 0; i < ns->n_nodes; i++) {
+    list[i] = strdup(ns->nodes[i]->name);
+  }
+
+  for (size_t i = 0; i < ns->n_nodes; i++) {
+    if (ns->nodes[i]->child_ns != NULL) {
+      count += cat_get_nodes_i(ns->nodes[i]->child_ns, list + count);
+    }
+  }
+
+  return count;
+}
+
+static void cat_flatten_node_list_i(const node_set *ns, char ***list,
+                                    size_t *n_nodes)
+{
+  *n_nodes = cat_count_flat_nodes_i(ns);
+  *list = malloc(sizeof(**list) * *n_nodes);
+  cat_get_nodes_i(ns, *list);
+}
+
+/* Concatenate the output files from each processor.
+
+   Each processor gets their own set of output files to prevent cobbling
+   results without having to add any locks which could slow down performance.
+
+   *cat* concatenate each processor's files into individual files then deletes
+   the extra processor specific files. Additionally, some files that are opened
+   for writing are not used, these files will also be cleaned up.
+ */
+void cat(const node_set *ns, const char *cache_dir, const int n_threads)
+{
+  char **node_names;
+  size_t n_nodes;
+  cat_flatten_node_list_i(ns, &node_names, &n_nodes);
+  #pragma omp parallel for
+  for (size_t i = 0; i < n_nodes; i++) {
+    cat_concat_file_i(node_names[i], cache_dir, n_threads);
+  }
+
+  for (size_t i = 0; i < n_nodes; i++) {
+    free(node_names[i]);
+  }
+  free(node_names);
 }
