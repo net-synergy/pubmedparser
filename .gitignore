@@ -9,3 +9,4 @@ tests/*
 !tests/data/
 !tests/Makefile
 import.report
+__pycache__/
