@@ -1,6 +1,6 @@
-#include "yaml_reader.h"
-
 #include <string.h>
+
+#include "yaml_reader.h"
 
 #define BLOCK_MAX 50000
 #define ISWHITESPACE(c) ((c == ' ') || (c == '\n') || (c == '\t'))

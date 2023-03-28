@@ -1,7 +1,7 @@
 #ifndef STRUCTURE_H
 #define STRUCTURE_H
 
-#include "paths.h"
+#include <stdlib.h>
 
 typedef struct PathStructure {
   char *name;

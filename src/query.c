@@ -1,8 +1,8 @@
-#include "query.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <zlib.h>
+
+#include "query.h"
 
 void tag_get(gzFile fptr, tag *t)
 {
