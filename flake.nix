@@ -34,6 +34,9 @@
         devShell = pkgs.mkShell {
           packages =
             (with pkgs; [ gcc gdb astyle zlib bats cmocka poetry pythonEnv ]);
+          shellHook = ''
+            export C_INCLUDE_PATH=${pythonEnv}/include
+          '';
         };
       });
 }

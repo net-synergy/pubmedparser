@@ -4,6 +4,8 @@ CFLAGS = -Wall -Wextra -O3 -march=native
 TOP_DIR = ..
 BIN_DIR = ../bin
 INCLUDE_DIR = ../include
+LIB_DIR = ../lib
+PYTHON_MODULE = ../pubmedparser
 
 debug: CFLAGS += -g
 
@@ -28,6 +30,11 @@ $(BIN_DIR)/read_xml: read_xml.o read_xml_core.o read_structure_file.o nodes.o \
                      paths.o error.o query.o yaml_reader.o
 	-[ -d $(BIN_DIR) ] || mkdir $(BIN_DIR)
 	$(CC) $(CFLAGS) -fopenmp $^ -o $@ -lz
+
+$(LIB_DIR)/libpubmedparser.so: read_xml_core.o read_structure_file.o nodes.o \
+			       paths.o error.o query.o yaml_reader.o
+	-[ -d $(LIB_DIR) ] || mkdir $(LIB_DIR)
+	$(CC) -shared -o $@ $^ -lz
 
 debug: $(BIN_DIR)/read_xml
 

@@ -2,6 +2,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <errno.h>
 #include <zlib.h>
 #include <omp.h>
 
@@ -234,22 +235,70 @@ static void cat(const node_set *ns, const char *cache_dir,
   free(node_names);
 }
 
+static char *dir_parent(const char *path)
+{
+  size_t path_len = strlen(path);
+  const char *p_ptr = path + path_len - 1;
+  size_t count = 0;
+  if (*p_ptr == '/') {
+    count++;
+    p_ptr--;
+  }
+
+  while ((*p_ptr != '/') && (count != (path_len - 1))) {
+    count++;
+    p_ptr--;
+  }
+
+  size_t new_len = (size_t)(p_ptr - path);
+  char *parent = malloc(sizeof(*parent) * (new_len + 1));
+  for (size_t i = 0; i < new_len; i++) {
+    parent[i] = path[i];
+  }
+  parent[new_len] = '\0';
+  printf("%s\n", parent);
+
+  return parent;
+}
+
+static int mkdir_and_parents(const char *path, mode_t mode)
+{
+  int status, err;
+
+  status = mkdir(path, mode);
+  err = errno;
+  // Quietly succeed if the directory already exists.
+  if ((status < 0) && (err == EEXIST)) {
+    status = 0;
+  }
+
+  if ((status < 0) && (err == ENOENT)) {
+    char *parent = dir_parent(path);
+    mkdir_and_parents(parent, mode);
+    free(parent);
+    status = mkdir_and_parents(path, mode);
+  }
+
+  return status;
+}
+
 /* Read the elements of XML files specified by the path structure.
 
-   parameters:
-   *files* a list of XML files to parse, if "-" read from stdin.
-   *n_files* number of files in *files*.
-   *ps* a path structure indicating which values to read from the files using
+   parameters
+   ==========
+   files: a list of XML files to parse, if "-" read from stdin.
+   n_files: number of files in *files*.
+   ps: a path structure indicating which values to read from the files using
        xpath syntax.
-   *cache_dir* the directory to store the results in (created if it doesn't
+   cache_dir: the directory to store the results in (created if it doesn't
        exist).
-   *progress_file* the name of a text file to save the names of the input files
+   progress_file: the name of a text file to save the names of the input files
        that have been read. This file will be appended to on repeated calls. It
        is intended to be used to allow the caller to filter the list of files
        to those that have not already been read before calling the read_xml in
        the case new XML files are being collected regularly. If set to NULL, it
        will not be used.
-   *n_threads* number of threads to use for parallel processing, if 1 don't
+   n_threads: number of threads to use for parallel processing, if 1 don't
        use OMP.
  */
 int read_xml(char **files, const size_t n_files, const path_struct ps,
@@ -260,7 +309,9 @@ int read_xml(char **files, const size_t n_files, const path_struct ps,
   FILE *progress_ptr;
   int status = 0;
 
-  mkdir(cache_dir_i, 0777);
+  if ((mkdir_and_parents(cache_dir_i, 0777)) < 0) {
+    pubmedparser_error(1, "Failed to make cache directory.");
+  }
 
   if ((progress_file != NULL) || ((n_files == 1) &&
                                   (strcmp(files[0], "-") == 0))) {
@@ -270,7 +321,7 @@ int read_xml(char **files, const size_t n_files, const path_struct ps,
   }
 
   if (!(progress_ptr = fopen(parsed, "a"))) {
-    pubmedparser_error(1, "Failed to open parsed file.\n");
+    pubmedparser_error(1, "Failed to open progress file.\n");
   }
   free(parsed);
 
