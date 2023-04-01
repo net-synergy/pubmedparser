@@ -173,6 +173,19 @@ void cat_concat_file_i(const char *file_prefix, const char *cache_dir,
   free(agg_file_name);
 }
 
+void cat_delete_empty_files_i(const char *file_prefix, const char *cache_dir)
+{
+  char file_name[STR_MAX];
+  snprintf(file_name, STR_MAX, "%s%s.tsv", cache_dir, file_prefix);
+  FILE *fptr = fopen(file_name, "r");
+  int pos = fseek(fptr, 0, SEEK_END);
+  fclose(fptr);
+
+  if (pos == 0) {
+    remove(file_name);
+  }
+}
+
 static size_t cat_count_flat_nodes_i(const node_set *ns)
 {
   size_t n_nodes = ns->n_nodes;
@@ -224,9 +237,15 @@ static void cat(const node_set *ns, const char *cache_dir,
   char **node_names;
   size_t n_nodes;
   cat_flatten_node_list_i(ns, &node_names, &n_nodes);
-  #pragma omp parallel for
-  for (size_t i = 0; i < n_nodes; i++) {
-    cat_concat_file_i(node_names[i], cache_dir, n_threads);
+  if (n_threads == 1) {
+    for (size_t i = 0; i < n_nodes; i++) {
+      cat_delete_empty_files_i(node_names[i], cache_dir);
+    }
+  } else {
+    #pragma omp parallel for
+    for (size_t i = 0; i < n_nodes; i++) {
+      cat_concat_file_i(node_names[i], cache_dir, n_threads);
+    }
   }
 
   for (size_t i = 0; i < n_nodes; i++) {
@@ -302,7 +321,7 @@ static int mkdir_and_parents(const char *path, mode_t mode)
        use OMP.
  */
 int read_xml(char **files, const size_t n_files, const path_struct ps,
-             const char *cache_dir, const char *progress_file, const size_t n_threads)
+             const char *cache_dir, const char *progress_file, size_t n_threads)
 {
   char *cache_dir_i = ensure_path_ends_with_slash(cache_dir);
   char *parsed;
@@ -325,8 +344,12 @@ int read_xml(char **files, const size_t n_files, const path_struct ps,
   }
   free(parsed);
 
+  if (n_files == 1) {
+    n_threads = 1;
+  }
+
   node_set *ns = node_set_generate(ps, NULL, cache_dir_i, STR_MAX);
-  if ((n_files == 1) || (n_threads == 1)) {
+  if (n_threads == 1) {
     status = parse_file(files[0], ns);
     fprintf(progress_ptr, "%s\n", files[0]);
   } else {
