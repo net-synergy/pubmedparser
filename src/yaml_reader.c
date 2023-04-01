@@ -111,9 +111,7 @@ static size_t next_line_depth(FILE *fptr)
   while (c != '\n' && c != EOF) c = fgetc(fptr);
 
   if (c == EOF) {
-    fprintf(stderr,
-            "End of file while parsing key value in structure file\n. Possibly a missing \"}\"");
-    return YAML__ERROR_KEY;
+    return YAML__ERROR_EOF;
   }
 
   while (ISWHITESPACE(c)) {
@@ -125,9 +123,7 @@ static size_t next_line_depth(FILE *fptr)
   }
 
   if (c == EOF) {
-    fprintf(stderr,
-            "End of file while parsing key value in structure file\n. Possibly a missing \"}\"");
-    return YAML__ERROR_KEY;
+    return YAML__ERROR_EOF;
   }
 
   ungetc(c, fptr);
@@ -149,11 +145,17 @@ int yaml_get_keys(FILE *fptr, char ***keys, size_t *n_keys, const int start,
 
   size_t depth = initial_depth;
   while (((c = yaml_get_key(buff, str_max, fptr)) != EOF) &&
-         (depth >= initial_depth)) {
+         (depth >= initial_depth) && (depth != YAML__ERROR_EOF)) {
     (*n_keys)++;
 
     do (depth = next_line_depth(fptr));
-    while ((depth > initial_depth) && (depth != YAML__ERROR_KEY));
+    while ((depth > initial_depth) && (depth != YAML__ERROR_EOF));
+  }
+
+  if ((depth == YAML__ERROR_EOF) && (initial_depth != 0)) {
+    fprintf(stderr,
+            "End of file while parsing key value in structure file\n. Possibly a missing \"}\"\n");
+    return YAML__ERROR_KEY;
   }
 
   *keys = malloc(sizeof **keys * (*n_keys));
@@ -165,8 +167,8 @@ int yaml_get_keys(FILE *fptr, char ***keys, size_t *n_keys, const int start,
     do (c = fgetc(fptr));
     while (ISWHITESPACE(c));
 
-    do (depth = next_line_depth(fptr));
-    while ((depth > initial_depth) && (depth != YAML__ERROR_KEY));
+    do depth = next_line_depth(fptr);
+    while ((depth > initial_depth) && (depth != YAML__ERROR_EOF));
   }
 
   return EXIT_SUCCESS;
