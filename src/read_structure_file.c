@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "yaml_reader.h"
 #include "structure.h"
+
+#include "yaml_reader.h"
 #include "error.h"
 
 static void read_elements(FILE *fptr, path_struct parent, const int fpos,

@@ -2,6 +2,7 @@ cache/
 results/
 bin/
 *.o
+*.so
 tests/*
 !tests/*.c
 !tests/*.bash
@@ -9,3 +10,7 @@ tests/*
 !tests/data/
 !tests/Makefile
 import.report
+__pycache__/
+build/
+dist/
+lib/

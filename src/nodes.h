@@ -1,9 +1,11 @@
 #ifndef NODES_H
 #define NODES_H
 
-#include "paths.h"
+#include <zlib.h>
+
 #include "structure.h"
-#include "zlib.h"
+
+#include "paths.h"
 
 typedef enum KeyTypes {
   IDX_NORMAL = 0,
@@ -58,9 +60,8 @@ node_set *node_set_generate(const path_struct structure,
                             const char *cache_dir,
                             const size_t str_max);
 
-void node_set_destroy(node_set *ns);
-
 node_set *node_set_clone(const node_set *ns, const char *cache_dir,
                          const size_t thread, const size_t str_max);
+void node_set_destroy(node_set *ns);
 
 #endif

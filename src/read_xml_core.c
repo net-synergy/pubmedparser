@@ -2,9 +2,14 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <errno.h>
 #include <zlib.h>
+#include <omp.h>
 
-#include "read_xml.h"
+#include "query.h"
+#include "paths.h"
+#include "nodes.h"
+#include "error.h"
 
 #define STR_MAX 10000
 
@@ -17,6 +22,30 @@
       continue;								\
     }									\
   }
+
+static char *ensure_path_ends_with_slash(const char *p)
+{
+  char *out = malloc(sizeof(*out) * (STR_MAX + 1));
+  strncpy(out, p, STR_MAX);
+
+  int str_len;
+  for (str_len = 0; p[str_len] != '\0'; str_len++);
+  str_len--;
+
+  if (out[str_len] != '/') {
+    strncat(out, "/", STR_MAX);
+  }
+
+  return out;
+}
+
+static char *expand_file(const char *filename, const char *dirname)
+{
+  char temp[STR_MAX + 1];
+  strncpy(temp, dirname, STR_MAX);
+  strncat(temp, filename, STR_MAX);
+  return strdup(temp);
+}
 
 static int parse_file_i(gzFile fptr, node_set *ns, tag *current_tag)
 {
@@ -77,7 +106,7 @@ static int parse_file_i(gzFile fptr, node_set *ns, tag *current_tag)
   return tags_matched;
 }
 
-int parse_file(const char *input, node_set *ns)
+static int parse_file(const char *input, node_set *ns)
 {
   gzFile fptr;
   if (strcmp(input, "-") == 0) {
@@ -123,7 +152,7 @@ void cat_concat_file_i(const char *file_prefix, const char *cache_dir,
   char file_name[STR_MAX];
   snprintf(file_name, STR_MAX, "%s%s.tsv", cache_dir, file_prefix);
   char *agg_file_name = strdup(file_name);
-  FILE *aggregate_file = fopen(file_name, "w");
+  FILE *aggregate_file = fopen(file_name, "a");
 
   for (int i = 0; i < n_threads; i++) {
     snprintf(file_name, STR_MAX, "%s%s_%d.tsv", cache_dir, file_prefix, i);
@@ -189,7 +218,8 @@ static void cat_flatten_node_list_i(const node_set *ns, char ***list,
    the extra processor specific files. Additionally, some files that are opened
    for writing are not used, these files will also be cleaned up.
  */
-void cat(const node_set *ns, const char *cache_dir, const int n_threads)
+static void cat(const node_set *ns, const char *cache_dir,
+                const int n_threads)
 {
   char **node_names;
   size_t n_nodes;
@@ -203,4 +233,128 @@ void cat(const node_set *ns, const char *cache_dir, const int n_threads)
     free(node_names[i]);
   }
   free(node_names);
+}
+
+static char *dir_parent(const char *path)
+{
+  size_t path_len = strlen(path);
+  const char *p_ptr = path + path_len - 1;
+  size_t count = 0;
+  if (*p_ptr == '/') {
+    count++;
+    p_ptr--;
+  }
+
+  while ((*p_ptr != '/') && (count != (path_len - 1))) {
+    count++;
+    p_ptr--;
+  }
+
+  size_t new_len = (size_t)(p_ptr - path);
+  char *parent = malloc(sizeof(*parent) * (new_len + 1));
+  for (size_t i = 0; i < new_len; i++) {
+    parent[i] = path[i];
+  }
+  parent[new_len] = '\0';
+  printf("%s\n", parent);
+
+  return parent;
+}
+
+static int mkdir_and_parents(const char *path, mode_t mode)
+{
+  int status, err;
+
+  status = mkdir(path, mode);
+  err = errno;
+  // Quietly succeed if the directory already exists.
+  if ((status < 0) && (err == EEXIST)) {
+    status = 0;
+  }
+
+  if ((status < 0) && (err == ENOENT)) {
+    char *parent = dir_parent(path);
+    mkdir_and_parents(parent, mode);
+    free(parent);
+    status = mkdir_and_parents(path, mode);
+  }
+
+  return status;
+}
+
+/* Read the elements of XML files specified by the path structure.
+
+   parameters
+   ==========
+   files: a list of XML files to parse, if "-" read from stdin.
+   n_files: number of files in *files*.
+   ps: a path structure indicating which values to read from the files using
+       xpath syntax.
+   cache_dir: the directory to store the results in (created if it doesn't
+       exist).
+   progress_file: the name of a text file to save the names of the input files
+       that have been read. This file will be appended to on repeated calls. It
+       is intended to be used to allow the caller to filter the list of files
+       to those that have not already been read before calling the read_xml in
+       the case new XML files are being collected regularly. If set to NULL, it
+       will not be used.
+   n_threads: number of threads to use for parallel processing, if 1 don't
+       use OMP.
+ */
+int read_xml(char **files, const size_t n_files, const path_struct ps,
+             const char *cache_dir, const char *progress_file, const size_t n_threads)
+{
+  char *cache_dir_i = ensure_path_ends_with_slash(cache_dir);
+  char *parsed;
+  FILE *progress_ptr;
+  int status = 0;
+
+  if ((mkdir_and_parents(cache_dir_i, 0777)) < 0) {
+    pubmedparser_error(1, "Failed to make cache directory.");
+  }
+
+  if ((progress_file != NULL) || ((n_files == 1) &&
+                                  (strcmp(files[0], "-") == 0))) {
+    parsed = expand_file(progress_file, cache_dir_i);
+  } else {
+    parsed = strdup("/dev/null");
+  }
+
+  if (!(progress_ptr = fopen(parsed, "a"))) {
+    pubmedparser_error(1, "Failed to open progress file.\n");
+  }
+  free(parsed);
+
+  node_set *ns = node_set_generate(ps, NULL, cache_dir_i, STR_MAX);
+  if ((n_files == 1) || (n_threads == 1)) {
+    status = parse_file(files[0], ns);
+    fprintf(progress_ptr, "%s\n", files[0]);
+  } else {
+    node_set *ns_dup[n_threads];
+    for (size_t i = 0; i < n_threads; i++) {
+      ns_dup[i] = node_set_clone(ns, cache_dir_i, i, STR_MAX);
+    }
+
+    #pragma omp parallel for private (status)
+    for (size_t i = 0; i < n_files; i++) {
+      status = parse_file(files[i], ns_dup[omp_get_thread_num()]);
+
+      if (status != 0) {
+        pubmedparser_error(1,  "Tag mismatch in file: %s\n", files[i]);
+      }
+
+      fprintf(progress_ptr, "%s\n", files[i]);
+    }
+
+    for (size_t i = 0; i < n_threads; i++) {
+      node_set_destroy(ns_dup[i]);
+    }
+  }
+  fclose(progress_ptr);
+
+  cat(ns, cache_dir_i, n_threads);
+  node_set_destroy(ns);
+  free(cache_dir_i);
+
+  return status;
 }
