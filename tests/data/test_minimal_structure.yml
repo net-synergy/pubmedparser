@@ -1,9 +1,4 @@
-root: "PubmedArticleSet"
+root: "//PubmedArticleSet"
 
-key: {
-  Publication: "/PubmedArticle/MedlineCitation/PMID"
-}
-
-key_features: {
-  Year: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year"
-}
+key: "/PubmedArticle/MedlineCitation/PMID"
+Year: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year"

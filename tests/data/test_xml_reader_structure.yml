@@ -1,20 +1,10 @@
-root: "PubmedArticleSet"
+root: "//PubmedArticleSet"
 
-key: {
-  Publication: "/PubmedArticle/MedlineCitation/PMID"
-}
+key: "/PubmedArticle/MedlineCitation/PMID"
 
-key_features: {
-  Year: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
-  Language: "/PubmedArticle/MedlineCitation/Article/Language"
-}
-
-nodes: {
-  Author: "/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
-  Chemical: "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
-  Abstract: "/PubmedArticle/MedlineCitation/Article/Abstract/AbstractText"
-}
-
-edges: {
-  Reference: "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
-}
+Year: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
+Language: "/PubmedArticle/MedlineCitation/Article/Language"
+Author: "/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
+Chemical: "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
+Abstract: "/PubmedArticle/MedlineCitation/Article/Abstract/AbstractText"
+Reference: "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
