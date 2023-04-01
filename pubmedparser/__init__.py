@@ -7,8 +7,6 @@ from .storage import default_cache_dir
 
 def _unprocessed_files(files: list[str], processed_files: str) -> list:
     """Filter that returns a list of files that have not been processed yet."""
-    print(processed_files)
-    print(os.path.exists(processed_files))
     if not os.path.exists(processed_files):
         return files
 
@@ -52,7 +50,6 @@ def read_xml(
             n_threads,
         )
     else:
-        raise NotImplementedError()
         _read_xml_from_dictionary(
             files,
             path_structure,
