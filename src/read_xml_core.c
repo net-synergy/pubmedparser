@@ -115,8 +115,8 @@ static int parse_file(const char *input, node_set *ns)
     fptr = gzopen(input, "rb");
   }
   if (!fptr) {
-    fprintf(stderr, "Couldn't open file: %s\n", input);
-    exit(1);
+    pubmedparser_error(PP_ERR_FILE_NOT_FOUND, "Could not open file %s\n", input);
+    return PP_ERR_FILE_NOT_FOUND;
   }
 
   char s[STR_MAX];
@@ -134,8 +134,9 @@ static int parse_file(const char *input, node_set *ns)
   if (status) {
     return 0;
   } else {
-    fprintf(stderr, "Open and closing tags did not match.\n");
-    return 1;
+    char *filename = strcmp(input, "-") == 0 ? strdup("stdin") : strdup(input);
+    pubmedparser_error(PP_ERR_TAG_MISMATCH, "Error in file %s\n", filename);
+    return PP_ERR_TAG_MISMATCH;
   }
 }
 

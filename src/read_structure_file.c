@@ -25,8 +25,8 @@ static void get_names(FILE *fptr, const int fpos, char ***names,
   for (i = 0; (i < *n_names) && (strcmp(keys[i], "root") != 0); i++);
 
   if (i == *n_names) {
-    fprintf(stderr, "Structure file must contain a key named \"root\"");
-    exit(1);
+    pubmedparser_error(PP_ERR_STRUCTURE_KEY,
+                       "Structure file must contain a key named \"root\"\n");
   }
 
   char *swap = NULL;
@@ -39,8 +39,8 @@ static void get_names(FILE *fptr, const int fpos, char ***names,
   for (i = 0; (i < *n_names) && (strcmp(keys[i], "key") != 0); i++);
 
   if (i == *n_names) {
-    fprintf(stderr, "Structure file must contain a key named \"key\"");
-    exit(1);
+    pubmedparser_error(PP_ERR_STRUCTURE_KEY,
+                       "Structure file must contain a key named \"key\"\n");
   }
 
   for (size_t j = i; j > 1; j--) {
