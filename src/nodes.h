@@ -6,19 +6,13 @@
 #include "structure.h"
 
 #include "paths.h"
+#include "query.h"
 
 typedef enum KeyTypes {
   IDX_NORMAL = 0,
   IDX_AUTO,
   IDX_CONDENSE
 } keytype;
-
-typedef struct Value {
-  z_off_t pos[2]; // { start, offset }
-  z_off_t att_pos[2];
-  const char *attribute_name;
-  const char *required_attribute_value;
-} *value;
 
 typedef struct Key {
   const keytype type;
@@ -30,7 +24,8 @@ typedef struct Key {
 typedef struct Node {
   const char *name;
   const path path;
-  struct Value *value;
+  struct Container *value;
+  struct Container *attribute;
   struct NodeSet *child_ns;
   FILE *out;
 } node;
@@ -44,13 +39,13 @@ typedef struct NodeSet {
   key *key;
 } node_set;
 
-void node_set_fprintf_node(FILE *out, gzFile in, node_set *,
-                           const size_t node_i, const size_t str_max);
-void node_set_fprintf_condensed_node(FILE *out, gzFile in, node_set *,
+void node_set_fprintf_node(FILE *stream, node_set *, const size_t node_i,
+                           const size_t str_max);
+void node_set_fprintf_condensed_node(FILE *stream, node_set *,
                                      const size_t str_max);
 
 node *node_root(node_set *);
-bool path_attribute_matches_required(gzFile, const value);
+bool path_attribute_matches_required(const node *);
 void node_set_reset_index(node_set *);
 void node_set_copy_parents_index(node_set *child, node_set *parent,
                                  const size_t str_max);

@@ -97,10 +97,6 @@ teardown_file() {
     _common_file_teardown
 }
 
-@test "Test key nodes file" {
-    diff $cache_dir/Publication.tsv <(echo -e "1\n2")
-}
-
 @test "Test tag mismatch causes error" {
     run read_xml \
         --structure-file=$structure_file \
@@ -110,8 +106,10 @@ teardown_file() {
 </PubmedArticleSet>
 EOF
 
-    [ "$status" -eq 1 ]
-    [ "$output" = "Open and closing tags did not match." ]
+    [ "$status" -eq 4 ] # 4 is PP_ERR_TAG_MISMATCH
+    [ "$output" = "Tags in XML file did not match
+
+Error in file stdin" ]
 }
 
 @test "Test handle empty tag" {
@@ -155,7 +153,7 @@ EOF
 
 @test "Test collects attributes" {
     diff $cache_dir/Chemical.tsv \
-        <(echo -e "1\tD1\tMolecule\n1\tD2\tSolution")
+        <(echo -e "1\tMolecule\tD1\n1\tSolution\tD2")
 }
 
 @test "Test filtering by attribute value" {

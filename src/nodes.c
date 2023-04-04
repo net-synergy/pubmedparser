@@ -105,30 +105,49 @@ static void find_attribute_name(const char *p, char **attribute,
   }
 }
 
-static value value_init(const char *xml_path, const size_t str_max)
+static attribute attribute_init(const char *xml_path, const size_t str_max)
 {
-  char *attribute;
+  char *attribute_name;
   char *expected_attribute;
-  find_attribute_name(xml_path, &attribute, &expected_attribute,
+  find_attribute_name(xml_path, &attribute_name, &expected_attribute,
                       str_max);
 
-  struct Value val_init = {
-    .pos = {-1, 0},
-    .att_pos = {-1, 0},
-    .attribute_name = attribute,
-    .required_attribute_value = expected_attribute
+  struct Container att_init = {
+    .buff = malloc(sizeof(*att_init.buff) * (str_max + 1)),
+    .buffsize = str_max,
+    .name = attribute_name,
+    .required_value = expected_attribute
+  };
+
+  attribute att = malloc(sizeof(*att));
+  memcpy(att, &att_init, sizeof(*att));
+  return att;
+}
+
+static void container_destroy(container c)
+{
+  if (c->name) {
+    free((char *)c->name);
+  }
+  if (c->required_value) {
+    free((char *)c->required_value);
+  }
+  free(c->buff);
+  free(c);
+}
+
+static value value_init(const size_t str_max)
+{
+  struct Container val_init = {
+    .buff = malloc(sizeof(*val_init.buff) * (str_max + 1)),
+    .buffsize = str_max,
+    .name = NULL,
+    .required_value = NULL
   };
 
   value val = malloc(sizeof(*val));
   memcpy(val, &val_init, sizeof(*val));
   return val;
-}
-
-static void value_destroy(value val)
-{
-  free((char *)val->attribute_name);
-  free((char *)val->required_attribute_value);
-  free(val);
 }
 
 static node_set *node_set_generate_from_sub_tags(const char *xml_path,
@@ -200,6 +219,7 @@ static node *node_generate(const path_struct ps, const size_t str_max,
   char **sub_tags;
   node_set *ns = NULL;
   value v = NULL;
+  attribute a = NULL;
   path p;
 
   if (ps->n_children > 0) {
@@ -221,7 +241,8 @@ static node *node_generate(const path_struct ps, const size_t str_max,
       ns = node_set_generate_from_sub_tags(ps->path, sub_tags, n_sub_tags,
                                            cache_dir, str_max);
     } else {
-      v = value_init(ps->path, str_max);
+      v = value_init(str_max);
+      a = attribute_init(ps->path, str_max);
     }
   }
 
@@ -229,6 +250,7 @@ static node *node_generate(const path_struct ps, const size_t str_max,
     .name = strdup(ps->name),
     .path = p,
     .value = v,
+    .attribute = a,
     .child_ns = ns,
     .out = get_file(ps->name, cache_dir)
   };
@@ -243,11 +265,15 @@ static void node_destroy(node *n)
 {
   free((char *)n->name);
   path_destroy((path)n->path);
-  if (n->value != NULL) {
-    value_destroy(n->value);
+  if (n->value) {
+    container_destroy(n->value);
   }
 
-  if (n->child_ns != NULL) {
+  if (n->attribute) {
+    container_destroy(n->attribute);
+  }
+
+  if (n->child_ns) {
     node_set_destroy(n->child_ns);
   }
 
@@ -353,27 +379,28 @@ void node_set_destroy(node_set *ns)
   free(ns);
 }
 
-static value value_clone(const value v)
+static attribute container_clone(const container c)
 {
-  char *att = NULL;
-  char *desired_att = NULL;
-  if (v->attribute_name != NULL) {
-    att = strdup(v->attribute_name);
+  char *attribute_name = NULL;
+  char *expected_attribute = NULL;
+  if (c->name) {
+    attribute_name = strdup(c->name);
   }
-  if (v->required_attribute_value) {
-    desired_att = strdup(v->required_attribute_value);
+  if (c->required_value) {
+    expected_attribute = strdup(c->required_value);
   }
 
-  struct Value dup_v_init = {
-    .attribute_name = att,
-    .required_attribute_value = desired_att,
-    .pos = {-1, 0}, // Don't care about transferring pos since it's transient.
-    .att_pos = {-1, 0}
+  struct Container dup_container_init = {
+    .name = attribute_name,
+    .required_value = expected_attribute,
+    .buffsize = c->buffsize,
+    .buff = malloc(sizeof(*c->buff) * c->buffsize)
   };
-  value dup_v = malloc(sizeof(*dup_v));
-  memcpy(dup_v, &dup_v_init, sizeof(*dup_v));
 
-  return dup_v;
+  attribute dup_container = malloc(sizeof(*dup_container));
+  memcpy(dup_container, &dup_container_init, sizeof(*dup_container));
+
+  return dup_container;
 }
 
 static path path_clone(const path p)
@@ -391,23 +418,29 @@ static path path_clone(const path p)
 static node *node_clone(const node *n, const char *cache_dir,
                         const int thread, const size_t str_max)
 {
-  value v = NULL;
+  value val = NULL;
+  attribute att = NULL;
   node_set *child_ns = NULL;
   char name[str_max];
 
   snprintf(name, str_max, "%s_%d", n->name, thread);
-  if (n->value != NULL) {
-    v = value_clone(n->value);
+  if (n->value) {
+    val = container_clone(n->value);
   }
 
-  if (n->child_ns != NULL) {
+  if (n->attribute) {
+    att = container_clone(n->attribute);
+  }
+
+  if (n->child_ns) {
     child_ns = node_set_clone(n->child_ns, cache_dir, thread, str_max);
   }
 
   node dup_n_init = {
     .name = strdup(name),
     .path = path_clone(n->path),
-    .value = v,
+    .value = val,
+    .attribute = att,
     .child_ns = child_ns,
     .out = get_file(name, cache_dir)
   };
@@ -443,49 +476,27 @@ node_set *node_set_clone(const node_set *ns, const char *cache_dir,
   return dup_ns;
 }
 
-static void collect_value(gzFile fptr, const z_off_t pos[2], char **value)
-{
-  char c;
-  if ((pos[0] == -1) || (pos[1] == 0)) {
-    *value = malloc(sizeof(*value));
-    (*value)[0] = '\0';
-    return;
-  }
-
-  *value = malloc(sizeof(*value) * (pos[1] + 1));
-  const z_off_t start = gztell(fptr);
-
-  gzseek(fptr, pos[0], SEEK_SET);
-  for (z_off_t i = 0; i < pos[1]; i++) {
-    c = gzgetc(fptr);
-    (*value)[i] = c;
-  }
-  (*value)[pos[1]] = '\0';
-
-  gzseek(fptr, start, SEEK_SET);
-}
-
 static void collect_auto_index(node_set *ns, char **key)
 {
   size_t idx_size = 5; // Assume 4 digits (+1 '\0') is plenty for index.
   *key = malloc(sizeof(**key) * idx_size);
-  snprintf(*key, idx_size, "%zu", ns->key->auto_index);
+  snprintf(*key, idx_size - 1, "%zu", ns->key->auto_index);
 }
 
-static void collect_index(gzFile fptr, node_set *ns, const size_t str_max)
+static void collect_index(node_set *ns, const size_t str_max)
 {
   char *ns_key;
   if (ns->key->type == IDX_AUTO) {
     collect_auto_index(ns, &ns_key);
   } else {
-    collect_value(fptr, ns->nodes[ns->key_idx]->value->pos, &ns_key);
+    ns_key = strdup(ns->nodes[ns->key_idx]->value->buff);
   }
 
-  if (ns->key->value != NULL) {
+  if (ns->key->value) {
     free(ns->key->value);
   }
 
-  if (ns->key->template != NULL) {
+  if (ns->key->template) {
     ns->key->value = malloc(sizeof(*ns->key->value) * str_max);
     snprintf(ns->key->value, str_max, ns->key->template, ns_key);
   } else {
@@ -495,28 +506,18 @@ static void collect_index(gzFile fptr, node_set *ns, const size_t str_max)
   free(ns_key);
 }
 
-static void node_fprintf(FILE *out, gzFile fptr, node *n)
+static void node_fprintf(FILE *stream, node *n)
 {
-  char *value;
-  char *att;
-
-  collect_value(fptr, n->value->pos, &value);
-  n->value->pos[0] = -1;
-  n->value->pos[1] = 0;
-  fprintf(out, "%s\t", value);
-  free(value);
-  if ((n->value->attribute_name != NULL) &&
-      (n->value->required_attribute_value == NULL)) {
-    collect_value(fptr, n->value->att_pos, &att);
-    n->value->att_pos[0] = -1;
-    n->value->att_pos[1] = 0;
-    fprintf(out, "%s\t", att);
-    free(att);
+  fprintf(stream, "\t%s", n->value->buff);
+  n->value->buff[0] = '\0';
+  if ((n->attribute->name) && !(n->attribute->required_value)) {
+    fprintf(stream, "\t%s", n->attribute->buff);
+    n->attribute->buff[0] = '\0';
   }
 }
 
-void node_set_fprintf_node(FILE *out, gzFile fptr, node_set *ns,
-                           const size_t node_i, const size_t str_max)
+void node_set_fprintf_node(FILE *stream, node_set *ns, const size_t node_i,
+                           const size_t str_max)
 {
   if (ns->key->type == IDX_CONDENSE) {
     return;
@@ -532,30 +533,30 @@ void node_set_fprintf_node(FILE *out, gzFile fptr, node_set *ns,
   of possible lengths and list type elements (such as authors) that can have
   any number elements. This would require adding realloc logic. */
   if (node_i == ns->key_idx) {
-    collect_index(fptr, ns, str_max);
+    collect_index(ns, str_max);
     ns->key->auto_index++;
     return;
   }
 
-  fprintf(out, "%s\t", ns->key->value);
-  node_fprintf(out, fptr, ns->nodes[node_i]);
-  fprintf(out, "\n");
+  fprintf(stream, "%s", ns->key->value);
+  node_fprintf(stream, ns->nodes[node_i]);
+  fprintf(stream, "\n");
 }
 
-void node_set_fprintf_condensed_node(FILE *out, gzFile fptr, node_set *ns,
+void node_set_fprintf_condensed_node(FILE *stream, node_set *ns,
                                      const size_t str_max)
 {
   if (!(ns->key->type == IDX_CONDENSE)) {
     return;
   }
 
-  collect_index(fptr, ns, str_max);
-  fprintf(out, "%s\t", ns->key->value);
+  collect_index(ns, str_max);
+  fprintf(stream, "%s", ns->key->value);
   // WARNING: Assumes key_value is always 0. This is true now but could change.
   for (size_t i = 1; i < ns->n_nodes; i++) {
-    node_fprintf(out, fptr, ns->nodes[i]);
+    node_fprintf(stream, ns->nodes[i]);
   }
-  fprintf(out, "\n");
+  fprintf(stream, "\n");
 }
 
 void node_set_reset_index(node_set *ns)
@@ -566,7 +567,7 @@ void node_set_reset_index(node_set *ns)
 void node_set_copy_parents_index(node_set *child, node_set *parent,
                                  const size_t str_max)
 {
-  if (child->key->template != NULL) {
+  if (child->key->template) {
     free(child->key->template);
   }
 
@@ -584,10 +585,7 @@ void node_set_copy_parents_index(node_set *child, node_set *parent,
   }
 }
 
-bool path_attribute_matches_required(gzFile fptr, const value v)
+bool path_attribute_matches_required(const node *n)
 {
-  char *path_attribute;
-  collect_value(fptr, v->att_pos, &path_attribute);
-
-  return strcmp(path_attribute, v->required_attribute_value) == 0;
+  return strcmp(n->attribute->buff, n->attribute->required_value) == 0;
 }

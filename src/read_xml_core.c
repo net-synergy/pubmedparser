@@ -50,14 +50,15 @@ static char *expand_file(const char *filename, const char *dirname)
 static int parse_file_i(gzFile fptr, node_set *ns, tag *current_tag)
 {
   path current_path = path_init_dynamic(ns->max_path_depth);
+  char c = '\0';
 
   while ((strcmp(ns->root, current_tag->value) != 0) && (!(gzeof(fptr)))) {
-    tag_get(fptr, current_tag);
+    c = tag_get(c, fptr, current_tag);
   }
 
   node *n;
   while (!(gzeof(fptr)) && !(OUT_OF_ROOT_SCOPE(current_tag, ns))) {
-    tag_get(fptr, current_tag);
+    c = tag_get(c, fptr, current_tag);
 
     if (current_tag->is_empty) {
       continue;
@@ -76,26 +77,25 @@ static int parse_file_i(gzFile fptr, node_set *ns, tag *current_tag)
             node_set_copy_parents_index(n->child_ns, ns, STR_MAX);
             parse_file_i(fptr, n->child_ns, current_tag);
             path_drop_last_component(current_path);
-            node_set_fprintf_condensed_node(n->out, fptr, n->child_ns, STR_MAX);
+            node_set_fprintf_condensed_node(n->out, n->child_ns, STR_MAX);
             node_set_reset_index(n->child_ns);
             continue;
           }
 
-          if (n->value->attribute_name != NULL) {
-            attribute_get(fptr, n->value->att_pos, current_tag);
+          if (n->attribute->name) {
+            c = attribute_get(c, fptr, n->attribute, current_tag);
             CONTINUE_IF_EMPTY_TAG(current_tag, current_path);
 
-            if ((n->value->required_attribute_value != NULL) &&
-                (!path_attribute_matches_required(fptr, n->value))) {
+            if ((n->attribute->required_value) &&
+                (!path_attribute_matches_required(n))) {
               continue;
             }
-
           }
 
-          value_get(fptr, n->value->pos, current_tag);
+          c = value_get(c, fptr, n->value, current_tag);
           CONTINUE_IF_EMPTY_TAG(current_tag, current_path);
 
-          node_set_fprintf_node(n->out, fptr, ns, i, STR_MAX);
+          node_set_fprintf_node(n->out, ns, i, STR_MAX);
         }
       }
     }
@@ -179,12 +179,12 @@ void cat_delete_empty_files_i(const char *file_prefix, const char *cache_dir)
   char file_name[STR_MAX];
   snprintf(file_name, STR_MAX, "%s%s.tsv", cache_dir, file_prefix);
   FILE *fptr = fopen(file_name, "r");
-  int pos = fseek(fptr, 0, SEEK_END);
-  fclose(fptr);
+  fseek(fptr, 0L, SEEK_END);
 
-  if (pos == 0) {
+  if (ftell(fptr) == 0) {
     remove(file_name);
   }
+  fclose(fptr);
 }
 
 static size_t cat_count_flat_nodes_i(const node_set *ns)
@@ -204,6 +204,7 @@ static size_t cat_get_nodes_i(const node_set *ns, char **list)
   size_t count = ns->n_nodes;
   for (size_t i = 0; i < ns->n_nodes; i++) {
     list[i] = strdup(ns->nodes[i]->name);
+    fflush(ns->nodes[i]->out); // Needed in single thread case since files haven't been closed yet.
   }
 
   for (size_t i = 0; i < ns->n_nodes; i++) {

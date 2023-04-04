@@ -3,25 +3,35 @@
 #include <zlib.h>
 
 #include "query.h"
+#include "error.h"
 
-void tag_get(gzFile fptr, tag *t)
+static inline void container_realloc(container c)
 {
-  char c = gzgetc(fptr);
+  c->buffsize *= 2;
+  c->buff = realloc(c->buff, sizeof(*c->buff) * (c->buffsize + 1));
+}
+
+char tag_get(char c, gzFile fptr, tag *t)
+{
   while (c != '<' && c != EOF) {
     if (c == '/') {
       if ((c = gzgetc(fptr)) == '>') {
         t->was_prev_empty = true;
-        return;
+        return c;
       }
     } else {
       c = gzgetc(fptr);
     }
   }
 
+  if (c == EOF) {
+    pubmedparser_error(PP_ERR_EOF, "End of file while searching for tag.\n");
+  }
+
   c = gzgetc(fptr);
   if (c == '?') {
     t->is_empty = true;
-    return;
+    return c;
   }
 
   if (c == '/') {
@@ -36,6 +46,10 @@ void tag_get(gzFile fptr, tag *t)
        c != EOF; i++, c = gzgetc(fptr))
     t->value[i] = c;
 
+  if (c == EOF) {
+    pubmedparser_error(PP_ERR_EOF, "End of file while searching for tag.\n");
+  }
+
   if (t->value[i - 1] == '/') {
     t->is_empty = true;
     i--;
@@ -45,28 +59,35 @@ void tag_get(gzFile fptr, tag *t)
 
   t->value[i] = '\0';
 
-  gzungetc(c, fptr);
+  return c;
 }
 
-void value_get(gzFile fptr, z_off_t pos[2], tag *t)
+char value_get(char c, gzFile fptr, value val, tag *t)
 {
-  char c = gzgetc(fptr);
   while (c != '>' && c != EOF) {
     if (c == '/') {
       if ((c = gzgetc(fptr)) == '>') {
         t->was_prev_empty = true;
-        return;
+        return c;
       }
     } else {
       c = gzgetc(fptr);
     }
   }
 
-  pos[0] = gztell(fptr);
+  if (c == EOF) {
+    pubmedparser_error(PP_ERR_EOF, "End of file while searching for value.\n");
+  }
 
   int tag_level = 0;
   char look_ahead = '\0';
+  size_t count = 0;
   while (((c = gzgetc(fptr)) != '\n') && (c != EOF)) {
+    val->buff[count] = c;
+    count++;
+    if (count == val->buffsize) {
+      container_realloc(val);
+    }
     if (c == '<') {
       look_ahead = gzgetc(fptr);
       gzungetc(look_ahead, fptr);
@@ -75,14 +96,20 @@ void value_get(gzFile fptr, z_off_t pos[2], tag *t)
       } else {
         tag_level++;
 
-        while (((c = gzgetc(fptr)) != '>') && (c != EOF)) {
+        do {
+          c = gzgetc(fptr);
+          val->buff[count] = c;
+          count++;
+          if (count == val->buffsize) {
+            container_realloc(val);
+          }
           if (c == '/') {
             if ((look_ahead = gzgetc(fptr)) == '>') {
               tag_level--;
             }
             gzungetc(look_ahead, fptr);
           }
-        }
+        } while ((c != '>') && (c != EOF));
       }
 
       if (tag_level < 0) {
@@ -91,32 +118,37 @@ void value_get(gzFile fptr, z_off_t pos[2], tag *t)
     }
   }
 
-  // gzungetc very rarely returned -1 here and all further operations would
-  // return EOF. So replace with gzseek here. But don't understand the error.
-  gzseek(fptr, -1, SEEK_CUR);
-  pos[1] = gztell(fptr) - pos[0];
+  if (c == EOF) {
+    pubmedparser_error(PP_ERR_EOF, "End of file while searching for value.\n");
+  }
+
+  val->buff[count - 1] = '\0'; // Last c read is '<'.
+
+  return c;
 }
 
-void attribute_get(gzFile fptr, z_off_t pos[2], tag *t)
+char attribute_get(char c, gzFile fptr, attribute att, tag *t)
 {
-  char c = gzgetc(fptr);
-
   while (c != '=' && c != '>' && c != EOF) {
     if (c == '/') {
       if ((c = gzgetc(fptr)) == '>') {
         t->was_prev_empty = true;
-        return;
+        return c;
       }
     } else {
       c = gzgetc(fptr);
     }
   }
 
+  if (c == EOF) {
+    pubmedparser_error(PP_ERR_EOF,
+                       "End of file while searching for attribute.\n");
+  }
+
   if (c == '>') {
     // No attribute found.
-    pos[0] = -1;
-    pos[1] = 0;
-    return;
+    att->buff[0] = '\0';
+    return c;
   }
 
   /* Remove '=' */
@@ -124,10 +156,22 @@ void attribute_get(gzFile fptr, z_off_t pos[2], tag *t)
   /* Remove leading '"' */
   c = gzgetc(fptr);
 
-  pos[0] = gztell(fptr) - 1;
-  int i;
-  for (i = 0; c != ' ' && c != '"' && c != '>'; i++, (c = gzgetc(fptr)));
+  size_t i;
+  for (i = 0; c != ' ' && c != '"' &&
+       c != '>' && c != EOF; i++) {
+    if (i == att->buffsize) {
+      container_realloc(att);
+    }
+    att->buff[i] = c;
+    c = gzgetc(fptr);
+  }
 
-  pos[1] = i;
-  c = gzungetc(c, fptr);
+  if (c == EOF) {
+    pubmedparser_error(PP_ERR_EOF,
+                       "End of file while searching for attribute.\n");
+  }
+
+  att->buff[i++] = '\0';
+
+  return c;
 }

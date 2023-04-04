@@ -10,7 +10,7 @@ PYTHON_MODULE = ../pubmedparser
 debug: CFLAGS += -g
 
 .PHONY: debug run all clean
-paths.o: paths.c paths.h yaml_reader.h
+paths.o: paths.c paths.h query.h yaml_reader.h
 	$(CC) $(CFLAGS) -c $*.c
 
 nodes.o: nodes.c nodes.h paths.h $(INCLUDE_DIR)/structure.h error.h
@@ -23,7 +23,7 @@ read_xml_core.o: read_xml_core.c paths.h query.h nodes.h error.h \
                  $(INCLUDE_DIR)/read_xml.h
 	$(CC) $(CFLAGS) -fopenmp -c $*.c -I$(INCLUDE_DIR)
 
-read_xml.o: $(INCLUDE_DIR)/read_xml.h $(INCLUDE_DIR)/structure.h
+read_xml.o: read_xml.c $(INCLUDE_DIR)/read_xml.h $(INCLUDE_DIR)/structure.h
 	$(CC) $(CFLAGS) -fopenmp -c $*.c -I$(INCLUDE_DIR)
 
 $(BIN_DIR)/read_xml: read_xml.o read_xml_core.o read_structure_file.o nodes.o \
