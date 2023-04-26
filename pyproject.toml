@@ -19,6 +19,7 @@ packages = [{ include = "pubmedparser" }]
 
 [tool.poetry.dependencies]
 python = "^3.8"
+appdirs = "^1.4.4"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
