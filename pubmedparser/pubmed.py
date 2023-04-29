@@ -46,7 +46,7 @@ def list_files(src_dir: str) -> List[str]:
         ftp.login()
         ftp.cwd("pubmed/" + src_dir)
         ftp.retrlines("NLST", files.append)
-    return files
+    return [f for f in files if f.endswith(".xml.gz")]
 
 
 def _missing_files(desired_files: List[str]) -> List[str]:
