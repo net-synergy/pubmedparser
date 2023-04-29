@@ -55,11 +55,7 @@ def _missing_files(desired_files: List[str]) -> List[str]:
     return sorted(list(set(desired_files) - set(intersect)))
 
 
-def download_pubmed_data(dest_dir: str, source: str, list_flag: bool):
-    if list_flag:
-        print(list_files(source))
-        return
-
+def download_pubmed_data(dest_dir: str, source: str):
     file_names = list_files(source)
 
     desired_file = _missing_files(file_names)
