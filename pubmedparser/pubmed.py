@@ -8,7 +8,7 @@ BASE_URL = "ftp.ncbi.nlm.nih.gov"
 NAME_PREFIX = "pubmed23n"  # Update yearly
 
 
-def download_files(src_dir: str, args: List[str]):
+def _download_files(src_dir: str, args: List[str]):
     file_names = [f"{NAME_PREFIX}{arg}.xml.gz" for arg in args]
     file_urls = [
         f"{BASE_URL}/{src_dir}/{file_name}" for file_name in file_names
@@ -31,7 +31,7 @@ def download_files(src_dir: str, args: List[str]):
             os.remove(f"{failed_file}.md5")
 
 
-def find_file_numbers(filename):
+def _find_file_numbers(filenames: List[str]) -> List[str]:
     pattern = r".*{}([0-9]+)\.xml\.gz$".format(NAME_PREFIX)
     match = re.match(pattern, filename)
     if match:
@@ -49,8 +49,8 @@ def list_files(src_dir: str) -> List[str]:
     return files
 
 
-def missing_files(desired_files: List[str]) -> List[str]:
-    local_files = sorted(find_file_numbers(os.listdir(os.getcwd())))
+def _missing_files(desired_files: List[str]) -> List[str]:
+    local_files = sorted(_find_file_numbers(os.listdir(os.getcwd())))
     intersect = sorted(list(set(desired_files) & set(local_files)))
     return sorted(list(set(desired_files) - set(intersect)))
 
@@ -62,7 +62,7 @@ def download_pubmed_data(dest_dir: str, source: str, list_flag: bool):
 
     file_names = list_files(source)
 
-    desired_file = missing_files(file_names)
+    desired_file = _missing_files(file_names)
 
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
@@ -70,5 +70,5 @@ def download_pubmed_data(dest_dir: str, source: str, list_flag: bool):
 
     if len(desired_file) > 0:
         print("Downloading files...")
-        download_files(source, desired_file)
+        _download_files(source, desired_file)
         print("Finished downloading files.")
