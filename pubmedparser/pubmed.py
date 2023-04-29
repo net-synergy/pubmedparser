@@ -4,7 +4,7 @@ import subprocess
 from ftplib import FTP
 from typing import List
 
-BASE_URL = "ftp://ftp.ncbi.nlm.nih.gov/pubmed"
+BASE_URL = "ftp.ncbi.nlm.nih.gov"
 NAME_PREFIX = "pubmed23n"  # Update yearly
 
 
@@ -44,7 +44,7 @@ def list_files(src_dir: str) -> List[str]:
     files: List[str] = []
     with FTP(BASE_URL) as ftp:
         ftp.login()
-        ftp.cwd(src_dir)
+        ftp.cwd("pubmed/" + src_dir)
         ftp.retrlines("NLST", files.append)
     return files
 
