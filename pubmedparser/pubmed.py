@@ -2,13 +2,16 @@ import os
 import re
 import subprocess
 from ftplib import FTP
-from typing import List
+from typing import Iterable, List
+
+from .storage import default_cache_dir
 
 BASE_URL = "ftp.ncbi.nlm.nih.gov"
 NAME_PREFIX = "pubmed23n"  # Update yearly
+NAME_REGEX_TEMPLATE = r".*{}({})\.xml\.gz$".format(NAME_PREFIX, "{}")
 
 
-def _download_files(src_dir: str, args: List[str]):
+def _download_files(src_dir: str, args: List[str], cache_dir: str):
     file_names = [f"{NAME_PREFIX}{arg}.xml.gz" for arg in args]
     file_urls = [
         f"{BASE_URL}/{src_dir}/{file_name}" for file_name in file_names
@@ -31,16 +34,10 @@ def _download_files(src_dir: str, args: List[str]):
             os.remove(f"{failed_file}.md5")
 
 
-def _find_file_numbers(filenames: List[str]) -> List[str]:
-    def matching_group(f):
-        m = regex.match(f)
-        if m is None:
-            return None
-        return m.groups(1)
-
-    pattern = r".*{}([0-9]+)\.xml\.gz$".format(NAME_PREFIX)
-    regex = re.compile(pattern)
-    return list(filter(matching_group, filenames))
+def _list_local_pubmed_files(path: str) -> List[str]:
+    files = os.listdir(path)
+    regex = re.compile(NAME_REGEX_TEMPLATE.format("[0-9]{4}"))
+    return [f for f in files if regex.match(f)]
 
 
 def list_files(src_dir: str) -> List[str]:
@@ -52,22 +49,41 @@ def list_files(src_dir: str) -> List[str]:
     return [f for f in files if f.endswith(".xml.gz")]
 
 
-def _missing_files(desired_files: List[str]) -> List[str]:
-    local_files = sorted(_find_file_numbers(os.listdir(os.getcwd())))
+def _missing_files(desired_files: List[str], cache_dir: str) -> List[str]:
+    local_files = sorted(_list_local_pubmed_files(cache_dir))
     intersect = sorted(list(set(desired_files) & set(local_files)))
     return sorted(list(set(desired_files) - set(intersect)))
 
 
-def download_pubmed_data(dest_dir: str, source: str):
-    file_names = list_files(source)
+def _filter_to_file_numbers(files: List[str], numbers: Iterable[int]):
+    number_pattern = "|".join([f"{n}" for n in numbers])
+    print(number_pattern)
+    regex = re.compile(NAME_REGEX_TEMPLATE.format(number_pattern))
+    return [f for f in files if regex.match(f)]
 
-    desired_file = _missing_files(file_names)
 
-    if not os.path.exists(dest_dir):
-        os.makedirs(dest_dir)
-    os.chdir(dest_dir)
+def download_pubmed_data(
+    files: str | int | Iterable[int] = "all",
+    source: str = "updatefiles",
+    cache_dir: str = default_cache_dir(NAME_PREFIX),
+):
+    if isinstance(files, str) and files != "all":
+        raise TypeError('Files is not of type int or "all".')
 
-    if len(desired_file) > 0:
+    if isinstance(files, int):
+        files = [files]
+
+    remote_files = list_files(source)
+    if not isinstance(files, str):
+        remote_files = _filter_to_file_numbers(remote_files, files)
+
+    missing_files = _missing_files(remote_files, cache_dir)
+
+    if not os.path.exists(cache_dir):
+        os.makedirs(cache_dir)
+    os.chdir(cache_dir)
+
+    if missing_files:
         print("Downloading files...")
-        _download_files(source, desired_file)
+        _download_files(source, missing_files, cache_dir)
         print("Finished downloading files.")
