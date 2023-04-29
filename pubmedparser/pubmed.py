@@ -32,12 +32,15 @@ def _download_files(src_dir: str, args: List[str]):
 
 
 def _find_file_numbers(filenames: List[str]) -> List[str]:
+    def matching_group(f):
+        m = regex.match(f)
+        if m is None:
+            return None
+        return m.groups(1)
+
     pattern = r".*{}([0-9]+)\.xml\.gz$".format(NAME_PREFIX)
-    match = re.match(pattern, filename)
-    if match:
-        return match.group(1)
-    else:
-        return None
+    regex = re.compile(pattern)
+    return list(filter(matching_group, filenames))
 
 
 def list_files(src_dir: str) -> List[str]:
