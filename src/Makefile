@@ -7,7 +7,7 @@ INCLUDE_DIR = ../include
 LIB_DIR = ../lib
 PYTHON_MODULE = ../pubmedparser
 
-debug: CFLAGS += -g
+debug: CFLAGS += -g3 -O0
 
 .PHONY: debug run all clean
 paths.o: paths.c paths.h query.h yaml_reader.h
