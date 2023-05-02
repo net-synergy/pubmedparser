@@ -51,6 +51,21 @@ def _list_local_pubmed_files(path: str) -> List[str]:
 
 
 def list_files(remote_dir: str = "all") -> List[str]:
+    """
+    List the files on pubmed's ftp server
+
+    Parameters
+    ----------
+    remote_dir : {"all", "baseline", "updatefiles"}
+        The directory to list. If "all" (default) concatenate files from all
+        directories.
+
+    Returns
+    -------
+    files : list
+        A list of all files in the requested directories.
+    """
+
     assert remote_dir == "all" or remote_dir in KNOWN_PUBMED_DIRECTORIES
     files: List[str] = []
     if remote_dir == "all":
@@ -82,6 +97,43 @@ def download(
     file_numbers: str | int | Iterable[int] = "all",
     cache_dir: str = default_cache_dir(NAME_PREFIX),
 ) -> str:
+    """
+    Download XML files from pubmed's ftp server
+
+    Files are saved locally to a cache directory. Only files that are not in
+    the cache directory will be download. As such, once the full dataset as
+    been downloaded it can be rerun using "all" to download only recently
+    uploaded files.
+
+    All downloaded files are validated against an md5 hash. Any files whose
+    hash does not match the value provided by pubmed will be deleted.
+
+    Parameters
+    ----------
+    file_numbers : str, int, list-like
+        Which files to download. If "all" (default) downloads all available
+        files. Otherwise, identify files by their index. Can provide a list of
+        files or a generator.
+    cache_dir : str
+        Where to save the files. Defaults to a subdirectory named after the
+        years prefix (i.e. f"pubmed{year}n") under the default cache directory:
+        `pubmedparser.storage.default_cache_dir`.
+
+    Returns
+    -------
+    cache_dir : str
+       Where the files were saved to. This can then be passed to
+       `pubmedparser.read_xml`
+
+    Examples
+    --------
+    >>> from pubmedparser import pubmed
+    >>> # Download a subset of files.
+    >>> cache_dir = pubmed.download(range(1300, 1310))
+    >>> # Download all available files.
+    >>> cache_dir = pubmed.download()
+    >>> # Call above periodically to check for and download new files.
+    """
 
     if isinstance(file_numbers, str) and file_numbers != "all":
         raise TypeError('Files is not of type int or "all".')
