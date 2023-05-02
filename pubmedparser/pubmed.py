@@ -50,9 +50,14 @@ def _list_local_pubmed_files(path: str) -> List[str]:
     return [f for f in files if regex.match(f)]
 
 
-def list_files(remote_dir: str = "updatefiles") -> List[str]:
-    assert remote_dir in KNOWN_PUBMED_DIRECTORIES
+def list_files(remote_dir: str = "all") -> List[str]:
+    assert remote_dir == "all" or remote_dir in KNOWN_PUBMED_DIRECTORIES
     files: List[str] = []
+    if remote_dir == "all":
+        for remote in KNOWN_PUBMED_DIRECTORIES:
+            files += list_files(remote)
+        return files
+
     with FTP(BASE_URL) as ftp:
         ftp.login()
         ftp.cwd("pubmed/" + remote_dir)
