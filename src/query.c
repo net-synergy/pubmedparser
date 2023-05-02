@@ -62,6 +62,19 @@ char tag_get(char c, gzFile fptr, tag *t)
   return c;
 }
 
+static inline void trim_whitespace(char *buff, size_t len)
+{
+  size_t start = 0;
+  size_t end = len;
+  while (buff[start] == ' ' && start < len) start++;
+  while (buff[end] == ' ' && end > 0) end--;
+  for (size_t i = start; start > 0 && i < end; i++) {
+    buff[i - start] = buff[i];
+  }
+  end -= start;
+  buff[end] = '\0';
+}
+
 char value_get(char c, gzFile fptr, value val, tag *t)
 {
   while (c != '>' && c != EOF) {
@@ -122,8 +135,9 @@ char value_get(char c, gzFile fptr, value val, tag *t)
     pubmedparser_error(PP_ERR_EOF, "End of file while searching for value.\n");
   }
 
-  val->buff[count - 1] = '\0'; // Last c read is '<'.
-
+  count--; // Last c read is '<'.
+  val->buff[count] = '\0';
+  trim_whitespace(val->buff, count);
   return c;
 }
 
