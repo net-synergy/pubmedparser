@@ -66,7 +66,6 @@ def _missing_files(desired_files: List[str], cache_dir: str) -> List[str]:
 
 def _filter_to_file_numbers(files: List[str], numbers: Iterable[int]):
     number_pattern = "|".join([f"{n}" for n in numbers])
-    print(number_pattern)
     regex = re.compile(NAME_REGEX_TEMPLATE.format(number_pattern))
     return [f for f in files if regex.match(f)]
 
