@@ -2,7 +2,7 @@ import os
 
 from ._readxml import from_structure_dictionary as _read_xml_from_dictionary
 from ._readxml import from_structure_file as _read_xml_from_structure_file
-from .storage import default_cache_dir
+from .storage import default_data_dir
 
 
 def _unprocessed_files(files: list[str], processed_files: str) -> list[str]:
@@ -24,12 +24,12 @@ def _unprocessed_files(files: list[str], processed_files: str) -> list[str]:
 def read_xml(
     files: str | list[str],
     path_structure: dict | str,
-    cache_dir: str,
-    relative_to_default_cache: bool = True,
+    data_dir: str,
+    relative_to_default_data: bool = True,
     progress_file: str = "processed.txt",
     n_threads: int = -1,
     exts: tuple[str, ...] = (".xml", ".xml.gz")
-) -> None:
+) -> str:
     """
     Collect values matching xpaths in XML files
 
@@ -42,11 +42,11 @@ def read_xml(
         A set of xpaths to collect. Either as a dictionary with keys
         representing names and values representing the paths or a path to a
         yaml file describing the same information.
-    cache_dir : str
+    data_dir : str
         Where to save the results.
-    relative_to_default_cache : bool
-        If true, `cache_dir` is a subdirectory under pubmedparser's default
-        cache directory. If false, `cache_dir` is relative to the cwd.
+    relative_to_default_data : bool
+        If true, `data_dir` is a subdirectory under pubmedparser's default
+        data directory. If false, `data_dir` is relative to the cwd.
     progress_file : str, default "processed.txt"
         If not none, save successfully parsed files to the progress file. If
         the file already exists, only files not listed in it will be read.
@@ -55,6 +55,10 @@ def read_xml(
     exts : tuple, default (".xml", ".xml.gz")
         A tuple of file extensions to include. Any file ending with an
         extension not included will be ignored.
+
+    Returns
+    -------
+    data_dir : the location the collected data was written to.
     """
 
     if isinstance(files, str):
@@ -65,12 +69,12 @@ def read_xml(
         else:
             raise FileNotFoundError("Files path not found")
 
-    if relative_to_default_cache:
-        cache_dir = default_cache_dir(cache_dir)
+    if relative_to_default_data:
+        data_dir = default_data_dir(data_dir)
 
     files = [f for f in files if f.endswith(exts)]
     files = _unprocessed_files(
-        files, processed_files=os.path.join(cache_dir, progress_file)
+        files, processed_files=os.path.join(data_dir, progress_file)
     )
 
     if isinstance(path_structure, str):
@@ -80,7 +84,7 @@ def read_xml(
         _read_xml_from_structure_file(
             files,
             path_structure,
-            cache_dir,
+            data_dir,
             progress_file,
             n_threads,
         )
@@ -88,7 +92,9 @@ def read_xml(
         _read_xml_from_dictionary(
             files,
             path_structure,
-            cache_dir,
+            data_dir,
             progress_file,
             n_threads,
         )
+
+    return data_dir
