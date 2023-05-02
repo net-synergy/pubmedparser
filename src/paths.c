@@ -125,6 +125,12 @@ void path_print(const path p)
 {
   char sep = '/';
   size_t len = (p->length < p->max_path_depth) ? p->length : p->max_path_depth;
+
+  if ((int)p->length < 0) {
+    printf("\n");
+    return;
+  }
+
   for (size_t i = 0; i < len; i++) {
     printf("%c%s", sep, p->components[i]);
   }
