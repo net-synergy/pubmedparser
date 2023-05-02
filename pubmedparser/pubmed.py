@@ -6,6 +6,8 @@ from typing import Iterable, List
 
 from .storage import default_cache_dir
 
+__all__ = ["download", "list_files"]
+
 BASE_URL = "ftp.ncbi.nlm.nih.gov"
 NAME_PREFIX = "pubmed23n"  # Update yearly
 NAME_REGEX_TEMPLATE = r".*{}({})\.xml\.gz$".format(NAME_PREFIX, "{}")
