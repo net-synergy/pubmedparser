@@ -74,29 +74,39 @@ def _filter_to_file_numbers(files: List[str], numbers: Iterable[int]):
 
 
 def download(
-    files_numbers: str | int | Iterable[int] = "all",
-    remote_dir: str = "updatefiles",
+    file_numbers: str | int | Iterable[int] = "all",
     cache_dir: str = default_cache_dir(NAME_PREFIX),
-):
-    assert remote_dir in KNOWN_PUBMED_DIRECTORIES
+) -> str:
 
-    if isinstance(files_numbers, str) and files_numbers != "all":
+    if isinstance(file_numbers, str) and file_numbers != "all":
         raise TypeError('Files is not of type int or "all".')
 
-    if isinstance(files_numbers, int):
-        files_numbers = [files_numbers]
+    if isinstance(file_numbers, int):
+        file_numbers = [file_numbers]
 
-    remote_files = list_files(remote_dir)
-    if not isinstance(files_numbers, str):
-        remote_files = _filter_to_file_numbers(remote_files, files_numbers)
+    remote_files = {
+        "baseline": list_files("baseline"),
+        "updatefiles": list_files("updatefiles"),
+    }
+    if not isinstance(file_numbers, str):
+        remote_files = {
+            k: _filter_to_file_numbers(remote_files[k], file_numbers)
+            for k in remote_files.keys()
+        }
 
-    missing_files = _missing_files(remote_files, cache_dir)
+    missing_files = {
+        k: _missing_files(remote_files[k], cache_dir)
+        for k in remote_files.keys()
+    }
 
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     os.chdir(cache_dir)
 
-    if missing_files:
+    if missing_files["baseline"] or missing_files["updatefiles"]:
         print("Downloading files...")
-        _download_files(remote_dir, missing_files, cache_dir)
+        for remote_dir in missing_files.keys():
+            _download_files(remote_dir, missing_files[remote_dir], cache_dir)
         print("Finished downloading files.")
+
+    return cache_dir
