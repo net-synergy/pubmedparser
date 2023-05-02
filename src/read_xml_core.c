@@ -73,7 +73,7 @@ static int parse_file_i(gzFile fptr, node_set *ns, tag *current_tag)
         n = ns->nodes[i];
         if (path_match(current_path, n->path)) {
 
-          if (n->child_ns != NULL) {
+          if (n->child_ns) {
             node_set_copy_parents_index(n->child_ns, ns, STR_MAX);
             parse_file_i(fptr, n->child_ns, current_tag);
             path_drop_last_component(current_path);
@@ -136,6 +136,7 @@ static int parse_file(const char *input, node_set *ns)
   } else {
     char *filename = strcmp(input, "-") == 0 ? strdup("stdin") : strdup(input);
     pubmedparser_error(PP_ERR_TAG_MISMATCH, "Error in file %s\n", filename);
+    free(filename);
     return PP_ERR_TAG_MISMATCH;
   }
 }

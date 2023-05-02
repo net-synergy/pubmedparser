@@ -126,7 +126,7 @@ void path_print(const path p)
   char sep = '/';
   size_t len = (p->length < p->max_path_depth) ? p->length : p->max_path_depth;
 
-  if ((int)p->length < 0) {
+  if (path_is_empty(p)) {
     printf("\n");
     return;
   }

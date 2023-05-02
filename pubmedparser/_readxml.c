@@ -151,8 +151,6 @@ static PyObject *read_xml_from_structure_dictionary(PyObject *self,
   parse_file_list(files, &files_i, &n_files_i);
   n_threads_i = determine_n_threads(n_threads);
   ps = parse_structure_dictionary(structure_dict);
-  printf("%zu\n", ps->n_children);
-  /* path_struct_print(ps); */
   status = read_xml(files_i, n_files_i, ps, cache_dir, progress_file,
                     n_threads_i);
   puts("parsed xml");
