@@ -14,7 +14,9 @@ NAME_REGEX_TEMPLATE = r".*{}({})\.xml\.gz$".format(NAME_PREFIX, "{}")
 KNOWN_PUBMED_DIRECTORIES = ("baseline", "updatefiles")
 
 
-def _download_files(remote_dir: str, file_names: List[str], cache_dir: str):
+def _download_files(
+    remote_dir: str, file_names: List[str], cache_dir: str
+) -> None:
     def in_cache(f):
         return os.path.join(cache_dir, f)
 
@@ -23,19 +25,19 @@ def _download_files(remote_dir: str, file_names: List[str], cache_dir: str):
         ftp.cwd("pubmed/" + remote_dir)
         for file_name in file_names:
             print(f"Downloading {file_name}")
-            with open(in_cache(file_name), "wb") as fw:
-                ftp.retrbinary(f"RETR {file_name}", fw.write)
+            with open(in_cache(file_name), "wb") as f_wb:
+                ftp.retrbinary(f"RETR {file_name}", f_wb.write)
 
-            with open(in_cache(f"{file_name}.md5"), "wb") as fw:
-                ftp.retrbinary(f"RETR {file_name}.md5", fw.write)
+            with open(in_cache(f"{file_name}.md5"), "wb") as f_wb:
+                ftp.retrbinary(f"RETR {file_name}.md5", f_wb.write)
 
     md5_file_names = [f"{f}.md5" for f in file_names]
     for file_name, md5_file_name in zip(file_names, md5_file_names):
-        with open(in_cache(md5_file_name), "r") as fr:
-            expected_md5 = fr.read().split()[1]
+        with open(in_cache(md5_file_name), "r") as f_r:
+            expected_md5 = f_r.read().split()[1]
 
-        with open(in_cache(file_name), "rb") as fr:
-            actual_md5 = hashlib.md5(fr.read()).hexdigest()
+        with open(in_cache(file_name), "rb") as f_rb:
+            actual_md5 = hashlib.md5(f_rb.read()).hexdigest()
 
         if actual_md5 != expected_md5:
             print(f"{file_name} failed md5sum check, deleting")
@@ -87,7 +89,9 @@ def _missing_files(desired_files: List[str], cache_dir: str) -> List[str]:
     return sorted(list(unique_desired_files - intersect))
 
 
-def _filter_to_file_numbers(files: List[str], numbers: Iterable[int]):
+def _filter_to_file_numbers(
+    files: List[str], numbers: Iterable[int]
+) -> List[str]:
     number_pattern = "|".join([f"{n}" for n in numbers])
     regex = re.compile(NAME_REGEX_TEMPLATE.format(number_pattern))
     return [f for f in files if regex.match(f)]

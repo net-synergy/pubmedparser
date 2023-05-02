@@ -5,7 +5,7 @@ from ._readxml import from_structure_file as _read_xml_from_structure_file
 from .storage import default_cache_dir
 
 
-def _unprocessed_files(files: list[str], processed_files: str) -> list:
+def _unprocessed_files(files: list[str], processed_files: str) -> list[str]:
     """Filter that returns a list of files that have not been processed yet."""
     if not os.path.exists(processed_files):
         return files
