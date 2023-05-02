@@ -59,9 +59,10 @@ def list_files(remote_dir: str = "updatefiles") -> List[str]:
 
 
 def _missing_files(desired_files: List[str], cache_dir: str) -> List[str]:
-    local_files = sorted(_list_local_pubmed_files(cache_dir))
-    intersect = sorted(list(set(desired_files) & set(local_files)))
-    return sorted(list(set(desired_files) - set(intersect)))
+    local_files = _list_local_pubmed_files(cache_dir)
+    unique_desired_files = set(desired_files)
+    intersect = unique_desired_files & set(local_files)
+    return sorted(list(unique_desired_files - intersect))
 
 
 def _filter_to_file_numbers(files: List[str], numbers: Iterable[int]):
