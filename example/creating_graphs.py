@@ -58,11 +58,7 @@ structure_dict = {
 }
 
 cache_dir = "dict_example"
-abs_cache_dir = default_cache_dir(cache_dir)
-pubmedparser.read_xml(
-    files,
-    structure_dict,
-    cache_dir,
-)
+pubmedparser.read_xml(data_dir, structure_dict, cache_dir, exts=("xml.gz",))
 
+abs_cache_dir = default_cache_dir(cache_dir)
 os.listdir(abs_cache_dir)

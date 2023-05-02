@@ -22,18 +22,20 @@ def _unprocessed_files(files: list[str], processed_files: str) -> list:
 
 
 def read_xml(
-    files: list[str],
+    files: str | list[str],
     path_structure: dict | str,
     cache_dir: str,
     relative_to_default_cache: bool = True,
     progress_file: str = "processed.txt",
-    n_threads=-1,
+    n_threads: int = -1,
+    exts: tuple[str, ...] = (".xml", ".xml.gz")
 ) -> None:
     """ """
 
     if relative_to_default_cache:
         cache_dir = default_cache_dir(cache_dir)
 
+    files = [f for f in files if f.endswith(exts)]
     files = _unprocessed_files(
         files, processed_files=os.path.join(cache_dir, progress_file)
     )
