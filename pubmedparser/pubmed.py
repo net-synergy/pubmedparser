@@ -9,8 +9,6 @@ from .storage import default_cache_dir
 __all__ = ["download", "list_files"]
 
 BASE_URL = "ftp.ncbi.nlm.nih.gov"
-NAME_PREFIX = "pubmed23n"  # Update yearly
-NAME_REGEX_TEMPLATE = r".*{}({})\.xml\.gz$".format(NAME_PREFIX, "{}")
 KNOWN_PUBMED_DIRECTORIES = ("baseline", "updatefiles")
 
 
@@ -46,9 +44,9 @@ def _download_files(
         os.unlink(in_cache(md5_file_name))
 
 
-def _list_local_pubmed_files(path: str) -> List[str]:
+def _list_local_pubmed_files(path: str, name_regex_template) -> List[str]:
     files = os.listdir(path)
-    regex = re.compile(NAME_REGEX_TEMPLATE.format("[0-9]{4}"))
+    regex = re.compile(name_regex_template.format("\d{4}"))
     return [f for f in files if regex.match(f)]
 
 
@@ -82,24 +80,34 @@ def list_files(remote_dir: str = "all") -> List[str]:
     return [f for f in files if f.endswith(".xml.gz")]
 
 
-def _missing_files(desired_files: List[str], cache_dir: str) -> List[str]:
-    local_files = _list_local_pubmed_files(cache_dir)
+def _missing_files(
+    desired_files: List[str], name_regex_template: str, cache_dir: str
+) -> List[str]:
+    local_files = _list_local_pubmed_files(cache_dir, name_regex_template)
     unique_desired_files = set(desired_files)
     intersect = unique_desired_files & set(local_files)
     return sorted(list(unique_desired_files - intersect))
 
 
 def _filter_to_file_numbers(
-    files: List[str], numbers: Iterable[int]
+    files: List[str], numbers: Iterable[int], name_regex_template: str
 ) -> List[str]:
     number_pattern = "|".join([f"{n}" for n in numbers])
-    regex = re.compile(NAME_REGEX_TEMPLATE.format(number_pattern))
+    regex = re.compile(name_regex_template.format(number_pattern))
     return [f for f in files if regex.match(f)]
+
+
+def _find_file_prefix(file_name: str, regex: str) -> str:
+    m = re.match(regex, file_name)
+    if not m:
+        raise NameError("Could not find file prefix. Please report bug.")
+
+    return m.groups()[0]
 
 
 def download(
     file_numbers: str | int | Iterable[int] = "all",
-    cache_dir: str = default_cache_dir(NAME_PREFIX),
+    cache_dir: str | None = None,
 ) -> str:
     """
     Download XML files from pubmed's ftp server
@@ -118,16 +126,21 @@ def download(
         Which files to download. If "all" (default) downloads all available
         files. Otherwise, identify files by their index. Can provide a list of
         files or a generator.
-    cache_dir : str
-        Where to save the files. Defaults to a subdirectory named after the
-        years prefix (i.e. f"pubmed{year}n") under the default cache directory:
-        `pubmedparser.storage.default_cache_dir`.
+    cache_dir : str, None
+        Where to save the files. If None (default) use a subdirectory named
+        after the file prefix (i.e. f"pubmed{year}n") under the default cache
+        directory. This prefix prevents different years files from interfering
+        which each other.
 
     Returns
     -------
     cache_dir : str
        Where the files were saved to. This can then be passed to
        `pubmedparser.read_xml`
+
+    See also
+    --------
+    `pubmedparser.storage.default_cache_dir`.
 
     Examples
     --------
@@ -145,18 +158,27 @@ def download(
     if isinstance(file_numbers, int):
         file_numbers = [file_numbers]
 
-    remote_files = {
-        "baseline": list_files("baseline"),
-        "updatefiles": list_files("updatefiles"),
-    }
+    name_regex_template = r"^{}{}\.xml\.gz$"
+    remote_files = {k: list_files(k) for k in KNOWN_PUBMED_DIRECTORIES}
+    prefix = _find_file_prefix(
+        remote_files["baseline"][0],
+        name_regex_template.format("(pubmed\d{2}n)", "\d{4}"),
+    )
+    name_regex_template = name_regex_template.format(prefix, "({})")
+    breakpoint()
+    if not cache_dir:
+        cache_dir = default_cache_dir(prefix)
+
     if not isinstance(file_numbers, str):
         remote_files = {
-            k: _filter_to_file_numbers(remote_files[k], file_numbers)
+            k: _filter_to_file_numbers(
+                remote_files[k], file_numbers, name_regex_template
+            )
             for k in remote_files.keys()
         }
 
     missing_files = {
-        k: _missing_files(remote_files[k], cache_dir)
+        k: _missing_files(remote_files[k], name_regex_template, cache_dir)
         for k in remote_files.keys()
     }
 
