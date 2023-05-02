@@ -1,26 +1,17 @@
 import os
 
 import pubmedparser
-from pubmedparser.storage import default_cache_dir
+from pubmedparser.storage import default_cache_dir, default_data_dir
 
-structure_file = "example/structure.yml"
-data_dir = "data/"
-files = [
-    os.path.join(data_dir, f)
-    for f in os.listdir(data_dir)
-    if f.endswith("xml")
-]
-cache_dir = "file_example"
-abs_cache_dir = default_cache_dir(cache_dir)
+# Download data
+files = pubmedparser.pubmed.download(range(1300, 1304))
 
 # Read XML files using a YAML file to describe what data to collect.
-pubmedparser.read_xml(
-    files,
-    structure_file,
-    cache_dir,
-)
+data_dir = "file_example"
+structure_file = "example/structure.yml"
+results = pubmedparser.read_xml(files, structure_file, data_dir)
 
-os.listdir(abs_cache_dir)
+os.listdir(results)
 
 structure_dict = {
     "root": "//PubmedArticleSet",
@@ -57,8 +48,7 @@ structure_dict = {
     },
 }
 
-cache_dir = "dict_example"
-pubmedparser.read_xml(data_dir, structure_dict, cache_dir, exts=("xml.gz",))
+data_dir = "dict_example"
+results = pubmedparser.read_xml(files, structure_dict, data_dir)
 
-abs_cache_dir = default_cache_dir(cache_dir)
-os.listdir(abs_cache_dir)
+os.listdir(results)
