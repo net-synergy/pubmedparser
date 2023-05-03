@@ -136,9 +136,6 @@ static int parse_file(const char *input, node_set *ns)
   if (status) {
     return 0;
   } else {
-    char *filename = strcmp(input, "-") == 0 ? strdup("stdin") : strdup(input);
-    pubmedparser_error(PP_ERR_TAG_MISMATCH, "Error in file %s\n", filename);
-    free(filename);
     return PP_ERR_TAG_MISMATCH;
   }
 }
@@ -354,8 +351,15 @@ int read_xml(char **files, const size_t n_files, const path_struct ps,
 
   node_set *ns = node_set_generate(ps, NULL, cache_dir_i, STR_MAX);
   if (n_threads == 1) {
-    status = parse_file(files[0], ns);
-    fprintf(progress_ptr, "%s\n", files[0]);
+    for (size_t i = 0; i < n_files; i++) {
+      status = parse_file(files[i], ns);
+
+      if (status != 0) {
+        pubmedparser_error(status, "Error in file %s\n", files[i]);
+      }
+
+      fprintf(progress_ptr, "%s\n", files[i]);
+    }
   } else {
     node_set *ns_dup[n_threads];
     for (size_t i = 0; i < n_threads; i++) {
@@ -367,7 +371,7 @@ int read_xml(char **files, const size_t n_files, const path_struct ps,
       status = parse_file(files[i], ns_dup[omp_get_thread_num()]);
 
       if (status != 0) {
-        pubmedparser_error(1,  "Tag mismatch in file: %s\n", files[i]);
+        pubmedparser_error(status, "Error in file %s\n", files[i]);
       }
 
       fprintf(progress_ptr, "%s\n", files[i]);
