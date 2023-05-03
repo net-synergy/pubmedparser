@@ -2,9 +2,16 @@ root: "//PubmedArticleSet"
 
 key: "/PubmedArticle/MedlineCitation/PMID"
 
-Year: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year",
+Date: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/{Year,Month,Day}",
 Language: "/PubmedArticle/MedlineCitation/Article/Language"
-Author: "/PubmedArticle/MedlineCitation/Article/AuthorList/Author/{LastName,ForeName}",
 Chemical: "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
 Abstract: "/PubmedArticle/MedlineCitation/Article/Abstract/AbstractText"
 Reference: "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
+
+Author: {
+  root: "/PubmedArticle/MedlineCitation/Article/AuthorList",
+  key: "/Author/auto_index",
+  LastName: "/Author/LastName",
+  ForeName: "/Author/ForeName",
+  Orcid: "/Author/Identifier/[@Source='ORCID']"
+}
