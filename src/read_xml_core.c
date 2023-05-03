@@ -280,7 +280,6 @@ static char *dir_parent(const char *path)
     parent[i] = path[i];
   }
   parent[new_len] = '\0';
-  printf("%s\n", parent);
 
   return parent;
 }
