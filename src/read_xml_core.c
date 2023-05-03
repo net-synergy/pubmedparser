@@ -92,8 +92,10 @@ static int parse_file_i(gzFile fptr, node_set *ns, tag *current_tag)
             }
           }
 
-          c = value_get(c, fptr, n->value, current_tag);
-          CONTINUE_IF_EMPTY_TAG(current_tag, current_path);
+          if ((i != ns->key_idx) || (ns->key->type == IDX_NORMAL)) {
+            c = value_get(c, fptr, n->value, current_tag);
+            CONTINUE_IF_EMPTY_TAG(current_tag, current_path);
+          }
 
           node_set_fprintf_node(n->out, ns, i, STR_MAX);
         }
