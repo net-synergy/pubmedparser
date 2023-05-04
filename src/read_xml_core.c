@@ -121,7 +121,7 @@ static int parse_file(const char *input, node_set *ns)
     return PP_ERR_FILE_NOT_FOUND;
   }
 
-  char s[STR_MAX];
+  char s[STR_MAX] = "\0";
   tag current_tag = {
     .value = s,
     .buff_size = STR_MAX,
@@ -320,7 +320,6 @@ int read_xml(char **files, const size_t n_files, const path_struct ps,
   char *cache_dir_i = ensure_path_ends_with_slash(cache_dir);
   char *parsed;
   FILE *progress_ptr;
-  int status = 0;
 
   if ((mkdir_and_parents(cache_dir_i, 0777)) < 0) {
     pubmedparser_error(1, "Failed to make cache directory.");
@@ -334,7 +333,7 @@ int read_xml(char **files, const size_t n_files, const path_struct ps,
   }
 
   if (!(progress_ptr = fopen(parsed, "a"))) {
-    pubmedparser_error(1, "Failed to open progress file.\n");
+    pubmedparser_error(PP_ERR_FILE_NOT_FOUND, "Failed to open progress file.\n");
   }
   free(parsed);
 
@@ -344,9 +343,9 @@ int read_xml(char **files, const size_t n_files, const path_struct ps,
     ns_dup[i] = node_set_clone(ns, cache_dir_i, i, STR_MAX);
   }
 
-  #pragma omp parallel for private (status)
+  #pragma omp parallel for
   for (size_t i = 0; i < n_files; i++) {
-    status = parse_file(files[i], ns_dup[omp_get_thread_num()]);
+    int status = parse_file(files[i], ns_dup[omp_get_thread_num()]);
 
     if (status != 0) {
       pubmedparser_error(status, "Error in file %s\n", files[i]);
@@ -364,5 +363,5 @@ int read_xml(char **files, const size_t n_files, const path_struct ps,
   node_set_destroy(ns);
   free(cache_dir_i);
 
-  return status;
+  return EXIT_SUCCESS;
 }
