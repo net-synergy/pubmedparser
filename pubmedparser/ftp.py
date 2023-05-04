@@ -13,7 +13,11 @@ KNOWN_PUBMED_DIRECTORIES = ("baseline", "updatefiles")
 
 
 def _download_files(
-    remote_dir: str, file_names: List[str], cache_dir: str
+    remote_dir: str,
+    file_names: List[str],
+    cache_dir: str,
+    attempt: int = 1,
+    max_tries: int = 3,
 ) -> None:
     def in_cache(f):
         return os.path.join(cache_dir, f)
@@ -38,8 +42,17 @@ def _download_files(
             actual_md5 = hashlib.md5(f_rb.read()).hexdigest()
 
         if actual_md5 != expected_md5:
-            print(f"{file_name} failed md5sum check, deleting")
-            os.unlink(file_name)
+            if attempt <= max_tries:
+                print(
+                    f"{file_name} failed md5sum check, trying"
+                    f" {max_tries - attempt} more times..."
+                )
+                _download_files(
+                    remote_dir, [file_name], cache_dir, attempt + 1, max_tries
+                )
+            else:
+                print(f"{file_name} failed md5sum check max tries, deleting")
+                os.unlink(in_cache(file_name))
 
         os.unlink(in_cache(md5_file_name))
 
