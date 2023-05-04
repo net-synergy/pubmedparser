@@ -6,7 +6,7 @@ PYTHON_MODULE = pubmedparser
 ARCH = x86_64
 CPYTHON = cpython-310
 
-.PHONY: all clean check cli
+.PHONY: all clean check cli debug
 all: $(PYTHON_MODULE)/_readxml.so cli
 
 cli:
@@ -19,6 +19,9 @@ clean:
 
 check:
 	@cd $(TEST_DIR); $(MAKE) check
+
+debug:
+	@cd $(SRC_DIR); $(MAKE) debug
 
 $(LIB_DIR)/libpubmedparser.so:
 	@cd $(SRC_DIR); $(MAKE) $@

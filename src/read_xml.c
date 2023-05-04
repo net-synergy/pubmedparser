@@ -22,6 +22,7 @@ static void usage(char *program_name, int failed)
        "Defualts to \"cache\".");
   puts("-s, --structure-file=STRING\ta yaml file with the xml paths to collect. "
        "Defaults to \"structure.yml\".");
+  puts("-n, --num-threads=INT\tnumber of indepent threads to use, defaults to OMP_NUM_THREADS.");
   puts("-p --progress-file=STRING\ta file to collect the names of the xml files "
        "that have been parsed.");
 }
@@ -29,6 +30,7 @@ static void usage(char *program_name, int failed)
 static struct option const longopts[] = {
   {"cache-dir", required_argument, NULL, 'c'},
   {"structure-file", required_argument, NULL, 's'},
+  {"num-threads", required_argument, NULL, 'n'},
   {"progress-file", required_argument, NULL, 'p'},
   {"help", no_argument, NULL, 'h'},
   {NULL, 0, NULL, 0}
@@ -41,14 +43,24 @@ int main(int argc, char **argv)
   char *cache_dir = "cache/";
   char *progress_file = "processed.txt";
   char *program_name = argv[0];
+  size_t n_threads = 0;
+  #pragma omp parallel
+  {
+    #pragma omp single
+    n_threads = omp_get_num_threads();
+  }
 
-  while ((optc = getopt_long(argc, argv, "c:s:h", longopts, NULL)) != EOF) {
+  while ((optc = getopt_long(argc, argv, "c:s:n:p:h", longopts, NULL)) != EOF) {
     switch (optc) {
     case 'c':
       cache_dir = optarg;
       break;
     case 's':
       structure_file = optarg;
+      break;
+    case 'n':
+      n_threads = atoi(optarg);
+      omp_set_num_threads(n_threads);
       break;
     case 'p':
       progress_file = optarg;
@@ -76,12 +88,6 @@ int main(int argc, char **argv)
     /* omp_get_num_threads() returns 1 outside of parallel blocks so
     this is a work around to get the real number of threads ahead of
     time. */
-    size_t n_threads = 0;
-    #pragma omp parallel
-    {
-      #pragma omp single
-      n_threads = omp_get_num_threads();
-    }
     status = read_xml(files, n_files, structure, cache_dir, progress_file,
                       n_threads);
   }

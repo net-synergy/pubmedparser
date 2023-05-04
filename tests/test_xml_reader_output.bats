@@ -109,7 +109,7 @@ EOF
     [ "$status" -eq 4 ] # 4 is PP_ERR_TAG_MISMATCH
     [ "$output" = "Tags in XML file did not match
 
-Error in file stdin" ]
+Error in file -" ]
 }
 
 @test "Test handle empty tag" {
