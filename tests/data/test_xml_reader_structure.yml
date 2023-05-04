@@ -7,6 +7,7 @@ Language: "/PubmedArticle/MedlineCitation/Article/Language"
 Chemical: "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
 Abstract: "/PubmedArticle/MedlineCitation/Article/Abstract/AbstractText"
 Reference: "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']"
+Keywords: "/PubmedArticle/MedlineCitation/KeywordList/Keyword"
 
 Author: {
   root: "/PubmedArticle/MedlineCitation/Article/AuthorList",

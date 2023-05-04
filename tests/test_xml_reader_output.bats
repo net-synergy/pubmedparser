@@ -47,6 +47,13 @@ setup_file() {
 	  <NameOfSubstance @UI="D2">Solution</NameOfSubstance>
         </Chemical>
       </ChemicalList>
+      <KeywordList>
+	  <Keyword> Spacey  </Keyword>
+	  <Keyword>Lines
+are a
+pain
+</Keyword>
+      </KeywordList>
     </MedlineCitation>
     <PubmedData>
       <ReferenceList>
@@ -164,6 +171,14 @@ EOF
 
 @test "Test reads values with HTML tags in them" {
     grep -oe '9<sub>10</sub>' $cache_dir/Abstract.tsv
+}
+
+@test "Test trims spaces in value field" {
+    diff <(head -n1 $cache_dir/Keywords.tsv) <(echo -e "1\tSpacey")
+}
+
+@test "Test handles newlines in value field and replaces with spaces" {
+    diff <(tail -n1 $cache_dir/Keywords.tsv) <(echo -e "1\tLines are a pain")
 }
 
 # @test "Test reads values greater than VALUE_MAX" {
