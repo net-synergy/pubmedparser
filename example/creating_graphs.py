@@ -1,10 +1,9 @@
 import os
 
 import pubmedparser
-from pubmedparser.storage import default_cache_dir, default_data_dir
 
 # Download data
-files = pubmedparser.pubmed.download(range(1300, 1304))
+files = pubmedparser.ftp.download(range(1, 6))
 
 # Read XML files using a YAML file to describe what data to collect.
 data_dir = "file_example"

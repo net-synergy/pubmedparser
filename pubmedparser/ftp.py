@@ -165,7 +165,6 @@ def download(
         name_regex_template.format("(pubmed\d{2}n)", "\d{4}"),
     )
     name_regex_template = name_regex_template.format(prefix, "({})")
-    breakpoint()
     if not cache_dir:
         cache_dir = default_cache_dir(prefix)
 
