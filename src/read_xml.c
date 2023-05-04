@@ -60,6 +60,7 @@ int main(int argc, char **argv)
       break;
     case 'n':
       n_threads = atoi(optarg);
+      omp_set_num_threads(n_threads);
       break;
     case 'p':
       progress_file = optarg;

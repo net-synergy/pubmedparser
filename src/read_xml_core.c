@@ -204,7 +204,6 @@ static size_t cat_get_nodes_i(const node_set *ns, char **list)
   size_t count = ns->n_nodes;
   for (size_t i = 0; i < ns->n_nodes; i++) {
     list[i] = strdup(ns->nodes[i]->name);
-    fflush(ns->nodes[i]->out); // Needed in single thread case since files haven't been closed yet.
   }
 
   for (size_t i = 0; i < ns->n_nodes; i++) {
@@ -239,15 +238,9 @@ static void cat(const node_set *ns, const char *cache_dir,
   char **node_names;
   size_t n_nodes;
   cat_flatten_node_list_i(ns, &node_names, &n_nodes);
-  if (n_threads == 1) {
-    for (size_t i = 0; i < n_nodes; i++) {
-      cat_delete_empty_files_i(node_names[i], cache_dir);
-    }
-  } else {
-    #pragma omp parallel for
-    for (size_t i = 0; i < n_nodes; i++) {
-      cat_concat_file_i(node_names[i], cache_dir, n_threads);
-    }
+  #pragma omp parallel for
+  for (size_t i = 0; i < n_nodes; i++) {
+    cat_concat_file_i(node_names[i], cache_dir, n_threads);
   }
 
   for (size_t i = 0; i < n_nodes; i++) {
@@ -345,41 +338,25 @@ int read_xml(char **files, const size_t n_files, const path_struct ps,
   }
   free(parsed);
 
-  if (n_files == 1) {
-    n_threads = 1;
+  node_set *ns = node_set_generate(ps, NULL, cache_dir_i, STR_MAX);
+  node_set *ns_dup[n_threads];
+  for (size_t i = 0; i < n_threads; i++) {
+    ns_dup[i] = node_set_clone(ns, cache_dir_i, i, STR_MAX);
   }
 
-  node_set *ns = node_set_generate(ps, NULL, cache_dir_i, STR_MAX);
-  if (n_threads == 1) {
-    for (size_t i = 0; i < n_files; i++) {
-      status = parse_file(files[i], ns);
+  #pragma omp parallel for private (status)
+  for (size_t i = 0; i < n_files; i++) {
+    status = parse_file(files[i], ns_dup[omp_get_thread_num()]);
 
-      if (status != 0) {
-        pubmedparser_error(status, "Error in file %s\n", files[i]);
-      }
-
-      fprintf(progress_ptr, "%s\n", files[i]);
-    }
-  } else {
-    node_set *ns_dup[n_threads];
-    for (size_t i = 0; i < n_threads; i++) {
-      ns_dup[i] = node_set_clone(ns, cache_dir_i, i, STR_MAX);
+    if (status != 0) {
+      pubmedparser_error(status, "Error in file %s\n", files[i]);
     }
 
-    #pragma omp parallel for private (status)
-    for (size_t i = 0; i < n_files; i++) {
-      status = parse_file(files[i], ns_dup[omp_get_thread_num()]);
+    fprintf(progress_ptr, "%s\n", files[i]);
+  }
 
-      if (status != 0) {
-        pubmedparser_error(status, "Error in file %s\n", files[i]);
-      }
-
-      fprintf(progress_ptr, "%s\n", files[i]);
-    }
-
-    for (size_t i = 0; i < n_threads; i++) {
-      node_set_destroy(ns_dup[i]);
-    }
+  for (size_t i = 0; i < n_threads; i++) {
+    node_set_destroy(ns_dup[i]);
   }
   fclose(progress_ptr);
 
