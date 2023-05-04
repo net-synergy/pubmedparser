@@ -121,7 +121,7 @@ def _find_file_prefix(file_name: str, regex: str) -> str:
 def download(
     file_numbers: str | int | Iterable[int] = "all",
     cache_dir: str | None = None,
-) -> str:
+) -> List[str]:
     """
     Download XML files from pubmed's ftp server
 
@@ -147,9 +147,9 @@ def download(
 
     Returns
     -------
-    cache_dir : str
-       Where the files were saved to. This can then be passed to
-       `pubmedparser.read_xml`
+    files : list
+       List of the files asked for which can be passed directly to
+       `pubmedparser.read_xml`.
 
     See also
     --------
@@ -159,9 +159,9 @@ def download(
     --------
     >>> from pubmedparser import pubmed
     >>> # Download a subset of files.
-    >>> cache_dir = pubmed.download(range(1300, 1310))
+    >>> files = pubmed.download(range(1300, 1310))
     >>> # Download all available files.
-    >>> cache_dir = pubmed.download()
+    >>> files = pubmed.download()
     >>> # Call above periodically to check for and download new files.
     """
 
@@ -204,4 +204,20 @@ def download(
             _download_files(remote_dir, missing_files[remote_dir], cache_dir)
         print("Finished downloading files.")
 
-    return cache_dir
+    requested_files = [
+        os.path.join(cache_dir, f"{prefix}{n:0>4}.xml.gz")
+        for n in file_numbers
+    ]
+    cached_files = [f for f in requested_files if os.path.exists(f)]
+    not_downloaded_files = set(requested_files) - set(cached_files)
+    if not_downloaded_files:
+        names_not_downloaded = [
+            os.path.split(f)[-1] for f in not_downloaded_files
+        ]
+        print("Failed to collect:\n\t" + "\n\t".join(names_not_downloaded))
+        print(
+            "\nThese files may not exist (check ftp.list_files), or they may"
+            " have been corrupted."
+        )
+
+    return cached_files
