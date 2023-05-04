@@ -1,8 +1,8 @@
 #include <string.h>
+#include <stdlib.h>
 
 #include "error.h"
 #include "paths.h"
-#include "yaml_reader.h"
 
 #define IS_SPECIAL(p) ((p == '@') || (p == '{') || (p == '['))
 

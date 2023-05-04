@@ -6,8 +6,7 @@
 #include <zlib.h>
 #include <omp.h>
 
-#include "query.h"
-#include "paths.h"
+#include "structure.h"
 #include "nodes.h"
 #include "error.h"
 

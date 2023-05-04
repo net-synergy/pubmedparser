@@ -6,11 +6,14 @@ PYTHON_MODULE = pubmedparser
 ARCH = x86_64
 CPYTHON = cpython-310
 
-.PHONY: all clean check cli python debug
-all: python cli
+.PHONY: all cli lib python clean check debug core
+all: python cli lib
 
 cli:
 	@cd $(SRC_DIR); $(MAKE) all
+
+lib:
+	@cd $(SRC_DIR); $(MAKE) lib
 
 python: $(PYTHON_MODULE)/_readxml.so
 
@@ -25,13 +28,10 @@ check:
 debug:
 	@cd $(SRC_DIR); $(MAKE) debug
 
-$(LIB_DIR)/libpubmedparser.so:
-	@cd $(SRC_DIR); $(MAKE) $@
+core:
+	@cd $(SRC_DIR); $(MAKE) core
 
-$(SRC_DIR)/read_xml_core.o:
-	@cd $(SRC_DIR); $(MAKE) read_xml_core.o
-
-$(PYTHON_MODULE)/_readxml.so: $(SRC_DIR)/read_xml_core.o $(PYTHON_MODULE)/_readxml.c
+$(PYTHON_MODULE)/_readxml.so: core $(PYTHON_MODULE)/_readxml.c
 	poetry run python setup.py build
 	-[ -L $@ ] || ln -s \
 	../build/lib.linux-$(ARCH)-$(CPYTHON)/pubmedparser/_readxml.$(CPYTHON)-$(ARCH)-linux-gnu.so $@

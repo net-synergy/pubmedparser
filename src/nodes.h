@@ -6,7 +6,6 @@
 #include "structure.h"
 
 #include "paths.h"
-#include "query.h"
 
 typedef enum KeyTypes {
   IDX_NORMAL = 0,
