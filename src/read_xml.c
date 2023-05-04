@@ -85,9 +85,6 @@ int main(int argc, char **argv)
     status = read_xml(files, 1, structure, cache_dir, progress_file, 1);
     free(*files);
   } else {
-    /* omp_get_num_threads() returns 1 outside of parallel blocks so
-    this is a work around to get the real number of threads ahead of
-    time. */
     status = read_xml(files, n_files, structure, cache_dir, progress_file,
                       n_threads);
   }
