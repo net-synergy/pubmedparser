@@ -92,7 +92,7 @@ def _missing_files(
 def _filter_to_file_numbers(
     files: List[str], numbers: Iterable[int], name_regex_template: str
 ) -> List[str]:
-    number_pattern = "|".join([f"{n}" for n in numbers])
+    number_pattern = "|".join([f"{n:0>4}" for n in numbers])
     regex = re.compile(name_regex_template.format(number_pattern))
     return [f for f in files if regex.match(f)]
 
