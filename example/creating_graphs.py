@@ -1,6 +1,7 @@
 import os
 
 import pubmedparser
+import pubmedparser.ftp
 
 # Download data
 files = pubmedparser.ftp.download(range(1, 6))
