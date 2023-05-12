@@ -314,7 +314,8 @@ static int mkdir_and_parents(const char *path, mode_t mode)
        use OMP.
  */
 int read_xml(char **files, const size_t n_files, const path_struct ps,
-             const char *cache_dir, const char *progress_file, size_t n_threads)
+             const char *cache_dir, const int overwrite_cache, const char *progress_file,
+             size_t n_threads)
 {
   char *cache_dir_i = ensure_path_ends_with_slash(cache_dir);
   char *parsed;
@@ -336,7 +337,8 @@ int read_xml(char **files, const size_t n_files, const path_struct ps,
   }
   free(parsed);
 
-  node_set *ns = node_set_generate(ps, NULL, cache_dir_i, STR_MAX);
+  node_set *ns = node_set_generate(ps, NULL, cache_dir_i, overwrite_cache,
+                                   STR_MAX);
   node_set *ns_dup[n_threads];
   for (size_t i = 0; i < n_threads; i++) {
     ns_dup[i] = node_set_clone(ns, cache_dir_i, i, STR_MAX);

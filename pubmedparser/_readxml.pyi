@@ -4,6 +4,7 @@ def from_structure_file(
     cache_dir: str,
     progress_file: str,
     n_threads: int,
+    overwrite_cache: bool,
 ) -> None: ...
 def from_structure_dictionary(
     files: list[str],
@@ -11,4 +12,5 @@ def from_structure_dictionary(
     cache_dir: str,
     progress_file: str,
     n_threads: int,
+    overwrite_cache: bool,
 ) -> None: ...

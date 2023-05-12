@@ -7,6 +7,11 @@
 
 #include "paths.h"
 
+enum {
+  CACHE_APPEND = 0,
+  CACHE_OVERWRITE
+};
+
 typedef enum KeyTypes {
   IDX_NORMAL = 0,
   IDX_AUTO,
@@ -52,6 +57,7 @@ void node_set_copy_parents_index(node_set *child, node_set *parent,
 node_set *node_set_generate(const path_struct structure,
                             const char *name_prefix,
                             const char *cache_dir,
+                            const int overwrite,
                             const size_t str_max);
 
 node_set *node_set_clone(const node_set *ns, const char *cache_dir,

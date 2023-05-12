@@ -54,22 +54,23 @@ static PyObject *read_xml_from_structure_file(PyObject *self, PyObject *args)
   const char *cache_dir;
   const char *progress_file;
   const int n_threads;
+  const int overwrite_cache;
   char **files_i;
   size_t n_threads_i;
   size_t n_files_i;
   path_struct ps;
   int status;
 
-  if (!PyArg_ParseTuple(args, "Osssi", &files, &structure_file, &cache_dir,
-                        &progress_file, &n_threads)) {
+  if (!PyArg_ParseTuple(args, "Osssip", &files, &structure_file, &cache_dir,
+                        &progress_file, &n_threads, &overwrite_cache)) {
     return NULL;
   }
 
   parse_file_list(files, &files_i, &n_files_i);
   n_threads_i = determine_n_threads(n_threads);
   ps = parse_structure_file(structure_file, STRMAX);
-  status = read_xml(files_i, n_files_i, ps, cache_dir, progress_file,
-                    n_threads_i);
+  status = read_xml(files_i, n_files_i, ps, cache_dir, overwrite_cache,
+                    progress_file, n_threads_i);
   destroy_file_list(&files_i, n_files_i);
   path_struct_destroy(ps);
 
@@ -137,22 +138,23 @@ static PyObject *read_xml_from_structure_dictionary(PyObject *self,
   const char *cache_dir;
   const char *progress_file;
   const int n_threads;
+  const int overwrite_cache;
   char **files_i;
   size_t n_threads_i;
   size_t n_files_i;
   path_struct ps;
   int status;
 
-  if (!PyArg_ParseTuple(args, "OOssi", &files, &structure_dict, &cache_dir,
-                        &progress_file, &n_threads)) {
+  if (!PyArg_ParseTuple(args, "OOssip", &files, &structure_dict, &cache_dir,
+                        &progress_file, &n_threads, &overwrite_cache)) {
     return NULL;
   }
 
   parse_file_list(files, &files_i, &n_files_i);
   n_threads_i = determine_n_threads(n_threads);
   ps = parse_structure_dictionary(structure_dict);
-  status = read_xml(files_i, n_files_i, ps, cache_dir, progress_file,
-                    n_threads_i);
+  status = read_xml(files_i, n_files_i, ps, cache_dir, overwrite_cache,
+                    progress_file, n_threads_i);
   puts("parsed xml");
   destroy_file_list(&files_i, n_files_i);
   path_struct_destroy(ps);

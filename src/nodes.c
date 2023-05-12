@@ -11,20 +11,22 @@ enum {
   ATT_EXPECTED
 };
 
-static node *node_generate(const path_struct ps, const size_t str_max,
-                           const char *cache_dir);
+static node *node_generate(const path_struct ps, const char *cache_dir,
+                           const int overwrite, const size_t str_max);
 
-static FILE *get_file(const char *name, const char *cache_dir)
+static FILE *get_file(const char *name, const char *cache_dir,
+                      const int overwrite)
 {
   FILE *fptr = malloc(sizeof(*fptr));
   size_t str_max = 8000;
   char out[str_max + 1];
+  char *mode = overwrite ? "w" : "a";
 
   strncpy(out, cache_dir, str_max);
   strncat(out, name, str_max);
   strncat(out, ".tsv", str_max);
 
-  fptr = fopen(out, "a");
+  fptr = fopen(out, mode);
   return fptr;
 }
 
@@ -152,7 +154,7 @@ static value value_init(const size_t str_max)
 
 static node_set *node_set_generate_from_sub_tags(const char *xml_path,
     char **sub_tags, const size_t n_sub_tags, const char *cache_dir,
-    const size_t str_max)
+    const int overwrite, const size_t str_max)
 {
   path p = path_init(xml_path, str_max);
   char *path_str = malloc(sizeof(*path_str) * str_max);
@@ -199,7 +201,7 @@ static node_set *node_set_generate_from_sub_tags(const char *xml_path,
     ps.children[i + 2]->n_children = 0;
   }
 
-  node_set *ns = node_set_generate(&ps, ps.name, cache_dir, str_max);
+  node_set *ns = node_set_generate(&ps, ps.name, cache_dir, overwrite, str_max);
 
   for (size_t i = 0; i < n_sub_tags; i++) {
     free(sub_tag_paths[i]);
@@ -213,8 +215,8 @@ static node_set *node_set_generate_from_sub_tags(const char *xml_path,
   return ns;
 };
 
-static node *node_generate(const path_struct ps, const size_t str_max,
-                           const char *cache_dir)
+static node *node_generate(const path_struct ps, const char *cache_dir,
+                           const int overwrite, const size_t str_max)
 {
   char **sub_tags;
   node_set *ns = NULL;
@@ -233,13 +235,13 @@ static node *node_generate(const path_struct ps, const size_t str_max,
     ps->children[0]->path = strdup(p->components[p->length - 1]);
     /* free(p->components[p->length]); */
 
-    ns = node_set_generate(ps, ps->name, cache_dir, str_max);
+    ns = node_set_generate(ps, ps->name, cache_dir, overwrite, str_max);
   } else {
     size_t n_sub_tags = find_sub_tag_names(ps->path, str_max, &sub_tags);
     p = path_init(ps->path, str_max);
     if (n_sub_tags > 0) {
       ns = node_set_generate_from_sub_tags(ps->path, sub_tags, n_sub_tags,
-                                           cache_dir, str_max);
+                                           cache_dir, overwrite, str_max);
     } else {
       v = value_init(str_max);
       a = attribute_init(ps->path, str_max);
@@ -252,7 +254,7 @@ static node *node_generate(const path_struct ps, const size_t str_max,
     .value = v,
     .attribute = a,
     .child_ns = ns,
-    .out = get_file(ps->name, cache_dir)
+    .out = get_file(ps->name, cache_dir, overwrite)
   };
 
   node *n = malloc(sizeof * n);
@@ -309,7 +311,8 @@ static void key_destroy(key *k)
 }
 
 node_set *node_set_generate(const path_struct ps, const char *name_prefix,
-                            const char *cache_dir, const size_t str_max)
+                            const char *cache_dir, const int overwrite, const
+                            size_t str_max)
 {
   if (name_prefix != NULL) {
     char *new_name;
@@ -329,7 +332,8 @@ node_set *node_set_generate(const path_struct ps, const char *name_prefix,
 
   node **nodes = malloc(sizeof(*nodes) * (ps->n_children - 1));
   for (size_t i = 0; i < (ps->n_children - 1); i++) {
-    nodes[i] = node_generate(ps->children[i + 1], str_max, cache_dir);
+    nodes[i] = node_generate(ps->children[i + 1], cache_dir, overwrite,
+                             str_max);
   }
 
   size_t max_p_depth = 0;
@@ -442,7 +446,7 @@ static node *node_clone(const node *n, const char *cache_dir,
     .value = val,
     .attribute = att,
     .child_ns = child_ns,
-    .out = get_file(name, cache_dir)
+    .out = get_file(name, cache_dir, CACHE_OVERWRITE) // Clone files are ephemeral so always overwrite.
   };
   node *dup_n = malloc(sizeof(*dup_n));
   memcpy(dup_n, &dup_n_init, sizeof(*dup_n));
