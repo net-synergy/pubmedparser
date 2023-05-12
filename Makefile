@@ -32,6 +32,7 @@ core:
 	@cd $(SRC_DIR); $(MAKE) core
 
 $(PYTHON_MODULE)/_readxml.so: core $(PYTHON_MODULE)/_readxml.c
+	-[ -L $@ ] && rm $@
 	poetry run python setup.py build
-	-[ -L $@ ] || ln -s \
-	../build/lib.linux-$(ARCH)-$(CPYTHON)/pubmedparser/_readxml.$(CPYTHON)-$(ARCH)-linux-gnu.so $@
+	ln -s \
+	  ../build/lib.linux-$(ARCH)-$(CPYTHON)/pubmedparser/_readxml.$(CPYTHON)-$(ARCH)-linux-gnu.so $@
