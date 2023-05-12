@@ -344,6 +344,8 @@ int read_xml(char **files, const size_t n_files, const path_struct ps,
     ns_dup[i] = node_set_clone(ns, cache_dir_i, i, STR_MAX);
   }
 
+  node_set_write_headers(ns, STR_MAX);
+
   #pragma omp parallel for
   for (size_t i = 0; i < n_files; i++) {
     int status = parse_file(files[i], ns_dup[omp_get_thread_num()]);

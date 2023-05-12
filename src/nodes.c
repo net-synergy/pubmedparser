@@ -5,6 +5,8 @@
 #include "nodes.h"
 #include "error.h"
 
+#define KEYNODE(ns) (ns->nodes[ns->key_idx])
+
 enum {
   ATT_NONE = 1,
   ATT_FOUND,
@@ -153,8 +155,8 @@ static value value_init(const size_t str_max)
 }
 
 static node_set *node_set_generate_from_sub_tags(const char *xml_path,
-    char **sub_tags, const size_t n_sub_tags, const char *cache_dir,
-    const int overwrite, const size_t str_max)
+    const char *name, char **sub_tags, const size_t n_sub_tags,
+    const char *cache_dir, const int overwrite, const size_t str_max)
 {
   path p = path_init(xml_path, str_max);
   char *path_str = malloc(sizeof(*path_str) * str_max);
@@ -165,7 +167,7 @@ static node_set *node_set_generate_from_sub_tags(const char *xml_path,
   }
 
   struct PathStructure ps = {
-    .name = strdup(p->components[p->length - 1]),
+    .name = strdup(name),
     .path = NULL,
     .parent = NULL,
     .children = malloc(sizeof(path_struct) * (n_sub_tags + 2)),
@@ -177,7 +179,7 @@ static node_set *node_set_generate_from_sub_tags(const char *xml_path,
   }
 
   ps.children[0]->name = strdup("root");
-  ps.children[0]->path = strdup(ps.name);
+  ps.children[0]->path = strdup(p->components[p->length - 1]);
   ps.children[0]->parent = &ps;
   ps.children[0]->children = NULL;
   ps.children[0]->n_children = 0;
@@ -240,7 +242,7 @@ static node *node_generate(const path_struct ps, const char *cache_dir,
     size_t n_sub_tags = find_sub_tag_names(ps->path, str_max, &sub_tags);
     p = path_init(ps->path, str_max);
     if (n_sub_tags > 0) {
-      ns = node_set_generate_from_sub_tags(ps->path, sub_tags, n_sub_tags,
+      ns = node_set_generate_from_sub_tags(ps->path, ps->name, sub_tags, n_sub_tags,
                                            cache_dir, overwrite, str_max);
     } else {
       v = value_init(str_max);
@@ -279,7 +281,9 @@ static void node_destroy(node *n)
     node_set_destroy(n->child_ns);
   }
 
-  fclose(n->out);
+  if (n->out) {
+    fclose(n->out);
+  }
   free(n);
 }
 
@@ -381,6 +385,132 @@ void node_set_destroy(node_set *ns)
   free(ns->nodes);
   free((char *)ns->root);
   free(ns);
+}
+
+static int is_file_empty(FILE *fptr)
+{
+  int p;
+  if ((p = ftell(fptr)) > 0) {
+    return false;
+  }
+
+  fseek(fptr, 0L, SEEK_END);
+  if (ftell(fptr) == 0) {
+    return true;
+  }
+
+  fseek(fptr, p, SEEK_SET);
+
+  return false;
+}
+
+static inline char *write_header_get_top_index_name(const node_set *ns)
+{
+  path key_path = KEYNODE(ns)->path;
+
+  return key_path->components[key_path->length - 1];
+}
+
+static inline char *write_header_skip_prefix(const char *name,
+    const char *prefix)
+{
+  return (char *)name + strlen(prefix) + 1;
+}
+
+static void write_header_condensed_ns_i(const node_set *ns,
+                                        node *parent,
+                                        const char *idx_header,
+                                        const char *name_prefix,
+                                        const size_t str_max)
+{
+  if (!(is_file_empty(parent->out))) {
+    return;
+  }
+
+  node *n;
+  char header[str_max + 1];
+  strncpy(header, idx_header, str_max);
+  strncat(header, "\t", str_max);
+  // Skip key since it doesn't hold a real value in condensed case.
+  for (size_t i = 1; i < ns->n_nodes; i++) {
+    n = ns->nodes[i];
+    strncat(header, write_header_skip_prefix(n->name, name_prefix),
+            str_max);
+    if ((n->attribute->name) && !(n->attribute->required_value)) {
+      strncat(header, "\t", str_max);
+      strncat(header, n->attribute->name, str_max);
+    }
+    strncat(header, i == (ns->n_nodes - 1) ? "\n" : "\t", str_max);
+  }
+  fprintf(parent->out, "%s", header);
+
+  return;
+}
+
+static void write_header_node_i(const node *n, const char *idx_header,
+                                const char *name_prefix, const size_t str_max)
+{
+  if (!(is_file_empty(n->out))) {
+    return;
+  }
+
+  char header[str_max + 1];
+  strncpy(header, idx_header, str_max);
+  strncat(header, "\t", str_max);
+
+  if (name_prefix) {
+    strncat(header, name_prefix, str_max);
+    strncat(header, "ID\t", str_max);
+    strncat(header, write_header_skip_prefix(n->name, name_prefix), str_max);
+  } else {
+    strncat(header, n->name, str_max);
+  }
+
+  if ((n->attribute->name) && !(n->attribute->required_value)) {
+    strncat(header, "\t", str_max);
+    strncat(header, n->attribute->name, str_max);
+  }
+  strncat(header, "\n", str_max);
+
+  fprintf(n->out, "%s", header);
+}
+
+static void node_set_write_headers_i(const node_set *ns,
+                                     node *parent,
+                                     const char *idx_header,
+                                     const char *name_prefix,
+                                     const size_t str_max)
+{
+  if (ns->key->type == IDX_CONDENSE) {
+    write_header_condensed_ns_i(ns, parent, idx_header, name_prefix, str_max);
+    fclose(parent->out);
+    parent->out = NULL;
+    return;
+  }
+
+  for (size_t i = 1; i < ns->n_nodes; i++) {
+    if (ns->nodes[i]->child_ns) {
+      node_set_write_headers_i(ns->nodes[i]->child_ns, ns->nodes[i], idx_header,
+                               ns->nodes[i]->name, str_max);
+    } else {
+      write_header_node_i(ns->nodes[i], idx_header, name_prefix, str_max);
+      // Results written to cloned nodeset's files not original.
+      fclose(ns->nodes[i]->out);
+      ns->nodes[i]->out = NULL;
+    }
+  }
+
+  return;
+}
+
+/* Write headers if the files don't already exist.
+   If the files have already been written to, assume we are appending to them
+   and that the path structure is the same as they were when the files were
+   first created. */
+void node_set_write_headers(const node_set *ns, const size_t str_max)
+{
+  char *idx = write_header_get_top_index_name(ns);
+  node_set_write_headers_i(ns, NULL, idx, NULL, str_max);
 }
 
 static attribute container_clone(const container c)

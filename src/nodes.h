@@ -60,6 +60,8 @@ node_set *node_set_generate(const path_struct structure,
                             const int overwrite,
                             const size_t str_max);
 
+void node_set_write_headers(const node_set *ns, const size_t str_max);
+
 node_set *node_set_clone(const node_set *ns, const char *cache_dir,
                          const size_t thread, const size_t str_max);
 void node_set_destroy(node_set *ns);
