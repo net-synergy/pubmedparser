@@ -196,7 +196,6 @@ def download(
 
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
-    os.chdir(cache_dir)
 
     if missing_files["baseline"] or missing_files["updatefiles"]:
         print("Downloading files...")
