@@ -12,6 +12,7 @@ static void parse_file_list(PyObject *py_files, char ***files,
 {
   if (!PyList_Check(py_files)) {
     PyErr_SetString(PyExc_ValueError, "Files argument was not a list.");
+    return NULL;
   }
 
   *n_files = (size_t)PyList_Size(py_files);
@@ -123,6 +124,7 @@ static path_struct parse_structure_dictionary(PyObject *structure_dict)
   if (!(PyDict_Check(structure_dict))) {
     PyErr_SetString(PyExc_ValueError,
                     "Structure dictionary was not a dictionary.");
+    return NULL;
   }
 
   read_dict_values_i(ps, structure_dict);
@@ -155,7 +157,6 @@ static PyObject *read_xml_from_structure_dictionary(PyObject *self,
   ps = parse_structure_dictionary(structure_dict);
   status = read_xml(files_i, n_files_i, ps, cache_dir, overwrite_cache,
                     progress_file, n_threads_i);
-  puts("parsed xml");
   destroy_file_list(&files_i, n_files_i);
   path_struct_destroy(ps);
 
@@ -168,7 +169,6 @@ static PyObject *read_xml_from_structure_dictionary(PyObject *self,
   }
 
   Py_RETURN_NONE;
-
 }
 
 static PyMethodDef ReadXmlMethods[] = {
