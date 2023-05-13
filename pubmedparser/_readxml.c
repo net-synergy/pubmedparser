@@ -110,8 +110,8 @@ static void read_dict_values_i(path_struct ps, PyObject *dict)
       child->n_children = 0;
     }
     ps->children[idx] = child;
+    idx++;
   }
-  idx++;
 }
 
 static path_struct parse_structure_dictionary(PyObject *structure_dict)
