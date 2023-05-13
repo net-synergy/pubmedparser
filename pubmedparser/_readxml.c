@@ -86,6 +86,33 @@ static PyObject *read_xml_from_structure_file(PyObject *self, PyObject *args)
   Py_RETURN_NONE;
 }
 
+static void reorder_ps(const char *name, const size_t pos, path_struct ps)
+{
+  size_t idx = 0;
+  if (strcmp(ps->children[pos]->name, name) == 0) {
+    return;
+  }
+
+  while ((idx < ps->n_children) &&
+         (strcmp(ps->children[idx]->name, name) != 0)) {
+    idx++;
+  }
+
+  if (idx == ps->n_children) {
+    size_t str_max = 1000;
+    char errmsg[str_max + 1];
+    strncpy(errmsg, "Structure dictionary missing required ", str_max);
+    strncat(errmsg, name, str_max);
+    strncat(errmsg, " key.", str_max);
+    PyErr_SetString(PyExc_ValueError, errmsg);
+    return NULL;
+  }
+
+  path_struct child = ps->children[pos];
+  ps->children[pos] = ps->children[idx];
+  ps->children[idx] = child;
+}
+
 static void read_dict_values_i(path_struct ps, PyObject *dict)
 {
   ps->n_children = (size_t)PyDict_Size(dict);
@@ -112,6 +139,9 @@ static void read_dict_values_i(path_struct ps, PyObject *dict)
     ps->children[idx] = child;
     idx++;
   }
+
+  reorder_ps("root", 0, ps);
+  reorder_ps("key", 1, ps);
 }
 
 static path_struct parse_structure_dictionary(PyObject *structure_dict)
