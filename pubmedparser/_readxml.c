@@ -12,6 +12,7 @@ static void parse_file_list(PyObject *py_files, char ***files,
 {
   if (!PyList_Check(py_files)) {
     PyErr_SetString(PyExc_ValueError, "Files argument was not a list.");
+    return NULL;
   }
 
   *n_files = (size_t)PyList_Size(py_files);
@@ -54,22 +55,23 @@ static PyObject *read_xml_from_structure_file(PyObject *self, PyObject *args)
   const char *cache_dir;
   const char *progress_file;
   const int n_threads;
+  const int overwrite_cache;
   char **files_i;
   size_t n_threads_i;
   size_t n_files_i;
   path_struct ps;
   int status;
 
-  if (!PyArg_ParseTuple(args, "Osssi", &files, &structure_file, &cache_dir,
-                        &progress_file, &n_threads)) {
+  if (!PyArg_ParseTuple(args, "Osssip", &files, &structure_file, &cache_dir,
+                        &progress_file, &n_threads, &overwrite_cache)) {
     return NULL;
   }
 
   parse_file_list(files, &files_i, &n_files_i);
   n_threads_i = determine_n_threads(n_threads);
   ps = parse_structure_file(structure_file, STRMAX);
-  status = read_xml(files_i, n_files_i, ps, cache_dir, progress_file,
-                    n_threads_i);
+  status = read_xml(files_i, n_files_i, ps, cache_dir, overwrite_cache,
+                    progress_file, n_threads_i);
   destroy_file_list(&files_i, n_files_i);
   path_struct_destroy(ps);
 
@@ -82,6 +84,33 @@ static PyObject *read_xml_from_structure_file(PyObject *self, PyObject *args)
   }
 
   Py_RETURN_NONE;
+}
+
+static void reorder_ps(const char *name, const size_t pos, path_struct ps)
+{
+  size_t idx = 0;
+  if (strcmp(ps->children[pos]->name, name) == 0) {
+    return;
+  }
+
+  while ((idx < ps->n_children) &&
+         (strcmp(ps->children[idx]->name, name) != 0)) {
+    idx++;
+  }
+
+  if (idx == ps->n_children) {
+    size_t str_max = 1000;
+    char errmsg[str_max + 1];
+    strncpy(errmsg, "Structure dictionary missing required ", str_max);
+    strncat(errmsg, name, str_max);
+    strncat(errmsg, " key.", str_max);
+    PyErr_SetString(PyExc_ValueError, errmsg);
+    return NULL;
+  }
+
+  path_struct child = ps->children[pos];
+  ps->children[pos] = ps->children[idx];
+  ps->children[idx] = child;
 }
 
 static void read_dict_values_i(path_struct ps, PyObject *dict)
@@ -108,8 +137,11 @@ static void read_dict_values_i(path_struct ps, PyObject *dict)
       child->n_children = 0;
     }
     ps->children[idx] = child;
+    idx++;
   }
-  idx++;
+
+  reorder_ps("root", 0, ps);
+  reorder_ps("key", 1, ps);
 }
 
 static path_struct parse_structure_dictionary(PyObject *structure_dict)
@@ -122,6 +154,7 @@ static path_struct parse_structure_dictionary(PyObject *structure_dict)
   if (!(PyDict_Check(structure_dict))) {
     PyErr_SetString(PyExc_ValueError,
                     "Structure dictionary was not a dictionary.");
+    return NULL;
   }
 
   read_dict_values_i(ps, structure_dict);
@@ -137,25 +170,23 @@ static PyObject *read_xml_from_structure_dictionary(PyObject *self,
   const char *cache_dir;
   const char *progress_file;
   const int n_threads;
+  const int overwrite_cache;
   char **files_i;
   size_t n_threads_i;
   size_t n_files_i;
   path_struct ps;
   int status;
 
-  if (!PyArg_ParseTuple(args, "OOssi", &files, &structure_dict, &cache_dir,
-                        &progress_file, &n_threads)) {
+  if (!PyArg_ParseTuple(args, "OOssip", &files, &structure_dict, &cache_dir,
+                        &progress_file, &n_threads, &overwrite_cache)) {
     return NULL;
   }
 
   parse_file_list(files, &files_i, &n_files_i);
   n_threads_i = determine_n_threads(n_threads);
   ps = parse_structure_dictionary(structure_dict);
-  printf("%zu\n", ps->n_children);
-  /* path_struct_print(ps); */
-  status = read_xml(files_i, n_files_i, ps, cache_dir, progress_file,
-                    n_threads_i);
-  puts("parsed xml");
+  status = read_xml(files_i, n_files_i, ps, cache_dir, overwrite_cache,
+                    progress_file, n_threads_i);
   destroy_file_list(&files_i, n_files_i);
   path_struct_destroy(ps);
 
@@ -168,7 +199,6 @@ static PyObject *read_xml_from_structure_dictionary(PyObject *self,
   }
 
   Py_RETURN_NONE;
-
 }
 
 static PyMethodDef ReadXmlMethods[] = {

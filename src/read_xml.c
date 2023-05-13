@@ -22,14 +22,19 @@ static void usage(char *program_name, int failed)
        "Defualts to \"cache\".");
   puts("-s, --structure-file=STRING\ta yaml file with the xml paths to collect. "
        "Defaults to \"structure.yml\".");
-  puts("-p --progress-file=STRING\ta file to collect the names of the xml files "
+  puts("-n, --num-threads=INT\tnumber of indepent threads to use, defaults to OMP_NUM_THREADS.");
+  puts("-p, --progress-file=STRING\ta file to collect the names of the xml files "
        "that have been parsed.");
+  puts("-w, --overwrite-cache\tIf set, overwrite the files in cache instead of appending them.");
+  puts("-h, --help\tIf Show this help.");
 }
 
 static struct option const longopts[] = {
   {"cache-dir", required_argument, NULL, 'c'},
   {"structure-file", required_argument, NULL, 's'},
+  {"num-threads", required_argument, NULL, 'n'},
   {"progress-file", required_argument, NULL, 'p'},
+  {"overwrite-cache", no_argument, NULL, 'w'},
   {"help", no_argument, NULL, 'h'},
   {NULL, 0, NULL, 0}
 };
@@ -39,10 +44,18 @@ int main(int argc, char **argv)
   int optc;
   char *structure_file = "structure.yml";
   char *cache_dir = "cache/";
+  int overwrite_cache = CACHE_APPEND;
   char *progress_file = "processed.txt";
   char *program_name = argv[0];
+  size_t n_threads = 0;
+  #pragma omp parallel
+  {
+    #pragma omp single
+    n_threads = omp_get_num_threads();
+  }
 
-  while ((optc = getopt_long(argc, argv, "c:s:h", longopts, NULL)) != EOF) {
+  while ((optc = getopt_long(argc, argv, "c:s:n:p:wh", longopts,
+                             NULL)) != EOF) {
     switch (optc) {
     case 'c':
       cache_dir = optarg;
@@ -50,8 +63,15 @@ int main(int argc, char **argv)
     case 's':
       structure_file = optarg;
       break;
+    case 'n':
+      n_threads = atoi(optarg);
+      omp_set_num_threads(n_threads);
+      break;
     case 'p':
       progress_file = optarg;
+      break;
+    case 'w':
+      overwrite_cache = CACHE_OVERWRITE;
       break;
     case 'h':
       usage(program_name, 0);
@@ -70,19 +90,12 @@ int main(int argc, char **argv)
   int status = 0;
   if (n_files == 0) {
     *files = strdup("-");
-    status = read_xml(files, 1, structure, cache_dir, progress_file, 1);
+    status = read_xml(files, 1, structure, cache_dir, overwrite_cache,
+                      progress_file, 1);
     free(*files);
   } else {
-    /* omp_get_num_threads() returns 1 outside of parallel blocks so
-    this is a work around to get the real number of threads ahead of
-    time. */
-    size_t n_threads = 0;
-    #pragma omp parallel
-    {
-      #pragma omp single
-      n_threads = omp_get_num_threads();
-    }
-    status = read_xml(files, n_files, structure, cache_dir, progress_file,
+    status = read_xml(files, n_files, structure, cache_dir, overwrite_cache,
+                      progress_file,
                       n_threads);
   }
 

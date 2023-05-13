@@ -1,8 +1,8 @@
 #include <string.h>
+#include <stdlib.h>
 
 #include "error.h"
 #include "paths.h"
-#include "yaml_reader.h"
 
 #define IS_SPECIAL(p) ((p == '@') || (p == '{') || (p == '['))
 
@@ -125,6 +125,12 @@ void path_print(const path p)
 {
   char sep = '/';
   size_t len = (p->length < p->max_path_depth) ? p->length : p->max_path_depth;
+
+  if (path_is_empty(p)) {
+    printf("\n");
+    return;
+  }
+
   for (size_t i = 0; i < len; i++) {
     printf("%c%s", sep, p->components[i]);
   }

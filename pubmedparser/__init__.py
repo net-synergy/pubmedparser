@@ -28,7 +28,8 @@ def read_xml(
     relative_to_default_data: bool = True,
     progress_file: str = "processed.txt",
     n_threads: int = -1,
-    exts: tuple[str, ...] = (".xml", ".xml.gz")
+    overwrite_cache: bool = False,
+    exts: tuple[str, ...] = (".xml", ".xml.gz"),
 ) -> str:
     """
     Collect values matching xpaths in XML files
@@ -87,6 +88,7 @@ def read_xml(
             data_dir,
             progress_file,
             n_threads,
+            overwrite_cache,
         )
     else:
         _read_xml_from_dictionary(
@@ -95,6 +97,7 @@ def read_xml(
             data_dir,
             progress_file,
             n_threads,
+            overwrite_cache,
         )
 
     return data_dir

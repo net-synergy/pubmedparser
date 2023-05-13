@@ -1,4 +1,0 @@
-root: "//PubmedArticleSet"
-
-key: "/PubmedArticle/MedlineCitation/PMID"
-Year: "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/Year"

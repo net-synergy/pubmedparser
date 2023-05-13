@@ -13,7 +13,11 @@ KNOWN_PUBMED_DIRECTORIES = ("baseline", "updatefiles")
 
 
 def _download_files(
-    remote_dir: str, file_names: List[str], cache_dir: str
+    remote_dir: str,
+    file_names: List[str],
+    cache_dir: str,
+    attempt: int = 1,
+    max_tries: int = 3,
 ) -> None:
     def in_cache(f):
         return os.path.join(cache_dir, f)
@@ -38,8 +42,17 @@ def _download_files(
             actual_md5 = hashlib.md5(f_rb.read()).hexdigest()
 
         if actual_md5 != expected_md5:
-            print(f"{file_name} failed md5sum check, deleting")
-            os.unlink(file_name)
+            if attempt <= max_tries:
+                print(
+                    f"{file_name} failed md5sum check, trying"
+                    f" {max_tries - attempt} more times..."
+                )
+                _download_files(
+                    remote_dir, [file_name], cache_dir, attempt + 1, max_tries
+                )
+            else:
+                print(f"{file_name} failed md5sum check max tries, deleting")
+                os.unlink(in_cache(file_name))
 
         os.unlink(in_cache(md5_file_name))
 
@@ -92,7 +105,7 @@ def _missing_files(
 def _filter_to_file_numbers(
     files: List[str], numbers: Iterable[int], name_regex_template: str
 ) -> List[str]:
-    number_pattern = "|".join([f"{n}" for n in numbers])
+    number_pattern = "|".join([f"{n:0>4}" for n in numbers])
     regex = re.compile(name_regex_template.format(number_pattern))
     return [f for f in files if regex.match(f)]
 
@@ -108,7 +121,7 @@ def _find_file_prefix(file_name: str, regex: str) -> str:
 def download(
     file_numbers: str | int | Iterable[int] = "all",
     cache_dir: str | None = None,
-) -> str:
+) -> List[str]:
     """
     Download XML files from pubmed's ftp server
 
@@ -134,9 +147,9 @@ def download(
 
     Returns
     -------
-    cache_dir : str
-       Where the files were saved to. This can then be passed to
-       `pubmedparser.read_xml`
+    files : list
+       List of the files asked for which can be passed directly to
+       `pubmedparser.read_xml`.
 
     See also
     --------
@@ -146,9 +159,9 @@ def download(
     --------
     >>> from pubmedparser import pubmed
     >>> # Download a subset of files.
-    >>> cache_dir = pubmed.download(range(1300, 1310))
+    >>> files = pubmed.download(range(1300, 1310))
     >>> # Download all available files.
-    >>> cache_dir = pubmed.download()
+    >>> files = pubmed.download()
     >>> # Call above periodically to check for and download new files.
     """
 
@@ -165,7 +178,6 @@ def download(
         name_regex_template.format("(pubmed\d{2}n)", "\d{4}"),
     )
     name_regex_template = name_regex_template.format(prefix, "({})")
-    breakpoint()
     if not cache_dir:
         cache_dir = default_cache_dir(prefix)
 
@@ -184,7 +196,6 @@ def download(
 
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
-    os.chdir(cache_dir)
 
     if missing_files["baseline"] or missing_files["updatefiles"]:
         print("Downloading files...")
@@ -192,4 +203,20 @@ def download(
             _download_files(remote_dir, missing_files[remote_dir], cache_dir)
         print("Finished downloading files.")
 
-    return cache_dir
+    requested_files = [
+        os.path.join(cache_dir, f"{prefix}{n:0>4}.xml.gz")
+        for n in file_numbers
+    ]
+    cached_files = [f for f in requested_files if os.path.exists(f)]
+    not_downloaded_files = set(requested_files) - set(cached_files)
+    if not_downloaded_files:
+        names_not_downloaded = [
+            os.path.split(f)[-1] for f in not_downloaded_files
+        ]
+        print("Failed to collect:\n\t" + "\n\t".join(names_not_downloaded))
+        print(
+            "\nThese files may not exist (check ftp.list_files), or they may"
+            " have been corrupted."
+        )
+
+    return cached_files

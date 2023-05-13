@@ -47,6 +47,13 @@ setup_file() {
 	  <NameOfSubstance @UI="D2">Solution</NameOfSubstance>
         </Chemical>
       </ChemicalList>
+      <KeywordList>
+	  <Keyword> Spacey  </Keyword>
+	  <Keyword>Lines
+are a
+pain
+</Keyword>
+      </KeywordList>
     </MedlineCitation>
     <PubmedData>
       <ReferenceList>
@@ -109,7 +116,7 @@ EOF
     [ "$status" -eq 4 ] # 4 is PP_ERR_TAG_MISMATCH
     [ "$output" = "Tags in XML file did not match
 
-Error in file stdin" ]
+Error in file -" ]
 }
 
 @test "Test handle empty tag" {
@@ -145,25 +152,45 @@ EOF
 EOF
 }
 
-@test "Test handle missing fore name" {
-    diff <(cut -f1 -c $cache_dir/Author.tsv | sort) \
-        <(cat "Smith\tJohn\nDoe\tJane\n\tJake\nSmith\tJohn\n" |
-            sort)
+@test "Test creates regular headers" {
+    diff <(head -n1 $cache_dir/Language.tsv) <(echo -e "PMID\tLanguage")
+    diff <(head -n1 $cache_dir/Keywords.tsv) <(echo -e "PMID\tKeywords")
+}
+
+@test "Test creates condensed headers" {
+    diff <(head -n1 $cache_dir/Date.tsv) <(echo -e "PMID\tYear\tMonth\tDay")
+}
+
+@test "Test creates header with attribute" {
+    diff <(head -n1 $cache_dir/Chemical.tsv) <(echo -e "PMID\tChemical\tUI")
+}
+
+@test "Test creates header for recursive node" {
+    diff <(head -n1 $cache_dir/Author_LastName.tsv) <(echo -e "PMID\tAuthorID\tLastName")
+    diff <(head -n1 $cache_dir/Author_ForeName.tsv) <(echo -e "PMID\tAuthorID\tForeName")
 }
 
 @test "Test collects attributes" {
     diff $cache_dir/Chemical.tsv \
-        <(echo -e "1\tMolecule\tD1\n1\tSolution\tD2")
+        <(echo -e "PMID\tChemical\tUI\n1\tMolecule\tD1\n1\tSolution\tD2")
 }
 
 @test "Test filtering by attribute value" {
     # If it collects references with doi attribute as well as pubmed,
     # there will be more entries i.e. 10.000 and 10.001.
-    diff $cache_dir/Reference.tsv <(echo -e "1\t2")
+    diff <(sed -n '2,$p' <$cache_dir/Reference.tsv) <(echo -e "1\t2")
 }
 
 @test "Test reads values with HTML tags in them" {
     grep -oe '9<sub>10</sub>' $cache_dir/Abstract.tsv
+}
+
+@test "Test trims spaces in value field" {
+    diff <(sed -n '2p' <$cache_dir/Keywords.tsv) <(echo -e "1\tSpacey")
+}
+
+@test "Test handles newlines in value field and replaces with spaces" {
+    diff <(tail -n1 $cache_dir/Keywords.tsv) <(echo -e "1\tLines are a pain")
 }
 
 # @test "Test reads values greater than VALUE_MAX" {
