@@ -10,23 +10,39 @@
 
 #define STR_MAX 10000
 
+static inline void putarg(char *short_opt, char *long_opt, char *type,
+                          char *description)
+{
+  size_t str_max = 512;
+  char long_opt_i[str_max + 1];
+  if (type) {
+    snprintf(long_opt_i, str_max, "%s=%s", long_opt, type);
+  } else {
+    snprintf(long_opt_i, str_max, "%s", long_opt);
+  }
+  printf("  -%s, --%s\n", short_opt, long_opt_i);
+  printf("\t\t\t%s\n", description);
+}
+
 static void usage(char *program_name, int failed)
 {
   if (failed) {
     puts("Called with unknown argument.\n");
   }
-  printf("Usage: %s OPTION ... [FILE]...\n", program_name);
+  printf("Usage: %s [OPTION]... [FILE]...\n", program_name);
   puts("Read XML files and print selected values to files.\n");
   puts("With no FILE read standard input.\n");
-  puts("-c, --cache-dir=STRING\tdirectory output files are written to. "
-       "Defualts to \"cache\".");
-  puts("-s, --structure-file=STRING\ta yaml file with the xml paths to collect. "
-       "Defaults to \"structure.yml\".");
-  puts("-n, --num-threads=INT\tnumber of indepent threads to use, defaults to OMP_NUM_THREADS.");
-  puts("-p, --progress-file=STRING\ta file to collect the names of the xml files "
-       "that have been parsed.");
-  puts("-w, --overwrite-cache\tIf set, overwrite the files in cache instead of appending them.");
-  puts("-h, --help\tIf Show this help.");
+  putarg("c", "cache-dir", "STRING",
+         "Directory output files are written to.  Defualts to \"cache\".");
+  putarg("s", "structure-file", "STRING",
+         "A yaml file with the xml paths to collect.  Defaults to \"structure.yml\".");
+  putarg("n", "num-threads", "INT",
+         "Number of independent threads to use, defaults to OMP_NUM_THREADS.");
+  putarg("p", "progress-file", "STRING",
+         "A file to collect the names of the xml files that have been parsed.");
+  putarg("w", "overwrite-cache", NULL,
+         "If set, overwrite the files in cache instead of appending them.");
+  putarg("h", "help", NULL, "Show this help.");
 }
 
 static struct option const longopts[] = {
