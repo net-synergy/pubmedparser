@@ -203,10 +203,17 @@ def download(
             _download_files(remote_dir, missing_files[remote_dir], cache_dir)
         print("Finished downloading files.")
 
-    requested_files = [
-        os.path.join(cache_dir, f"{prefix}{n:0>4}.xml.gz")
-        for n in file_numbers
-    ]
+    if isinstance(file_numbers, str):
+        requested_files = [
+            os.path.join(cache_dir, f)
+            for k in remote_files.keys()
+            for f in remote_files[k]
+        ]
+    else:
+        requested_files = [
+            os.path.join(cache_dir, f"{prefix}{n:0>4}.xml.gz")
+            for n in file_numbers
+        ]
     cached_files = [f for f in requested_files if os.path.exists(f)]
     not_downloaded_files = set(requested_files) - set(cached_files)
     if not_downloaded_files:
