@@ -15,7 +15,7 @@ description = "Download and parse pubmed publication data"
 license = "MIT"
 keywords = ["publication", "network"]
 repository = "https://gitlab.com/net-synergy/pubmedparser"
-readme = "README.org"
+readme = "README.md"
 authors = ["David Connell <davidconnell12@gmail.com>"]
 maintainers = ["David Connell <davidconnell12@gmail.com>"]
 packages = [{ include = "pubmedparser" }]

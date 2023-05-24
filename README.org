@@ -16,19 +16,37 @@ Usage:
       data/*.xml.gz
 #+end_src
 
-The cache directory is where the results are stored.
+Or, with python:
+#+begin_src python :eval no
+  import pubmedparser
+  import pubmedparser.ftp
 
-** Building
+  # Download data
+  files = pubmedparser.ftp.download(range(1, 6))
+
+  # Read XML files using a YAML file to describe what data to collect.
+  data_dir = "file_example"
+  structure_file = "example/structure.yml"
+  results = pubmedparser.read_xml(files, structure_file, data_dir)
+#+end_src
+
+In python, the structure file can be replaced with a dictionary of dictionaries as well.
+
+** Building CLI
 Requires ~zlib~.
 
 Clone the repository and in the directory run:
 #+begin_src sh :eval no
-  make all
+  make cli
 #+end_src
 
 or using nix:
 #+begin_src sh :eval no
   nix shell "gitlab:DavidRConnell/pubmedparser"
+#+end_src
+** Installing with pip
+#+begin_src sh :eval no
+  pip install pubmedparser
 #+end_src
 
 * Structure file
@@ -124,6 +142,48 @@ The ~{child,child,child}~ syntax allows you to select multiple children at the s
 This is useful when multiple children make up a single piece of information (i.e. the publication date).
 
 A similar example structure file can be found in the example directory of this project at: [[file:./example/structure.yml]].
+* Structure dictionary
+The structure of the xml data to read can also be described as a python dictionary of dictionaries.
+
+The form is similar to the file:
+#+begin_src python
+  structure = {
+      "root": "//PubmedArticleSet",
+      "key": "/PubmedArticle/MedlineCitation/PMID",
+      "DOI": "/PubmedArticle/PubmedData/ArticleIdList/ArticleId/[@IdType='doi']",
+      "Date": "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/{Year,Month,Day}",
+      "Journal": "/PubmedArticle/MedlineCitation/Article/Journal/{Title,ISOAbbreviation}",
+      "Language": "/PubmedArticle/MedlineCitation/Article/Language",
+      "Author": {
+          "root": "/PubmedArticle/MedlineCitation/Article/AuthorList",
+          "key": "/Author/auto_index",
+          "LastName": "/Author/LastName",
+          "ForName": "/Author/ForeName",
+          "Affiliation": "/Author/AffiliationInfo/Affiliation",
+          "Orcid": "/Author/Identifier/[@Source='ORCID']",
+      },
+      "Grant": {
+          "root": "/PubmedArticle/MedlineCitation/Article/GrantList",
+          "key": "/Grant/auto_index",
+          "ID": "/Grant/GrantID",
+          "Agency": "/Grant/Agency",
+      },
+      "Chemical": "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
+      "Qualifier": "/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/QualifierName/@UI",
+      "Descriptor": "/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/DescriptorName/@UI",
+      "Keywords": "/PubmedArticle/MedlineCitation/KeywordList/Keyword",
+      "Reference": {
+          "root": (
+              "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList"
+          ),
+          "key": "/condensed",
+          "PMID": "/ArticleId/[@IdType='pubmed']",
+          "DOI": "/ArticleId/[@IdType='doi']",
+      },
+  }
+#+end_src
+
+This can then be passed to ~pubmedparser.read_xml~ in place of the structure file.
 * Future goals
 ** Improve printing logic
 Currently, values are printed as they are read in. Since the results for the different paths are written to separate files, this shouldn't matter, except for the case of the key.
