@@ -175,7 +175,7 @@ def download(
     remote_files = {k: list_files(k) for k in KNOWN_PUBMED_DIRECTORIES}
     prefix = _find_file_prefix(
         remote_files["baseline"][0],
-        name_regex_template.format("(pubmed\d{2}n)", "\d{4}"),
+        name_regex_template.format(r"(pubmed\d{2}n)", r"\d{4}"),
     )
     name_regex_template = name_regex_template.format(prefix, "({})")
     if not cache_dir:
