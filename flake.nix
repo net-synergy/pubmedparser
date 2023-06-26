@@ -26,7 +26,7 @@
             ]);
           groups = [ ];
         };
-        pythonPackage = pkgs.poetry2nix.mkPoetryPackage { projectDir = ./.; };
+        pythonPackage = pkgs.poetry2nix.mkPoetryPackages { projectDir = ./.; };
       in {
         packages.pubmedparser = pkgs.callPackage ./. { inherit src version; };
         packages.python = pythonPackage;

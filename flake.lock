@@ -5,11 +5,11 @@
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1681202837,
-        "narHash": "sha256-H+Rh19JDwRtpVPAWp64F+rlEtxUWBAQW28eAi3SRSzg=",
+        "lastModified": 1687709756,
+        "narHash": "sha256-Y5wKlQSkgEK2weWdOu4J3riRd+kV/VCgHsqLNTTWQ/0=",
         "owner": "numtide",
         "repo": "flake-utils",
-        "rev": "cfacdce06f30d2b68473a46042957675eebb3401",
+        "rev": "dbabf0ca0c0c4bce6ea5eaf65af5cb694d2082c7",
         "type": "github"
       },
       "original": {
@@ -20,11 +20,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1683162834,
-        "narHash": "sha256-Tnb3Y7dJDyf2nXvNh3qy4j8l9OivEDL2CXyT3Yfegr8=",
+        "lastModified": 1687796934,
+        "narHash": "sha256-tVG/L8X80ST6t96NtC1CVlDIjxlbh+dUfp3Y7saVjN4=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "abcc3146aeb06b8d2ded75bddac3a63544a6be7e",
+        "rev": "744aa21bff1ba8cd184358e4180748901662abe6",
         "type": "github"
       },
       "original": {
