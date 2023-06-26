@@ -1,8 +1,3 @@
----
-author: David R. Connell
-title: Pubmed parser
----
-
 Read XML files and pull out selected values. Values to collect are
 determined by paths found in a [structure file](#structure-file). The
 structure file also includes a key which associates the values with a
@@ -25,17 +20,21 @@ xml_read --cache-dir=cache --structure-file=structure.yml \
 Or, with python:
 
 ``` python
-import pubmedparser
-import pubmedparser.ftp
+import pubmedparser2
+import pubmedparser2.ftp
 
 # Download data
-files = pubmedparser.ftp.download(range(1, 6))
+files = pubmedparser2.ftp.download(range(1, 6))
 
 # Read XML files using a YAML file to describe what data to collect.
 data_dir = "file_example"
 structure_file = "example/structure.yml"
-results = pubmedparser.read_xml(files, structure_file, data_dir)
+results = pubmedparser2.read_xml(files, structure_file, data_dir)
 ```
+
+See [the example
+file](https://gitlab.com/net-synergy/pubmedparser/-/blob/master/example/creating_graphs.py)
+for more options.
 
 In python, the structure file can be replaced with a dictionary of
 dictionaries as well.
@@ -59,7 +58,7 @@ nix shell "gitlab:DavidRConnell/pubmedparser"
 ## Installing with pip
 
 ``` bash
-pip install pubmedparser
+pip install pubmedparser2
 ```
 
 # Structure file

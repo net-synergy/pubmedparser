@@ -18,17 +18,19 @@ Usage:
 
 Or, with python:
 #+begin_src python :eval no
-  import pubmedparser
-  import pubmedparser.ftp
+  import pubmedparser2
+  import pubmedparser2.ftp
 
   # Download data
-  files = pubmedparser.ftp.download(range(1, 6))
+  files = pubmedparser2.ftp.download(range(1, 6))
 
   # Read XML files using a YAML file to describe what data to collect.
   data_dir = "file_example"
   structure_file = "example/structure.yml"
-  results = pubmedparser.read_xml(files, structure_file, data_dir)
+  results = pubmedparser2.read_xml(files, structure_file, data_dir)
 #+end_src
+
+See [[https://gitlab.com/net-synergy/pubmedparser/-/blob/master/example/creating_graphs.py][the example file]] for more options.
 
 In python, the structure file can be replaced with a dictionary of dictionaries as well.
 
@@ -46,7 +48,7 @@ or using nix:
 #+end_src
 ** Installing with pip
 #+begin_src sh :eval no
-  pip install pubmedparser
+  pip install pubmedparser2
 #+end_src
 
 * Structure file
