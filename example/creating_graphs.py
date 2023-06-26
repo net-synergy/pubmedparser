@@ -4,7 +4,7 @@ import pubmedparser
 import pubmedparser.ftp
 
 # Download data
-files = pubmedparser.ftp.download(range(1, 6))
+files = pubmedparser.ftp.download(range(1383, 1389))
 
 # Read XML files using a YAML file to describe what data to collect.
 data_dir = "file_example"
