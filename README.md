@@ -20,16 +20,16 @@ xml_read --cache-dir=cache --structure-file=structure.yml \
 Or, with python:
 
 ``` python
-import pubmedparser2
-import pubmedparser2.ftp
+import pubmedparser
+import pubmedparser.ftp
 
 # Download data
-files = pubmedparser2.ftp.download(range(1, 6))
+files = pubmedparser.ftp.download(range(1, 6))
 
 # Read XML files using a YAML file to describe what data to collect.
 data_dir = "file_example"
 structure_file = "example/structure.yml"
-results = pubmedparser2.read_xml(files, structure_file, data_dir)
+results = pubmedparser.read_xml(files, structure_file, data_dir)
 ```
 
 See [the example
