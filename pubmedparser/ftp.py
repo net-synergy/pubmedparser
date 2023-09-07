@@ -157,11 +157,11 @@ def download(
 
     Examples
     --------
-    >>> from pubmedparser import pubmed
+    >>> from pubmedparser import ftp
     >>> # Download a subset of files.
-    >>> files = pubmed.download(range(1300, 1310))
+    >>> files = ftp.download(range(1300, 1310))
     >>> # Download all available files.
-    >>> files = pubmed.download()
+    >>> files = ftp.download()
     >>> # Call above periodically to check for and download new files.
     """
 
