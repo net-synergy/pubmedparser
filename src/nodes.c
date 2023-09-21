@@ -460,7 +460,7 @@ static void write_header_node_i(const node *n, const char *idx_header,
 
   if (name_prefix) {
     strncat(header, name_prefix, str_max);
-    strncat(header, "ID\t", str_max);
+    strncat(header, "Index\t", str_max);
     strncat(header, write_header_skip_prefix(n->name, name_prefix), str_max);
   } else {
     strncat(header, n->name, str_max);

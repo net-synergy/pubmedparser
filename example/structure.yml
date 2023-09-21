@@ -18,7 +18,7 @@ Author: {
 
 Grant: {
   root: "/PubmedArticle/MedlineCitation/Article/GrantList"
-  key: "/Grant/auto_index",
+  key: "/Grant/auto_index"
   ID: "/Grant/GrantID"
   Agency: "/Grant/Agency"
 }
