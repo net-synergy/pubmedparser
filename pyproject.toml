@@ -1,13 +1,3 @@
-[tool.black]
-line-length = 79
-preview = true
-
-[tool.isort]
-profile = "black"
-
-[tool.mypy]
-ignore_missing_imports = true
-
 [tool.poetry]
 name = "pubmedparser2"
 version = "2.0.2-alpha"
@@ -28,10 +18,32 @@ appdirs = "^1.4.4"
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.1.0"
-mypy = "^1.1.1"
-isort = "^5.12.0"
-flake8 = "^6.0.0"
+ipython = "^8.16"
+black = "^23.0"
+isort = "^5.12"
+python-lsp-server = "^1.8"
+pylsp-mypy = "^0.6"
+python-lsp-ruff = "^1.5"
+
+[tool.black]
+line-length = 79
+preview = true
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.pylsp-mypy]
+enabled = true
+live_mode = false
+dmypy = true
+
+[tool.ruff]
+line-length = 79
+ignore = ["E203", "D400"]
+select = ["A", "C", "D", "E", "F", "N", "RET", "SIM"]
 
 [tool.poetry.build]
 script = "build.py"

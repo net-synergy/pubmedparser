@@ -2,7 +2,7 @@
   description = "Convert pubmed xml files to tables";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-23.05";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -16,15 +16,7 @@
           projectDir = ./.;
           editablePackageSources = { pubmedparser = ./pubmedparser; };
           preferWheels = true;
-          extraPackages = (ps:
-            with ps; [
-              ipython
-              python-lsp-server
-              pyls-isort
-              python-lsp-black
-              pylsp-mypy
-            ]);
-          groups = [ ];
+          groups = [ "dev" ];
         };
         pythonPackage = pkgs.poetry2nix.mkPoetryPackages { projectDir = ./.; };
       in {
