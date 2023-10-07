@@ -17,35 +17,29 @@ structure_dict = {
     "root": "//PubmedArticleSet",
     "key": "/PubmedArticle/MedlineCitation/PMID",
     "DOI": "/PubmedArticle/PubmedData/ArticleIdList/ArticleId/[@IdType='doi']",
-    "Date": "/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate/{Year,Month,Day}",
-    "Journal": "/PubmedArticle/MedlineCitation/Article/Journal/{Title,ISOAbbreviation}",
+    "Publication": {
+        "root": "/PubmedArticle/MedlineCitation/Article/Journal",
+        "key": "/condensed",
+        "Year": "/JournalIssue/PubDate/Year",
+        "Month": "/JournalIssue/PubDate/Month",
+        "Day": "/JournalIssue/PubDate/Day",
+        "Journal": "/Title",
+    },
     "Language": "/PubmedArticle/MedlineCitation/Article/Language",
     "Author": {
         "root": "/PubmedArticle/MedlineCitation/Article/AuthorList",
         "key": "/Author/auto_index",
         "LastName": "/Author/LastName",
-        "ForName": "/Author/ForeName",
+        "ForeName": "/Author/ForeName",
         "Affiliation": "/Author/AffiliationInfo/Affiliation",
         "Orcid": "/Author/Identifier/[@Source='ORCID']",
     },
-    "Grant": {
-        "root": "/PubmedArticle/MedlineCitation/Article/GrantList",
-        "key": "/Grant/auto_index",
-        "ID": "/Grant/GrantID",
-        "Agency": "/Grant/Agency",
-    },
+    "Grant": "/PubmedArticle/MedlineCitation/Article/GrantList/Grant/{GrantID,Agency}",
     "Chemical": "/PubmedArticle/MedlineCitation/ChemicalList/Chemical/NameOfSubstance/@UI",
     "Qualifier": "/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/QualifierName/@UI",
     "Descriptor": "/PubmedArticle/MedlineCitation/MeshHeadingList/MeshHeading/DescriptorName/@UI",
     "Keywords": "/PubmedArticle/MedlineCitation/KeywordList/Keyword",
-    "Reference": {
-        "root": (
-            "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList"
-        ),
-        "key": "/condensed",
-        "PMID": "/ArticleId/[@IdType='pubmed']",
-        "DOI": "/ArticleId/[@IdType='doi']",
-    },
+    "Reference": "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']",
 }
 
 data_dir = "dict_example"
