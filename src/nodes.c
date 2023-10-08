@@ -434,12 +434,12 @@ static void write_header_condensed_ns_i(const node_set *ns,
   // Skip key since it doesn't hold a real value in condensed case.
   for (size_t i = 1; i < ns->n_nodes; i++) {
     n = ns->nodes[i];
-    strncat(header, write_header_skip_prefix(n->name, name_prefix),
-            str_max);
     if ((n->attribute->name) && !(n->attribute->required_value)) {
       strncat(header, "\t", str_max);
       strncat(header, n->attribute->name, str_max);
     }
+    strncat(header, write_header_skip_prefix(n->name, name_prefix),
+            str_max);
     strncat(header, i == (ns->n_nodes - 1) ? "\n" : "\t", str_max);
   }
   fprintf(parent->out, "%s", header);
@@ -461,14 +461,17 @@ static void write_header_node_i(const node *n, const char *idx_header,
   if (name_prefix) {
     strncat(header, name_prefix, str_max);
     strncat(header, "Index\t", str_max);
-    strncat(header, write_header_skip_prefix(n->name, name_prefix), str_max);
-  } else {
-    strncat(header, n->name, str_max);
   }
 
   if ((n->attribute->name) && !(n->attribute->required_value)) {
-    strncat(header, "\t", str_max);
     strncat(header, n->attribute->name, str_max);
+    strncat(header, "\t", str_max);
+  }
+
+  if (name_prefix) {
+    strncat(header, write_header_skip_prefix(n->name, name_prefix), str_max);
+  } else {
+    strncat(header, n->name, str_max);
   }
   strncat(header, "\n", str_max);
 
@@ -642,12 +645,12 @@ static void collect_index(node_set *ns, const size_t str_max)
 
 static void node_fprintf(FILE *stream, node *n)
 {
-  fprintf(stream, "\t%s", n->value->buff);
-  n->value->buff[0] = '\0';
   if ((n->attribute->name) && !(n->attribute->required_value)) {
     fprintf(stream, "\t%s", n->attribute->buff);
     n->attribute->buff[0] = '\0';
   }
+  fprintf(stream, "\t%s", n->value->buff);
+  n->value->buff[0] = '\0';
 }
 
 void node_set_fprintf_node(FILE *stream, node_set *ns, const size_t node_i,
