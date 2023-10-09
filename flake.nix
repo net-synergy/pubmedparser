@@ -11,7 +11,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         src = self;
-        version = "2.0.2-alpha";
+        version = "2.0.0";
         pythonEnv = pkgs.poetry2nix.mkPoetryEnv {
           projectDir = ./.;
           editablePackageSources = { pubmedparser = ./pubmedparser; };
