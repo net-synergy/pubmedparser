@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Prevent printing extra characters in condensed groups ID field (https://gitlab.com/net-synergy/pubmedparser/-/issues/9)
 
+### Changed
+
+- Modify optional arguments in python `readxml` functions.
+
 ## [2.0.0] 2023-10-09
 
 ### Added

@@ -4,6 +4,8 @@ from ._readxml import from_structure_dictionary as _read_xml_from_dictionary
 from ._readxml import from_structure_file as _read_xml_from_structure_file
 from .storage import default_data_dir
 
+__all__ = ["read_xml"]
+
 
 def _unprocessed_files(files: list[str], processed_files: str) -> list[str]:
     """Filter that returns a list of files that have not been processed yet."""
@@ -28,11 +30,11 @@ def read_xml(
     relative_to_default_data: bool = True,
     progress_file: str = "processed.txt",
     n_threads: int = -1,
-    overwrite_cache: bool = False,
+    mode: str = "append",
+    reprocess_all: bool = False,
     exts: tuple[str, ...] = (".xml", ".xml.gz"),
 ) -> str:
-    """
-    Collect values matching xpaths in XML files
+    """Collect values matching xpaths in XML files.
 
     Parameters
     ----------
@@ -53,6 +55,14 @@ def read_xml(
         the file already exists, only files not listed in it will be read.
     n_threads : int, default -1
         Number of files to process in parallel. If -1, use system default.
+    mode : str {"append", "write"}
+        If "write", write over the old collected results, otherwise append to
+        the end. In either case, only xml files that haven't been processed yet
+        will be read unless reprocess_all is set to true.
+    reprocess_all : bool
+        If True process all xml files passed to the files argument, even if
+        they were previously parsed. This overrides mode, also delete the old
+        results to prevent duplication.
     exts : tuple, default (".xml", ".xml.gz")
         A tuple of file extensions to include. Any file ending with an
         extension not included will be ignored.
@@ -61,7 +71,6 @@ def read_xml(
     -------
     data_dir : the location the collected data was written to.
     """
-
     if isinstance(files, str):
         if os.path.isdir(files):
             files = os.listdir(files)
@@ -73,10 +82,20 @@ def read_xml(
     if relative_to_default_data:
         data_dir = default_data_dir(data_dir)
 
+    if mode == "write" or reprocess_all:
+        overwrite_cache = True
+    elif mode == "append":
+        overwrite_cache = False
+    else:
+        raise KeyError(f'Mode should be "append" or "write" got {mode}')
+
     files = [f for f in files if f.endswith(exts)]
-    files = _unprocessed_files(
-        files, processed_files=os.path.join(data_dir, progress_file)
-    )
+    if reprocess_all:
+        os.unlink(os.path.join(data_dir, progress_file))
+    else:
+        files = _unprocessed_files(
+            files, processed_files=os.path.join(data_dir, progress_file)
+        )
 
     if isinstance(path_structure, str):
         assert os.path.exists(

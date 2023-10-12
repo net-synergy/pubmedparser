@@ -42,6 +42,7 @@ structure_dict = {
     "Reference": "/PubmedArticle/PubmedData/ReferenceList/Reference/ArticleIdList/ArticleId/[@IdType='pubmed']",
 }
 
+# Read XML files using a dictionary to describe what data to collect.
 data_dir = "dict_example"
 results = pubmedparser.read_xml(files, structure_dict, data_dir)
 
