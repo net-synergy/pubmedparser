@@ -125,6 +125,7 @@ static attribute attribute_init(const char *xml_path, const size_t str_max)
 
   attribute att = malloc(sizeof(*att));
   memcpy(att, &att_init, sizeof(*att));
+  att->buff[0] = '\0';
   return att;
 }
 
@@ -151,6 +152,7 @@ static value value_init(const size_t str_max)
 
   value val = malloc(sizeof(*val));
   memcpy(val, &val_init, sizeof(*val));
+  val->buff[0] = '\0';
   return val;
 }
 
@@ -536,6 +538,7 @@ static attribute container_clone(const container c)
 
   attribute dup_container = malloc(sizeof(*dup_container));
   memcpy(dup_container, &dup_container_init, sizeof(*dup_container));
+  dup_container->buff[0] = '\0';
 
   return dup_container;
 }
