@@ -413,12 +413,6 @@ static inline char *write_header_get_top_index_name(const node_set *ns)
   return key_path->components[key_path->length - 1];
 }
 
-static inline char *write_header_skip_prefix(const char *name,
-    const char *prefix)
-{
-  return (char *)name + strlen(prefix) + 1;
-}
-
 static void write_header_condensed_ns_i(const node_set *ns,
                                         node *parent,
                                         const char *idx_header,
@@ -440,7 +434,7 @@ static void write_header_condensed_ns_i(const node_set *ns,
       strncat(header, "\t", str_max);
       strncat(header, n->attribute->name, str_max);
     }
-    strncat(header, write_header_skip_prefix(n->name, name_prefix),
+    strncat(header, n->path->components[n->path->length - 1],
             str_max);
     strncat(header, i == (ns->n_nodes - 1) ? "\n" : "\t", str_max);
   }
@@ -470,11 +464,7 @@ static void write_header_node_i(const node *n, const char *idx_header,
     strncat(header, "\t", str_max);
   }
 
-  if (name_prefix) {
-    strncat(header, write_header_skip_prefix(n->name, name_prefix), str_max);
-  } else {
-    strncat(header, n->name, str_max);
-  }
+  strncat(header, n->path->components[n->path->length - 1], str_max);
   strncat(header, "\n", str_max);
 
   fprintf(n->out, "%s", header);
