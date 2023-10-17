@@ -96,7 +96,8 @@ char value_get(char c, gzFile fptr, value val, tag *t)
   char look_ahead = '\0';
   size_t count = 0;
   while ((c = gzgetc(fptr)) != EOF) {
-    val->buff[count] = c == '\n' ? ' ' : c;
+    c = ((c == '\n') || (c == '\t')) ? ' ' : c;
+    val->buff[count] = c;
     count++;
     if (count == val->buffsize) {
       container_realloc(val);
@@ -111,7 +112,7 @@ char value_get(char c, gzFile fptr, value val, tag *t)
 
         do {
           c = gzgetc(fptr);
-          val->buff[count] = c == '\n' ? ' ' : c;
+          val->buff[count] = c;
           count++;
           if (count == val->buffsize) {
             container_realloc(val);
