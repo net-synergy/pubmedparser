@@ -64,8 +64,7 @@ def _list_local_pubmed_files(path: str, name_regex_template) -> List[str]:
 
 
 def list_files(remote_dir: str = "all") -> List[str]:
-    """
-    List the files on pubmed's ftp server
+    """List the files on pubmed's ftp server.
 
     Parameters
     ----------
@@ -78,7 +77,6 @@ def list_files(remote_dir: str = "all") -> List[str]:
     files : list
         A list of all files in the requested directories.
     """
-
     assert remote_dir == "all" or remote_dir in KNOWN_PUBMED_DIRECTORIES
     files: List[str] = []
     if remote_dir == "all":
@@ -99,7 +97,7 @@ def _missing_files(
     local_files = _list_local_pubmed_files(cache_dir, name_regex_template)
     unique_desired_files = set(desired_files)
     intersect = unique_desired_files & set(local_files)
-    return sorted(list(unique_desired_files - intersect))
+    return sorted(unique_desired_files - intersect)
 
 
 def _filter_to_file_numbers(
@@ -122,8 +120,7 @@ def download(
     file_numbers: str | int | Iterable[int] = "all",
     cache_dir: str | None = None,
 ) -> List[str]:
-    """
-    Download XML files from pubmed's ftp server
+    """Download XML files from pubmed's ftp server.
 
     Files are saved locally to a cache directory. Only files that are not in
     the cache directory will be download. As such, once the full dataset as
@@ -151,7 +148,7 @@ def download(
        List of the files asked for which can be passed directly to
        `pubmedparser.read_xml`.
 
-    See also
+    See Also
     --------
     `pubmedparser.storage.default_cache_dir`.
 
@@ -164,7 +161,6 @@ def download(
     >>> files = ftp.download()
     >>> # Call above periodically to check for and download new files.
     """
-
     if isinstance(file_numbers, str) and file_numbers != "all":
         raise TypeError('Files is not of type int or "all".')
 
@@ -186,12 +182,12 @@ def download(
             k: _filter_to_file_numbers(
                 remote_files[k], file_numbers, name_regex_template
             )
-            for k in remote_files.keys()
+            for k in remote_files
         }
 
     missing_files = {
         k: _missing_files(remote_files[k], name_regex_template, cache_dir)
-        for k in remote_files.keys()
+        for k in remote_files
     }
 
     if not os.path.exists(cache_dir):
@@ -199,14 +195,14 @@ def download(
 
     if missing_files["baseline"] or missing_files["updatefiles"]:
         print("Downloading files...")
-        for remote_dir in missing_files.keys():
+        for remote_dir in missing_files:
             _download_files(remote_dir, missing_files[remote_dir], cache_dir)
         print("Finished downloading files.")
 
     if isinstance(file_numbers, str):
         requested_files = [
             os.path.join(cache_dir, f)
-            for k in remote_files.keys()
+            for k in remote_files
             for f in remote_files[k]
         ]
     else:
