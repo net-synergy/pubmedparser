@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Missing -fPIC flag when compiling the library
+- Update README with current installation istructions
 
 ## [2.0.3] 2023-10-17
 

@@ -12,13 +12,6 @@ For more info on Pubmed's XML files see:
 
 Usage:
 
-``` bash
-xml_read --cache-dir=cache --structure-file=structure.yml \
-    data/*.xml.gz
-```
-
-Or, with python:
-
 ``` python
 import pubmedparser
 import pubmedparser.ftp
@@ -39,26 +32,33 @@ for more options.
 In python, the structure file can be replaced with a dictionary of
 dictionaries as well.
 
-## Building CLI
-
-Requires `zlib`.
-
-Clone the repository and in the directory run:
+Or, as a CLI:
 
 ``` bash
-make cli
-```
-
-or using nix:
-
-``` bash
-nix shell "gitlab:DavidRConnell/pubmedparser"
+xml_read --cache-dir=cache --structure-file=structure.yml \
+    data/*.xml.gz
 ```
 
 ## Installing with pip
 
 ``` bash
 pip install pubmedparser2
+```
+
+## Building python package
+
+Requires `zlib`.
+
+Clone the repository and in the directory. Then use [poetry](https://python-poetry.org/docs) to install the dependencies.
+
+``` bash
+poetry install
+```
+
+Then run the make command:
+
+``` bash
+make python
 ```
 
 # Structure file
