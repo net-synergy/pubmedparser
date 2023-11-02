@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O3 -march=native
+CFLAGS = -fPIC -Wall -Wextra -O3
 
 TOP_DIR = ..
 BIN_DIR = ../bin
