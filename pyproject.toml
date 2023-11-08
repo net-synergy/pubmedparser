@@ -9,6 +9,7 @@ readme = "README.md"
 authors = ["David Connell <davidconnell12@gmail.com>"]
 maintainers = ["David Connell <davidconnell12@gmail.com>"]
 packages = [{ include = "pubmedparser" }]
+include = [ "include", "src" ]
 
 [tool.poetry.dependencies]
 python = "^3.9"
