@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pubmedparser2"
-version = "2.0.4"
+version = "2.0.5"
 description = "Download and parse pubmed publication data"
 license = "MIT"
 keywords = ["publication", "network", "MEDLINE", "PubMed", "references"]

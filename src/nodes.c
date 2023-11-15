@@ -416,7 +416,6 @@ static inline char *write_header_get_top_index_name(const node_set *ns)
 static void write_header_condensed_ns_i(const node_set *ns,
                                         node *parent,
                                         const char *idx_header,
-                                        const char *name_prefix,
                                         const size_t str_max)
 {
   if (!(is_file_empty(parent->out))) {
@@ -477,7 +476,7 @@ static void node_set_write_headers_i(const node_set *ns,
                                      const size_t str_max)
 {
   if (ns->key->type == IDX_CONDENSE) {
-    write_header_condensed_ns_i(ns, parent, idx_header, name_prefix, str_max);
+    write_header_condensed_ns_i(ns, parent, idx_header, str_max);
     fclose(parent->out);
     parent->out = NULL;
     return;
@@ -608,9 +607,9 @@ node_set *node_set_clone(const node_set *ns, const char *cache_dir,
 
 static void collect_auto_index(node_set *ns, char **key)
 {
-  size_t idx_size = 5; // Assume 4 digits (+1 '\0') is plenty for index.
+  size_t idx_size = 6; // Assume 4 digits (+2 '\t'/'\0') is plenty for index.
   *key = malloc(sizeof(**key) * idx_size);
-  snprintf(*key, idx_size - 1, "%zu", ns->key->auto_index);
+  snprintf(*key, idx_size - 1, "\t%zu", ns->key->auto_index);
 }
 
 static void collect_index(node_set *ns, const size_t str_max)
@@ -703,16 +702,7 @@ void node_set_copy_parents_index(node_set *child, node_set *parent,
 
   child->key->template = malloc(sizeof(*child->key->template) * str_max);
   strncpy(child->key->template, parent->key->value, str_max - 1);
-
-  /* HACK: "%s" will be replaced by the key value, if there is not a specific
-  key (in the case of a child node set, it's possible the child inherits a key
-  from the parent but does not have it's own key.), there is no value so this
-  will be replaced with '\0'. */
-  if (child->nodes[child->key_idx]->path->length == 0) {
-    strncat(child->key->template, "%s", str_max - 1);
-  } else {
-    strncat(child->key->template, "\t%s", str_max - 1);
-  }
+  strncat(child->key->template, "%s", str_max - 1);
 }
 
 bool path_attribute_matches_required(const node *n)

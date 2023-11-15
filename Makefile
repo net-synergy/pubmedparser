@@ -33,6 +33,7 @@ core:
 
 $(PYTHON_MODULE)/_readxml.so: core $(PYTHON_MODULE)/_readxml.c
 	-[ -L $@ ] && rm $@
-	poetry run python setup.py build
+	-[ -d build/ ] && rm -rf build
+	poetry build
 	ln -s \
 	  ../build/lib.linux-$(ARCH)-$(CPYTHON)/pubmedparser/_readxml.$(CPYTHON)-$(ARCH)-linux-gnu.so $@
