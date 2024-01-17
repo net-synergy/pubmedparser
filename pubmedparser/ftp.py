@@ -1,6 +1,7 @@
 import hashlib
 import os
 import re
+import time
 from ftplib import FTP
 from typing import Iterable, List
 
@@ -22,16 +23,27 @@ def _download_files(
     def in_cache(f):
         return os.path.join(cache_dir, f)
 
-    with FTP(BASE_URL) as ftp:
-        ftp.login()
-        ftp.cwd("pubmed/" + remote_dir)
-        for file_name in file_names:
-            print(f"Downloading {file_name}")
+    def _download_i(file_name, i, max_tries):
+        try:
             with open(in_cache(file_name), "wb") as f_wb:
                 ftp.retrbinary(f"RETR {file_name}", f_wb.write)
 
             with open(in_cache(f"{file_name}.md5"), "wb") as f_wb:
                 ftp.retrbinary(f"RETR {file_name}.md5", f_wb.write)
+        except (EOFError, BrokenPipeError) as err:
+            os.unlink(in_cache(file_name))
+            if i == max_tries:
+                raise err
+
+            time.sleep(0.1)
+            _download_i(file_name, i + 1, max_tries)
+
+    with FTP(BASE_URL) as ftp:
+        ftp.login()
+        ftp.cwd("pubmed/" + remote_dir)
+        for file_name in file_names:
+            print(f"Downloading {file_name}")
+            _download_i(file_name, 0, max_tries)
 
     md5_file_names = [f"{f}.md5" for f in file_names]
     for file_name, md5_file_name in zip(file_names, md5_file_names):
