@@ -76,7 +76,7 @@ def read_xml(
     """
     if isinstance(files, str):
         if os.path.isdir(files):
-            files = os.listdir(files)
+            files = [os.path.join(files, f) for f in os.listdir(files)]
         elif os.path.exists(files):
             files = [files]
         else:

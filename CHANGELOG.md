@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Handle failed ftp downloads.
+- Passing a directory to `read_xml`
 
 ## [2.0.5] 2023-11-14
 
