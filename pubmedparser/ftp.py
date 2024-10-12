@@ -66,7 +66,8 @@ def _download_files(
                 print(f"{file_name} failed md5sum check max tries, deleting")
                 os.unlink(in_cache(file_name))
 
-        os.unlink(in_cache(md5_file_name))
+        if os.path.exists(md5_file_name):
+            os.unlink(in_cache(md5_file_name))
 
 
 def _list_local_pubmed_files(path: str, name_regex_template) -> List[str]:
