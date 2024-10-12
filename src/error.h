@@ -11,6 +11,6 @@ typedef enum {
   PP_NUM_ERRORS
 } PP_ERRNO;
 
-void pubmedparser_error(const PP_ERRNO code, const char *fmt, ...);
+void pubmedparser_error(const PP_ERRNO code, char const* fmt, ...);
 
 #endif

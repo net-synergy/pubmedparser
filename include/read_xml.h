@@ -1,15 +1,13 @@
 #ifndef READ_XML_H
 #define READ_XML_H
 
-#include <stdlib.h>
 #include "structure.h"
 
-enum {
-  CACHE_APPEND = 0,
-  CACHE_OVERWRITE = 1
-};
+#include <stdlib.h>
 
-int read_xml(char **files, const size_t n_files, const path_struct ps,
-             const char *cache_dir, const int overwrite_cache, const char *progress_file,
-             size_t n_threads);
+enum { CACHE_APPEND = 0, CACHE_OVERWRITE = 1 };
+
+int read_xml(char** files, size_t const n_files, path_struct const ps,
+  char const* cache_dir, int const overwrite_cache, char const* progress_file,
+  size_t n_threads);
 #endif

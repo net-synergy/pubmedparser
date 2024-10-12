@@ -26,9 +26,18 @@
         groups = [ "dev" ];
       };
     in {
-      devShells.${system}.default = pkgs.mkShell {
-        packages =
-          (with pkgs; [ gcc gdb astyle zlib bats cmocka poetry pythonEnv ]);
-      };
+      devShells.${system}.default =
+        (pkgs.mkShell.override { stdenv = pkgs.clangStdenv; }) {
+          packages = (with pkgs; [
+            llvm
+            gdb
+            valgrind
+            zlib
+            bats
+            cmocka
+            poetry
+            pythonEnv
+          ]);
+        };
     };
 }

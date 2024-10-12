@@ -1,28 +1,25 @@
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-
 #include "nodes.h"
+
 #include "error.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define KEYNODE(ns) (ns->nodes[ns->key_idx])
 
-enum {
-  ATT_NONE = 1,
-  ATT_FOUND,
-  ATT_EXPECTED
-};
+enum { ATT_NONE = 1, ATT_FOUND, ATT_EXPECTED };
 
-static node *node_generate(const path_struct ps, const char *cache_dir,
-                           const int overwrite, const size_t str_max);
+static node* node_generate(path_struct const ps, char const* cache_dir,
+  int const overwrite, size_t const str_max);
 
-static FILE *get_file(const char *name, const char *cache_dir,
-                      const int overwrite)
+static FILE* get_file(
+  char const* name, char const* cache_dir, int const overwrite)
 {
-  FILE *fptr = malloc(sizeof(*fptr));
+  FILE* fptr = malloc(sizeof(*fptr));
   size_t str_max = 8000;
   char out[str_max + 1];
-  char *mode = overwrite ? "w" : "a";
+  char* mode = overwrite ? "w" : "a";
 
   strncpy(out, cache_dir, str_max);
   strncat(out, name, str_max);
@@ -32,11 +29,12 @@ static FILE *get_file(const char *name, const char *cache_dir,
   return fptr;
 }
 
-static size_t find_sub_tag_names(const char *p, size_t str_max,
-                                 char ***sub_tags_holder)
+static size_t find_sub_tag_names(
+  char const* p, size_t str_max, char*** sub_tags_holder)
 {
-  while ((*p != '\0') && (*p != '{'))
+  while ((*p != '\0') && (*p != '{')) {
     p++;
+  }
 
   if (*p == '\0') {
     sub_tags_holder[0] = NULL;
@@ -47,8 +45,9 @@ static size_t find_sub_tag_names(const char *p, size_t str_max,
   size_t count = 1;
   size_t i = 0;
   while ((p[i] != '}') && (p[i] != '\0')) {
-    if (p[i] == ',')
+    if (p[i] == ',') {
       count++;
+    }
     i++;
   }
 
@@ -56,7 +55,7 @@ static size_t find_sub_tag_names(const char *p, size_t str_max,
     pubmedparser_error(3, "Could not find subtag; malformed path.\n");
   }
 
-  sub_tags_holder[0] = malloc(sizeof(char *) * count);
+  sub_tags_holder[0] = malloc(sizeof(char*) * count);
   char tag[str_max];
   for (size_t j = 0; j < count; j++) {
     for (i = 0; (*p != ',') && (*p != '}') && (i < (str_max - 1)); i++, p++) {
@@ -70,11 +69,12 @@ static size_t find_sub_tag_names(const char *p, size_t str_max,
   return count;
 }
 
-static void find_attribute_name(const char *p, char **attribute,
-                                char **expected_attribute, const size_t str_max)
+static void find_attribute_name(char const* p, char** attribute,
+  char** expected_attribute, size_t const str_max)
 {
-  while ((*p != '\0') && (*p != '@') && (*p != '['))
+  while ((*p != '\0') && (*p != '@') && (*p != '[')) {
     p++;
+  }
 
   *attribute = NULL;
   *expected_attribute = NULL;
@@ -93,28 +93,30 @@ static void find_attribute_name(const char *p, char **attribute,
   *attribute = malloc(sizeof(**attribute) * str_max);
   p++; /* Skip @ */
   size_t i;
-  for (i = 0; (p[i] != '\0') && (p[i] != '=') && (i < (str_max - 1)); i++)
+  for (i = 0; (p[i] != '\0') && (p[i] != '=') && (i < (str_max - 1)); i++) {
     (*attribute)[i] = p[i];
+  }
   (*attribute)[i] = '\0';
 
   if (att_type == ATT_EXPECTED) {
     *expected_attribute = malloc(sizeof(**expected_attribute) * str_max);
     p += i;
-    while ((*p == '=') || (*p == '\'') || (*p == ' '))
+    while ((*p == '=') || (*p == '\'') || (*p == ' ')) {
       p++;
+    }
 
-    for (i = 0; (p[i] != '\'') && (p[i] != ']') && (i < (str_max - 1)); i++)
+    for (i = 0; (p[i] != '\'') && (p[i] != ']') && (i < (str_max - 1)); i++) {
       (*expected_attribute)[i] = p[i];
+    }
     (*expected_attribute)[i] = '\0';
   }
 }
 
-static attribute attribute_init(const char *xml_path, const size_t str_max)
+static attribute attribute_init(char const* xml_path, size_t const str_max)
 {
-  char *attribute_name;
-  char *expected_attribute;
-  find_attribute_name(xml_path, &attribute_name, &expected_attribute,
-                      str_max);
+  char* attribute_name;
+  char* expected_attribute;
+  find_attribute_name(xml_path, &attribute_name, &expected_attribute, str_max);
 
   struct Container att_init = {
     .buff = malloc(sizeof(*att_init.buff) * (str_max + 1)),
@@ -132,16 +134,16 @@ static attribute attribute_init(const char *xml_path, const size_t str_max)
 static void container_destroy(container c)
 {
   if (c->name) {
-    free((char *)c->name);
+    free((char*)c->name);
   }
   if (c->required_value) {
-    free((char *)c->required_value);
+    free((char*)c->required_value);
   }
   free(c->buff);
   free(c);
 }
 
-static value value_init(const size_t str_max)
+static value value_init(size_t const str_max)
 {
   struct Container val_init = {
     .buff = malloc(sizeof(*val_init.buff) * (str_max + 1)),
@@ -156,12 +158,12 @@ static value value_init(const size_t str_max)
   return val;
 }
 
-static node_set *node_set_generate_from_sub_tags(const char *xml_path,
-    const char *name, char **sub_tags, const size_t n_sub_tags,
-    const char *cache_dir, const int overwrite, const size_t str_max)
+static node_set* node_set_generate_from_sub_tags(char const* xml_path,
+  char const* name, char** sub_tags, size_t const n_sub_tags,
+  char const* cache_dir, int const overwrite, size_t const str_max)
 {
   path p = path_init(xml_path, str_max);
-  char *path_str = malloc(sizeof(*path_str) * str_max);
+  char* path_str = malloc(sizeof(*path_str) * str_max);
 
   for (size_t i = 0; i < p->length; i++) {
     strncat(path_str, "/", str_max);
@@ -192,7 +194,7 @@ static node_set *node_set_generate_from_sub_tags(const char *xml_path,
   ps.children[1]->children = NULL;
   ps.children[1]->n_children = 0;
 
-  char **sub_tag_paths = malloc(sizeof(*sub_tag_paths) * n_sub_tags);
+  char** sub_tag_paths = malloc(sizeof(*sub_tag_paths) * n_sub_tags);
   for (size_t i = 0; i < n_sub_tags; i++) {
     sub_tag_paths[i] = malloc(sizeof(*sub_tag_paths[i]) * str_max);
     strncpy(sub_tag_paths[i], "/", str_max);
@@ -205,7 +207,8 @@ static node_set *node_set_generate_from_sub_tags(const char *xml_path,
     ps.children[i + 2]->n_children = 0;
   }
 
-  node_set *ns = node_set_generate(&ps, ps.name, cache_dir, overwrite, str_max);
+  node_set* ns =
+    node_set_generate(&ps, ps.name, cache_dir, overwrite, str_max);
 
   for (size_t i = 0; i < n_sub_tags; i++) {
     free(sub_tag_paths[i]);
@@ -219,11 +222,11 @@ static node_set *node_set_generate_from_sub_tags(const char *xml_path,
   return ns;
 };
 
-static node *node_generate(const path_struct ps, const char *cache_dir,
-                           const int overwrite, const size_t str_max)
+static node* node_generate(path_struct const ps, char const* cache_dir,
+  int const overwrite, size_t const str_max)
 {
-  char **sub_tags;
-  node_set *ns = NULL;
+  char** sub_tags;
+  node_set* ns = NULL;
   value v = NULL;
   attribute a = NULL;
   path p;
@@ -232,8 +235,8 @@ static node *node_generate(const path_struct ps, const char *cache_dir,
     p = path_init(ps->children[0]->path, str_max);
     /* By dropping the last component of the path then calling that the root we
     can use the same pattern as in the top level where we search for the first
-    instance of root then loop until hitting the root end tag. This allows us to
-    use recursion in the main parser. */
+    instance of root then loop until hitting the root end tag. This allows us
+    to use recursion in the main parser. */
     /* p->length--; */
     ps->children[0]->name = strdup(p->components[p->length - 1]);
     ps->children[0]->path = strdup(p->components[p->length - 1]);
@@ -244,32 +247,30 @@ static node *node_generate(const path_struct ps, const char *cache_dir,
     size_t n_sub_tags = find_sub_tag_names(ps->path, str_max, &sub_tags);
     p = path_init(ps->path, str_max);
     if (n_sub_tags > 0) {
-      ns = node_set_generate_from_sub_tags(ps->path, ps->name, sub_tags, n_sub_tags,
-                                           cache_dir, overwrite, str_max);
+      ns = node_set_generate_from_sub_tags(ps->path, ps->name, sub_tags,
+        n_sub_tags, cache_dir, overwrite, str_max);
     } else {
       v = value_init(str_max);
       a = attribute_init(ps->path, str_max);
     }
   }
 
-  node n_init = {
-    .name = strdup(ps->name),
+  node n_init = { .name = strdup(ps->name),
     .path = p,
     .value = v,
     .attribute = a,
     .child_ns = ns,
-    .out = get_file(ps->name, cache_dir, overwrite)
-  };
+    .out = get_file(ps->name, cache_dir, overwrite) };
 
-  node *n = malloc(sizeof * n);
-  memcpy(n, &n_init, sizeof * n);
+  node* n = malloc(sizeof *n);
+  memcpy(n, &n_init, sizeof *n);
 
   return n;
 }
 
-static void node_destroy(node *n)
+static void node_destroy(node* n)
 {
-  free((char *)n->name);
+  free((char*)n->name);
   path_destroy((path)n->path);
   if (n->value) {
     container_destroy(n->value);
@@ -289,21 +290,18 @@ static void node_destroy(node *n)
   free(n);
 }
 
-static key *key_generate(const keytype type)
+static key* key_generate(keytype const type)
 {
   key key_init = {
-    .auto_index = 0,
-    .template = NULL,
-    .value = NULL,
-    .type = type
+    .auto_index = 0, .template = NULL, .value = NULL, .type = type
   };
 
-  key *k = malloc(sizeof(*k));
+  key* k = malloc(sizeof(*k));
   memcpy(k, &key_init, sizeof(*k));
   return k;
 }
 
-static void key_destroy(key *k)
+static void key_destroy(key* k)
 {
   if (k->template != NULL) {
     free(k->template);
@@ -316,14 +314,13 @@ static void key_destroy(key *k)
   free(k);
 }
 
-node_set *node_set_generate(const path_struct ps, const char *name_prefix,
-                            const char *cache_dir, const int overwrite, const
-                            size_t str_max)
+node_set* node_set_generate(path_struct const ps, char const* name_prefix,
+  char const* cache_dir, int const overwrite, size_t const str_max)
 {
   if (name_prefix != NULL) {
-    char *new_name;
-    char *old_name;
-    char *name_prefix_i = strdup(name_prefix);
+    char* new_name;
+    char* old_name;
+    char* name_prefix_i = strdup(name_prefix);
     strcat(name_prefix_i, "_");
     for (size_t i = 0; i < (ps->n_children - 1); i++) {
       new_name = malloc(sizeof(*new_name) * str_max);
@@ -336,20 +333,22 @@ node_set *node_set_generate(const path_struct ps, const char *name_prefix,
     free(name_prefix_i);
   }
 
-  node **nodes = malloc(sizeof(*nodes) * (ps->n_children - 1));
+  node** nodes = malloc(sizeof(*nodes) * (ps->n_children - 1));
   for (size_t i = 0; i < (ps->n_children - 1); i++) {
-    nodes[i] = node_generate(ps->children[i + 1], cache_dir, overwrite,
-                             str_max);
+    nodes[i] =
+      node_generate(ps->children[i + 1], cache_dir, overwrite, str_max);
   }
 
   size_t max_p_depth = 0;
   for (size_t i = 0; i < (ps->n_children - 1); i++) {
-    max_p_depth = (max_p_depth > nodes[i]->path->length) ? max_p_depth :
-                  nodes[i]->path->length;
+    max_p_depth =
+      (max_p_depth > nodes[i]->path->length) ?
+        max_p_depth :
+        nodes[i]->path->length;
   }
 
   int key_type = IDX_NORMAL;
-  char *key_path = nodes[0]->path->components[nodes[0]->path->length - 1];
+  char* key_path = nodes[0]->path->components[nodes[0]->path->length - 1];
   if (strcmp(key_path, "auto_index") == 0) {
     key_type = IDX_AUTO;
     path_drop_last_component(nodes[0]->path);
@@ -358,26 +357,26 @@ node_set *node_set_generate(const path_struct ps, const char *name_prefix,
     path_drop_last_component(nodes[0]->path);
   }
 
-  key *ns_key = key_generate(key_type);
+  key* ns_key = key_generate(key_type);
 
-  char *root = ps->children[0]->path;
-  while (root[0] == '/') root++;
-  node_set ns_init = {
-    .root = strdup(root),
+  char* root = ps->children[0]->path;
+  while (root[0] == '/') {
+    root++;
+  }
+  node_set ns_init = { .root = strdup(root),
     .key_idx = 0, // Always 0 since get_names moves it to 0 if it's not.
     .nodes = nodes,
     .n_nodes = ps->n_children - 1,
     .max_path_depth = max_p_depth,
-    .key = ns_key
-  };
+    .key = ns_key };
 
-  node_set *ns = malloc(sizeof(*ns));
+  node_set* ns = malloc(sizeof(*ns));
   memcpy(ns, &ns_init, sizeof(*ns));
 
   return ns;
 }
 
-void node_set_destroy(node_set *ns)
+void node_set_destroy(node_set* ns)
 {
   for (size_t i = 0; i < ns->n_nodes; i++) {
     node_destroy(ns->nodes[i]);
@@ -385,11 +384,11 @@ void node_set_destroy(node_set *ns)
   key_destroy(ns->key);
 
   free(ns->nodes);
-  free((char *)ns->root);
+  free((char*)ns->root);
   free(ns);
 }
 
-static int is_file_empty(FILE *fptr)
+static int is_file_empty(FILE* fptr)
 {
   int p;
   if ((p = ftell(fptr)) > 0) {
@@ -406,23 +405,21 @@ static int is_file_empty(FILE *fptr)
   return false;
 }
 
-static inline char *write_header_get_top_index_name(const node_set *ns)
+static inline char* write_header_get_top_index_name(node_set const* ns)
 {
   path key_path = KEYNODE(ns)->path;
 
   return key_path->components[key_path->length - 1];
 }
 
-static void write_header_condensed_ns_i(const node_set *ns,
-                                        node *parent,
-                                        const char *idx_header,
-                                        const size_t str_max)
+static void write_header_condensed_ns_i(node_set const* ns, node* parent,
+  char const* idx_header, size_t const str_max)
 {
   if (!(is_file_empty(parent->out))) {
     return;
   }
 
-  node *n;
+  node* n;
   char header[str_max + 1];
   strncpy(header, idx_header, str_max);
   strncat(header, "\t", str_max);
@@ -433,8 +430,7 @@ static void write_header_condensed_ns_i(const node_set *ns,
       strncat(header, "\t", str_max);
       strncat(header, n->attribute->name, str_max);
     }
-    strncat(header, n->path->components[n->path->length - 1],
-            str_max);
+    strncat(header, n->path->components[n->path->length - 1], str_max);
     strncat(header, i == (ns->n_nodes - 1) ? "\n" : "\t", str_max);
   }
   fprintf(parent->out, "%s", header);
@@ -442,8 +438,8 @@ static void write_header_condensed_ns_i(const node_set *ns,
   return;
 }
 
-static void write_header_node_i(const node *n, const char *idx_header,
-                                const char *name_prefix, const size_t str_max)
+static void write_header_node_i(node const* n, char const* idx_header,
+  char const* name_prefix, size_t const str_max)
 {
   if (!(is_file_empty(n->out))) {
     return;
@@ -469,11 +465,8 @@ static void write_header_node_i(const node *n, const char *idx_header,
   fprintf(n->out, "%s", header);
 }
 
-static void node_set_write_headers_i(const node_set *ns,
-                                     node *parent,
-                                     const char *idx_header,
-                                     const char *name_prefix,
-                                     const size_t str_max)
+static void node_set_write_headers_i(node_set const* ns, node* parent,
+  char const* idx_header, char const* name_prefix, size_t const str_max)
 {
   if (ns->key->type == IDX_CONDENSE) {
     write_header_condensed_ns_i(ns, parent, idx_header, str_max);
@@ -484,8 +477,8 @@ static void node_set_write_headers_i(const node_set *ns,
 
   for (size_t i = 1; i < ns->n_nodes; i++) {
     if (ns->nodes[i]->child_ns) {
-      node_set_write_headers_i(ns->nodes[i]->child_ns, ns->nodes[i], idx_header,
-                               ns->nodes[i]->name, str_max);
+      node_set_write_headers_i(ns->nodes[i]->child_ns, ns->nodes[i],
+        idx_header, ns->nodes[i]->name, str_max);
     } else {
       write_header_node_i(ns->nodes[i], idx_header, name_prefix, str_max);
       // Results written to cloned nodeset's files not original.
@@ -501,16 +494,16 @@ static void node_set_write_headers_i(const node_set *ns,
    If the files have already been written to, assume we are appending to them
    and that the path structure is the same as they were when the files were
    first created. */
-void node_set_write_headers(const node_set *ns, const size_t str_max)
+void node_set_write_headers(node_set const* ns, size_t const str_max)
 {
-  char *idx = write_header_get_top_index_name(ns);
+  char* idx = write_header_get_top_index_name(ns);
   node_set_write_headers_i(ns, NULL, idx, NULL, str_max);
 }
 
-static attribute container_clone(const container c)
+static attribute container_clone(container const c)
 {
-  char *attribute_name = NULL;
-  char *expected_attribute = NULL;
+  char* attribute_name = NULL;
+  char* expected_attribute = NULL;
   if (c->name) {
     attribute_name = strdup(c->name);
   }
@@ -518,12 +511,10 @@ static attribute container_clone(const container c)
     expected_attribute = strdup(c->required_value);
   }
 
-  struct Container dup_container_init = {
-    .name = attribute_name,
+  struct Container dup_container_init = { .name = attribute_name,
     .required_value = expected_attribute,
     .buffsize = c->buffsize,
-    .buff = malloc(sizeof(*c->buff) * c->buffsize)
-  };
+    .buff = malloc(sizeof(*c->buff) * c->buffsize) };
 
   attribute dup_container = malloc(sizeof(*dup_container));
   memcpy(dup_container, &dup_container_init, sizeof(*dup_container));
@@ -532,7 +523,7 @@ static attribute container_clone(const container c)
   return dup_container;
 }
 
-static path path_clone(const path p)
+static path path_clone(path const p)
 {
   path dup_p = malloc(sizeof(*dup_p));
   memcpy(dup_p, p, sizeof(*dup_p));
@@ -544,12 +535,12 @@ static path path_clone(const path p)
   return dup_p;
 }
 
-static node *node_clone(const node *n, const char *cache_dir,
-                        const int thread, const size_t str_max)
+static node* node_clone(
+  node const* n, char const* cache_dir, int const thread, size_t const str_max)
 {
   value val = NULL;
   attribute att = NULL;
-  node_set *child_ns = NULL;
+  node_set* child_ns = NULL;
   char name[str_max];
 
   snprintf(name, str_max, "%s_%d", n->name, thread);
@@ -571,17 +562,18 @@ static node *node_clone(const node *n, const char *cache_dir,
     .value = val,
     .attribute = att,
     .child_ns = child_ns,
-    .out = get_file(name, cache_dir, CACHE_OVERWRITE) // Clone files are ephemeral so always overwrite.
+    .out = get_file(name, cache_dir,
+      CACHE_OVERWRITE) // Clone files are ephemeral so always overwrite.
   };
-  node *dup_n = malloc(sizeof(*dup_n));
+  node* dup_n = malloc(sizeof(*dup_n));
   memcpy(dup_n, &dup_n_init, sizeof(*dup_n));
 
   return dup_n;
 }
 
-key *key_clone(const key *k)
+key* key_clone(key const* k)
 {
-  key *dup_k = malloc(sizeof(*dup_k));
+  key* dup_k = malloc(sizeof(*dup_k));
   memcpy(dup_k, k, sizeof(*dup_k));
   dup_k->template = k->template == NULL ? NULL : strdup(k->template);
   dup_k->value = k->value == NULL ? NULL : strdup(k->value);
@@ -589,10 +581,10 @@ key *key_clone(const key *k)
   return dup_k;
 }
 
-node_set *node_set_clone(const node_set *ns, const char *cache_dir,
-                         const size_t thread, const size_t str_max)
+node_set* node_set_clone(node_set const* ns, char const* cache_dir,
+  size_t const thread, size_t const str_max)
 {
-  node_set *dup_ns = malloc(sizeof(*dup_ns));
+  node_set* dup_ns = malloc(sizeof(*dup_ns));
   memcpy(dup_ns, ns, sizeof(*ns));
   dup_ns->root = strdup(ns->root);
 
@@ -605,16 +597,16 @@ node_set *node_set_clone(const node_set *ns, const char *cache_dir,
   return dup_ns;
 }
 
-static void collect_auto_index(node_set *ns, char **key)
+static void collect_auto_index(node_set* ns, char** key)
 {
   size_t idx_size = 6; // Assume 4 digits (+2 '\t'/'\0') is plenty for index.
   *key = malloc(sizeof(**key) * idx_size);
   snprintf(*key, idx_size - 1, "\t%zu", ns->key->auto_index);
 }
 
-static void collect_index(node_set *ns, const size_t str_max)
+static void collect_index(node_set* ns, size_t const str_max)
 {
-  char *ns_key;
+  char* ns_key;
   if (ns->key->type == IDX_AUTO) {
     collect_auto_index(ns, &ns_key);
   } else {
@@ -635,7 +627,7 @@ static void collect_index(node_set *ns, const size_t str_max)
   free(ns_key);
 }
 
-static void node_fprintf(FILE *stream, node *n)
+static void node_fprintf(FILE* stream, node* n)
 {
   if ((n->attribute->name) && !(n->attribute->required_value)) {
     fprintf(stream, "\t%s", n->attribute->buff);
@@ -645,8 +637,8 @@ static void node_fprintf(FILE *stream, node *n)
   n->value->buff[0] = '\0';
 }
 
-void node_set_fprintf_node(FILE *stream, node_set *ns, const size_t node_i,
-                           const size_t str_max)
+void node_set_fprintf_node(
+  FILE* stream, node_set* ns, size_t const node_i, size_t const str_max)
 {
   if (ns->key->type == IDX_CONDENSE) {
     return;
@@ -672,8 +664,8 @@ void node_set_fprintf_node(FILE *stream, node_set *ns, const size_t node_i,
   fprintf(stream, "\n");
 }
 
-void node_set_fprintf_condensed_node(FILE *stream, node_set *ns,
-                                     const size_t str_max)
+void node_set_fprintf_condensed_node(
+  FILE* stream, node_set* ns, size_t const str_max)
 {
   if (!(ns->key->type == IDX_CONDENSE)) {
     return;
@@ -688,13 +680,10 @@ void node_set_fprintf_condensed_node(FILE *stream, node_set *ns,
   fprintf(stream, "\n");
 }
 
-void node_set_reset_index(node_set *ns)
-{
-  ns->key->auto_index = 0;
-}
+void node_set_reset_index(node_set* ns) { ns->key->auto_index = 0; }
 
-void node_set_copy_parents_index(node_set *child, node_set *parent,
-                                 const size_t str_max)
+void node_set_copy_parents_index(
+  node_set* child, node_set* parent, size_t const str_max)
 {
   if (child->key->template) {
     free(child->key->template);
@@ -705,7 +694,7 @@ void node_set_copy_parents_index(node_set *child, node_set *parent,
   strncat(child->key->template, "%s", str_max - 1);
 }
 
-bool path_attribute_matches_required(const node *n)
+bool path_attribute_matches_required(node const* n)
 {
   return strcmp(n->attribute->buff, n->attribute->required_value) == 0;
 }

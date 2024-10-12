@@ -1,9 +1,10 @@
+#include "query.h"
+
+#include "error.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <zlib.h>
-
-#include "query.h"
-#include "error.h"
 
 static inline void container_realloc(container c)
 {
@@ -11,7 +12,7 @@ static inline void container_realloc(container c)
   c->buff = realloc(c->buff, sizeof(*c->buff) * (c->buffsize + 1));
 }
 
-char tag_get(char c, gzFile fptr, tag *t)
+char tag_get(char c, gzFile fptr, tag* t)
 {
   while (c != '<' && c != EOF) {
     if (c == '/') {
@@ -42,9 +43,10 @@ char tag_get(char c, gzFile fptr, tag *t)
   }
 
   size_t i;
-  for (i = 0; c != ' ' && c != '>' && i < (t->buff_size - 1) &&
-       c != EOF; i++, c = gzgetc(fptr))
+  for (i = 0; c != ' ' && c != '>' && i < (t->buff_size - 1) && c != EOF; i++,
+      c = gzgetc(fptr)) {
     t->value[i] = c;
+  }
 
   if (c == EOF) {
     pubmedparser_error(PP_ERR_EOF, "End of file while searching for tag.\n");
@@ -62,12 +64,16 @@ char tag_get(char c, gzFile fptr, tag *t)
   return c;
 }
 
-static inline void trim_whitespace(char *buff, size_t len)
+static inline void trim_whitespace(char* buff, size_t len)
 {
   size_t start = 0;
   size_t end = len - 1;
-  while (buff[start] == ' ' && start < len) start++;
-  while (buff[end] == ' ' && end > 0) end--;
+  while (buff[start] == ' ' && start < len) {
+    start++;
+  }
+  while (buff[end] == ' ' && end > 0) {
+    end--;
+  }
   for (size_t i = start; start > 0 && i < (end + 1); i++) {
     buff[i - start] = buff[i];
   }
@@ -75,7 +81,7 @@ static inline void trim_whitespace(char *buff, size_t len)
   buff[end + 1] = '\0';
 }
 
-char value_get(char c, gzFile fptr, value val, tag *t)
+char value_get(char c, gzFile fptr, value val, tag* t)
 {
   while (c != '>' && c != EOF) {
     if (c == '/') {
@@ -142,7 +148,7 @@ char value_get(char c, gzFile fptr, value val, tag *t)
   return c;
 }
 
-char attribute_get(char c, gzFile fptr, attribute att, tag *t)
+char attribute_get(char c, gzFile fptr, attribute att, tag* t)
 {
   while (c != '=' && c != '>' && c != EOF) {
     if (c == '/') {
@@ -156,8 +162,8 @@ char attribute_get(char c, gzFile fptr, attribute att, tag *t)
   }
 
   if (c == EOF) {
-    pubmedparser_error(PP_ERR_EOF,
-                       "End of file while searching for attribute.\n");
+    pubmedparser_error(
+      PP_ERR_EOF, "End of file while searching for attribute.\n");
   }
 
   if (c == '>') {
@@ -172,8 +178,7 @@ char attribute_get(char c, gzFile fptr, attribute att, tag *t)
   c = gzgetc(fptr);
 
   size_t i;
-  for (i = 0; c != ' ' && c != '"' &&
-       c != '>' && c != EOF; i++) {
+  for (i = 0; c != ' ' && c != '"' && c != '>' && c != EOF; i++) {
     if (i == att->buffsize) {
       container_realloc(att);
     }
@@ -182,8 +187,8 @@ char attribute_get(char c, gzFile fptr, attribute att, tag *t)
   }
 
   if (c == EOF) {
-    pubmedparser_error(PP_ERR_EOF,
-                       "End of file while searching for attribute.\n");
+    pubmedparser_error(
+      PP_ERR_EOF, "End of file while searching for attribute.\n");
   }
 
   att->buff[i++] = '\0';

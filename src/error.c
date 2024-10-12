@@ -1,10 +1,10 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-
 #include "error.h"
 
-static char *pp_error_strings[PP_NUM_ERRORS] = {
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+static char* pp_error_strings[PP_NUM_ERRORS] = {
   [PP_ERR_STRUCTURE_KEY] = "Key not found in structure file",
   [PP_ERR_STRUCTURE_VALUE] = "Value malformed or missing in structure file",
   [PP_ERR_EOF] = "End of file reached during parsing",
@@ -13,21 +13,21 @@ static char *pp_error_strings[PP_NUM_ERRORS] = {
   [PP_ERR_FILE_NOT_FOUND] = "Could not open file"
 };
 
-void *pubmedparser_error_handler(const PP_ERRNO code, const char *errstr,
-                                 const char *msg);
+void* pubmedparser_error_handler(
+  const PP_ERRNO code, char const* errstr, char const* msg);
 
-void pp_nonreturning_error_handler(const PP_ERRNO code, const char *errstr,
-                                   const char *msg)
+void pp_nonreturning_error_handler(
+  const PP_ERRNO code, char const* errstr, char const* msg)
 {
   fprintf(stderr, "%s\n\n", errstr);
   fprintf(stderr, "%s\n", msg);
   exit(code);
 }
 
-void pubmedparser_error(const PP_ERRNO code, const char *fmt, ...)
+void pubmedparser_error(const PP_ERRNO code, char const* fmt, ...)
 {
   va_list ap;
-  char *errstr = pp_error_strings[code];
+  char* errstr = pp_error_strings[code];
   char errmsg[500];
 
   va_start(ap, fmt);

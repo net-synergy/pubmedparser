@@ -1,16 +1,15 @@
+#include "error.h"
+#include "structure.h"
+#include "yaml_reader.h"
+
 #include <stdio.h>
 #include <string.h>
 
-#include "structure.h"
+static void read_elements(
+  FILE* fptr, path_struct parent, int const fpos, size_t const str_max);
 
-#include "yaml_reader.h"
-#include "error.h"
-
-static void read_elements(FILE *fptr, path_struct parent, const int fpos,
-                          const size_t str_max);
-
-static void get_names(FILE *fptr, const int fpos, char ***names,
-                      size_t *n_names, const size_t str_max)
+static void get_names(FILE* fptr, int const fpos, char*** names,
+  size_t* n_names, size_t const str_max)
 {
   *n_names = 0;
   int rc = 0;
@@ -20,27 +19,29 @@ static void get_names(FILE *fptr, const int fpos, char ***names,
     pubmedparser_error(rc, "Error reading keys from structure file");
   }
 
-  char **keys = *names;
+  char** keys = *names;
   size_t i = 0;
-  for (i = 0; (i < *n_names) && (strcmp(keys[i], "root") != 0); i++);
+  for (i = 0; (i < *n_names) && (strcmp(keys[i], "root") != 0); i++)
+    ;
 
   if (i == *n_names) {
     pubmedparser_error(PP_ERR_STRUCTURE_KEY,
-                       "Structure file must contain a key named \"root\"\n");
+      "Structure file must contain a key named \"root\"\n");
   }
 
-  char *swap = NULL;
+  char* swap = NULL;
   for (size_t j = i; j > 0; j--) {
     swap = keys[j - 1];
     keys[j - 1] = keys[j];
     keys[j] = swap;
   }
 
-  for (i = 0; (i < *n_names) && (strcmp(keys[i], "key") != 0); i++);
+  for (i = 0; (i < *n_names) && (strcmp(keys[i], "key") != 0); i++)
+    ;
 
   if (i == *n_names) {
     pubmedparser_error(PP_ERR_STRUCTURE_KEY,
-                       "Structure file must contain a key named \"key\"\n");
+      "Structure file must contain a key named \"key\"\n");
   }
 
   for (size_t j = i; j > 1; j--) {
@@ -52,8 +53,8 @@ static void get_names(FILE *fptr, const int fpos, char ***names,
   *names = keys;
 }
 
-static path_struct read_element(FILE *fptr, const char *name,
-                                path_struct parent, const int fpos, const size_t str_max)
+static path_struct read_element(FILE* fptr, char const* name,
+  path_struct parent, int const fpos, size_t const str_max)
 {
   struct PathStructure el_init;
 
@@ -77,15 +78,15 @@ static path_struct read_element(FILE *fptr, const char *name,
   return element;
 }
 
-static void read_elements(FILE *fptr, path_struct parent, const int fpos,
-                          const size_t str_max)
+static void read_elements(
+  FILE* fptr, path_struct parent, int const fpos, size_t const str_max)
 {
   size_t n_names = 0;
-  char **names;
+  char** names;
 
   get_names(fptr, fpos, &names, &n_names, str_max);
 
-  path_struct *children = malloc(sizeof(*children) * n_names);
+  path_struct* children = malloc(sizeof(*children) * n_names);
   for (size_t i = 0; i < n_names; i++) {
     children[i] = read_element(fptr, names[i], parent, fpos, str_max);
   }
@@ -95,7 +96,7 @@ static void read_elements(FILE *fptr, path_struct parent, const int fpos,
   free(names);
 }
 
-static void path_struct_print_i(const path_struct ps, const size_t depth)
+static void path_struct_print_i(path_struct const ps, size_t const depth)
 {
   char tab[depth + 1];
   for (size_t i = 0; i < depth; i++) {
@@ -115,15 +116,12 @@ static void path_struct_print_i(const path_struct ps, const size_t depth)
   }
 }
 
-void path_struct_print(const path_struct ps)
-{
-  path_struct_print_i(ps, 0);
-}
+void path_struct_print(path_struct const ps) { path_struct_print_i(ps, 0); }
 
-path_struct parse_structure_file(const char *structure_file,
-                                 const size_t str_max)
+path_struct parse_structure_file(
+  char const* structure_file, size_t const str_max)
 {
-  FILE *fptr;
+  FILE* fptr;
   struct PathStructure top;
   top.name = strdup("top");
   top.parent = NULL;
