@@ -16,3 +16,4 @@ dist/
 lib/
 .mypy_cache
 *.egg-info/
+vgcore.*

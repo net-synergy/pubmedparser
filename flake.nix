@@ -30,8 +30,10 @@
         (pkgs.mkShell.override { stdenv = pkgs.clangStdenv; }) {
           packages = (with pkgs; [
             llvm
+            clang-tools
             gdb
             valgrind
+            bear
             zlib
             bats
             cmocka

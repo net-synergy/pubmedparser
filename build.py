@@ -12,8 +12,7 @@ extensions = [
         "pubmedparser._readxml",
         sources=["pubmedparser/_readxml.c"],
         include_dirs=["include"],
-        extra_compile_args=["-O3", "-fopenmp"],
-        extra_link_args=["-fopenmp"],
+        extra_compile_args=["-O3"],
         libraries=["z", "pubmedparser"],
     ),
 ]
@@ -63,7 +62,7 @@ def build(setup_kwargs):
                         "sources": [os.path.join("src", f) for f in c_files],
                         "include_dirs": ["include"],
                         "libraries": ["z"],
-                        "cflags": ["-O3", "-fopenmp"],
+                        "cflags": ["-O3"],
                     },
                 )
             ],

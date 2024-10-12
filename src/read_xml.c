@@ -3,7 +3,6 @@
 #include "structure.h"
 
 #include <getopt.h>
-#include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,7 +38,7 @@ static void usage(char* program_name, int failed)
     "A yaml file with the xml paths to collect.  Defaults to "
     "\"structure.yml\".");
   putarg("n", "num-threads", "INT",
-    "Number of independent threads to use, defaults to OMP_NUM_THREADS.");
+    "Number of independent threads to use, defaults to 1.");
   putarg("p", "progress-file", "STRING",
     "A file to collect the names of the xml files that have been parsed.");
   putarg("w", "overwrite-cache", NULL,
@@ -64,12 +63,7 @@ int main(int argc, char** argv)
   int overwrite_cache = CACHE_APPEND;
   char* progress_file = "processed.txt";
   char* program_name = argv[0];
-  size_t n_threads = 0;
-#pragma omp parallel
-  {
-#pragma omp single
-    n_threads = omp_get_num_threads();
-  }
+  size_t n_threads = 1;
 
   while (
     (optc = getopt_long(argc, argv, "c:s:n:p:wh", longopts, NULL)) != EOF) {
@@ -82,7 +76,6 @@ int main(int argc, char** argv)
         break;
       case 'n':
         n_threads = atoi(optarg);
-        omp_set_num_threads(n_threads);
         break;
       case 'p':
         progress_file = optarg;

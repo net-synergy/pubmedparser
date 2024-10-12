@@ -3,7 +3,6 @@
 #include "structure.h"
 
 #include <Python.h>
-#include <omp.h>
 
 #define STRMAX 10000
 
@@ -11,7 +10,7 @@ static void parse_file_list(PyObject* py_files, char*** files, size_t* n_files)
 {
   if (!PyList_Check(py_files)) {
     PyErr_SetString(PyExc_ValueError, "Files argument was not a list.");
-    return NULL;
+    return;
   }
 
   *n_files = (size_t)PyList_Size(py_files);
@@ -38,11 +37,7 @@ static size_t determine_n_threads(int n_threads)
 {
   size_t n_threads_i = (size_t)n_threads;
   if (n_threads == -1) {
-#pragma omp parallel
-    {
-#pragma omp single
-      n_threads_i = (size_t)omp_get_num_threads();
-    }
+    return 1;
   }
   return n_threads_i;
 }
@@ -104,7 +99,7 @@ static void reorder_ps(char const* name, size_t const pos, path_struct ps)
     strncat(errmsg, name, str_max);
     strncat(errmsg, " key.", str_max);
     PyErr_SetString(PyExc_ValueError, errmsg);
-    return NULL;
+    return;
   }
 
   path_struct child = ps->children[pos];

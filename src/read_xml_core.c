@@ -4,7 +4,6 @@
 
 #include <dirent.h>
 #include <errno.h>
-#include <omp.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -23,6 +22,8 @@
       continue;                                                               \
     }                                                                         \
   }
+
+#define omp_get_thread_num() 1
 
 static char* ensure_path_ends_with_slash(char const* p)
 {
@@ -234,7 +235,7 @@ static void cat(node_set const* ns, char const* cache_dir, int const n_threads)
   char** node_names;
   size_t n_nodes;
   cat_flatten_node_list_i(ns, &node_names, &n_nodes);
-#pragma omp parallel for
+  /* #pragma omp parallel for */
   for (size_t i = 0; i < n_nodes; i++) {
     cat_concat_file_i(node_names[i], cache_dir, n_threads);
   }
@@ -344,7 +345,7 @@ int read_xml(char** files, size_t const n_files, path_struct const ps,
 
   node_set_write_headers(ns, STR_MAX);
 
-#pragma omp parallel for
+  /* #pragma omp parallel for */
   for (size_t i = 0; i < n_files; i++) {
     int status = parse_file(files[i], ns_dup[omp_get_thread_num()]);
 
