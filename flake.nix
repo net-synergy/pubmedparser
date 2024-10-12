@@ -2,33 +2,33 @@
   description = "Convert pubmed xml files to tables";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-23.05";
-    flake-utils.url = "github:numtide/flake-utils";
+    nixpkgs.url = "github:nixos/nixpkgs";
+    poetry2nix = {
+      url = "github:nix-community/poetry2nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-        src = self;
-        version = "2.0.5";
-        pythonEnv = pkgs.poetry2nix.mkPoetryEnv {
-          projectDir = ./.;
-          editablePackageSources = { pubmedparser = ./pubmedparser; };
-          preferWheels = true;
-          groups = [ "dev" ];
-        };
-        pythonPackage = pkgs.poetry2nix.mkPoetryPackages { projectDir = ./.; };
-      in {
-        packages.pubmedparser = pkgs.callPackage ./. { inherit src version; };
-        packages.python = pythonPackage;
-        defaultPackage = self.packages.${system}.pubmedparser;
-        devShell = pkgs.mkShell {
-          packages =
-            (with pkgs; [ gcc gdb astyle zlib bats cmocka poetry pythonEnv ]);
-          shellHook = ''
-            export C_INCLUDE_PATH=${pythonEnv}/include
-          '';
-        };
-      });
+  outputs = { self, nixpkgs, poetry2nix }:
+    let
+      system = "x86_64-linux";
+      python = pkgs.python311;
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [ poetry2nix.overlays.default ];
+      };
+
+      pythonEnv = pkgs.poetry2nix.mkPoetryEnv {
+        inherit python;
+        projectDir = ./.;
+        editablePackageSources = { pubmedparser = ./.; };
+        preferWheels = true;
+        groups = [ "dev" ];
+      };
+    in {
+      devShells.${system}.default = pkgs.mkShell {
+        packages =
+          (with pkgs; [ gcc gdb astyle zlib bats cmocka poetry pythonEnv ]);
+      };
+    };
 }
