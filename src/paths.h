@@ -4,7 +4,6 @@
 #include "query.h"
 
 #include <stdbool.h>
-#include <stdio.h>
 
 typedef struct Path {
   char** components;

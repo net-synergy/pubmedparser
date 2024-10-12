@@ -1,5 +1,6 @@
 #include "yaml_reader.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #define BLOCK_MAX 50000

@@ -4,6 +4,7 @@
 #include "paths.h"
 #include "structure.h"
 
+#include <stdio.h>
 #include <zlib.h>
 
 enum { CACHE_APPEND = 0, CACHE_OVERWRITE };

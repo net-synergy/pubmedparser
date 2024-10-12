@@ -2,7 +2,6 @@
 #define YAML_READER_H
 
 #include <stdio.h>
-#include <stdlib.h>
 
 enum {
   YAML__ERROR_FILE = 50,
