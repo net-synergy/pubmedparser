@@ -4,6 +4,9 @@ all: $(BIN_DIR)/read_xml
 .PHNOY: lib
 lib: $(LIB_DIR)/libpubmedparser.so
 
+error.o: error.c error.h $(INCLUDE_DIR)/read_xml.h
+	$(CC) $(CFLAGS) -c $*.c -I$(INCLUDE_DIR)
+
 paths.o: paths.c paths.h query.h error.h
 	$(CC) $(CFLAGS) -c $*.c
 

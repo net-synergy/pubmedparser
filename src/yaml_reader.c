@@ -1,5 +1,7 @@
 #include "yaml_reader.h"
 
+#include "error.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -20,7 +22,7 @@ static void yaml_rewind_to_start_of_line(FILE* fptr)
   };
 }
 
-static int yaml_get_key(char* buffer, size_t const max_size, FILE* fptr)
+static pp_errno yaml_get_key(char* buffer, size_t const max_size, FILE* fptr)
 {
   char c;
 
@@ -42,9 +44,9 @@ static int yaml_get_key(char* buffer, size_t const max_size, FILE* fptr)
 
   if (i == max_size) {
     buffer[i - 1] = '\0';
-    fprintf(stderr, "Warning: buffer too small to fit key. \
-Increase buffer size to get entire key.\n");
-    return YAML__WARN_BUFFER_OVERFLOW;
+    pubmedparser_error(PP_ERR_BUFFER_OVERFLOW, "%s",
+      "Buffer too small to fit key. Increase buffer size to get "
+      "entire key.");
   }
 
   return c;
@@ -59,7 +61,7 @@ static int yaml_get_value(char* buffer, size_t const max_size, FILE* fptr)
   } while ((c == ' ') || (c == '\t') || (c == '{'));
 
   if (c == '}' || c == EOF || c == '\n') {
-    return YAML__ERROR_VALUE;
+    pubmedparser_error(PP_ERR_VALUE, "%s", "Found malformed value.");
   }
 
   if (c == '{') {
@@ -85,14 +87,13 @@ static int yaml_get_value(char* buffer, size_t const max_size, FILE* fptr)
   }
 
   if (c == EOF) {
-    return YAML__ERROR_VALUE;
+    pubmedparser_error(PP_ERR_EOF, "");
   }
 
   if (i == max_size) {
     buffer[i - 1] = '\0';
-    fprintf(stderr, "Warning: value was larger than value buffer. \
-Increase buffer size to get full value.\n");
-    return YAML__WARN_BUFFER_OVERFLOW;
+    pubmedparser_error(PP_ERR_BUFFER_OVERFLOW, "%s",
+      "Value was larger than buffer. Increase buffer size to get full value.");
   }
 
   while (ISWHITESPACE(buffer[i - 1])) {
@@ -101,23 +102,23 @@ Increase buffer size to get full value.\n");
   buffer[i] = '\0';
 
   if (c == EOF) {
-    return YAML__ERROR_VALUE;
+    pubmedparser_error(PP_ERR_EOF, "");
   }
 
   return c;
 }
 
-static size_t next_line_depth(FILE* fptr)
+static int next_line_depth(FILE* fptr)
 {
   char c = fgetc(fptr);
-  size_t depth = 0;
+  int depth = 0;
 
   while (c != '\n' && c != EOF) {
     c = fgetc(fptr);
   }
 
   if (c == EOF) {
-    return YAML__ERROR_EOF;
+    return EOF;
   }
 
   while (ISWHITESPACE(c)) {
@@ -129,7 +130,7 @@ static size_t next_line_depth(FILE* fptr)
   }
 
   if (c == EOF) {
-    return YAML__ERROR_EOF;
+    return EOF;
   }
 
   ungetc(c, fptr);
@@ -144,30 +145,33 @@ int yaml_get_keys(FILE* fptr, char*** keys, size_t* n_keys, int const start,
   char c;
   *n_keys = 0;
 
-  size_t initial_depth = 0;
+  int initial_depth = 0;
   yaml_rewind_to_start_of_line(fptr);
   for (c = fgetc(fptr); ISWHITESPACE(c); c = fgetc(fptr), initial_depth++)
     ;
   yaml_rewind_to_start_of_line(fptr);
 
-  size_t depth = initial_depth;
+  int depth = initial_depth;
   while (((c = yaml_get_key(buff, str_max, fptr)) != EOF) &&
-         (depth >= initial_depth) && (depth != YAML__ERROR_EOF)) {
+         (depth >= initial_depth)) {
     (*n_keys)++;
 
     do {
       (depth = next_line_depth(fptr));
-    } while ((depth > initial_depth) && (depth != YAML__ERROR_EOF));
+    } while ((depth > initial_depth));
   }
 
-  if ((depth == YAML__ERROR_EOF) && (initial_depth != 0)) {
-    fprintf(stderr,
+  if ((depth == EOF) && (initial_depth != 0)) {
+    pubmedparser_error(PP_ERR_EOF, "%s",
       "End of file while parsing key value in structure file\n. "
-      "Possibly a missing \"}\"\n");
-    return YAML__ERROR_KEY;
+      "Possibly a missing \"}\"");
   }
 
   *keys = malloc(sizeof **keys * (*n_keys));
+  if (!keys) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   fseek(fptr, start, SEEK_SET);
   for (size_t k = 0; k < (*n_keys); k++) {
     c = yaml_get_key(buff, str_max, fptr);
@@ -179,13 +183,13 @@ int yaml_get_keys(FILE* fptr, char*** keys, size_t* n_keys, int const start,
 
     do {
       depth = next_line_depth(fptr);
-    } while ((depth > initial_depth) && (depth != YAML__ERROR_EOF));
+    } while ((depth > initial_depth));
   }
 
   return EXIT_SUCCESS;
 }
 
-static int yaml_ff_to_key(
+static void yaml_ff_to_key(
   FILE* fptr, char const* key, int const start, size_t const str_max)
 {
   fseek(fptr, start, SEEK_SET);
@@ -197,28 +201,16 @@ static int yaml_ff_to_key(
   } while (strcmp(buff, key) != 0 && c != EOF);
 
   if (c == EOF) {
-    fprintf(stderr, "Could not find key %s in structure file\n", key);
-    return YAML__ERROR_KEY;
+    pubmedparser_error(
+      PP_ERR_KEY, "Could not find key %s in structure file.", key);
   }
-
-  return EXIT_SUCCESS;
 }
 
-int yaml_get_map_value(FILE* fptr, char const* key, char* value,
+void yaml_get_map_value(FILE* fptr, char const* key, char* value,
   int const start, size_t const str_max)
 {
   yaml_ff_to_key(fptr, key, start, str_max);
-
-  char c;
-  c = yaml_get_value(value, str_max, fptr);
-
-  if (c == YAML__ERROR_VALUE) {
-    fprintf(
-      stderr, "Could not find value for key %s in structure file\n", key);
-    return c;
-  }
-
-  return 0;
+  yaml_get_value(value, str_max, fptr);
 }
 
 int yaml_map_value_is_singleton(
@@ -232,14 +224,8 @@ int yaml_map_value_is_singleton(
   } while (ISWHITESPACE(c));
 
   if (c == EOF) {
-    fprintf(
-      stderr, "Could not find values for key %s in structure file.\n", key);
-    return YAML__ERROR_VALUE;
+    pubmedparser_error(PP_ERR_EOF, "");
   }
 
-  if (c == '{') {
-    return 0;
-  } else {
-    return 1;
-  }
+  return c == '{' ? 0 : 1;
 }

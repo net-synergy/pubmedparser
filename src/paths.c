@@ -32,8 +32,7 @@ static void get_components(
   size_t comp_i = 0;
   char name[str_max];
   if (*p != '/') {
-    // 2 is arbitrary, can change to error code enum.
-    pubmedparser_error(2, "Path malformed. Most start with '/'\n");
+    pubmedparser_error(0, "Path malformed. Most start with '/'");
   }
   p++; // Strip initial '/';
   while (*p != '\0' && !IS_SPECIAL(*p)) {
@@ -68,6 +67,10 @@ path path_init(char const* xml_path, size_t const str_max)
   };
 
   path out = malloc(sizeof(*out));
+  if (!out) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   memcpy(out, &p, sizeof(*out));
 
   return out;
@@ -81,9 +84,11 @@ void path_destroy(path p)
 
 path path_init_dynamic(size_t const max_path_depth)
 {
-  struct Path p = { .components = malloc(sizeof(char*) * max_path_depth),
+  struct Path p = {
+    .components = malloc(sizeof(char*) * max_path_depth),
     .length = 0,
-    .max_path_depth = max_path_depth };
+    .max_path_depth = max_path_depth,
+  };
 
   path out = malloc(sizeof(*out));
   memcpy(out, &p, sizeof(p));
@@ -122,7 +127,11 @@ int path_match(path const p1, path const p2)
   return i == 0;
 }
 
-inline int path_is_empty(path const p) { return (int)p->length == -1; }
+inline int path_is_empty(path const p)
+{
+  /* printf("%d\n", (int)p->length); */
+  return (int)p->length == -1;
+}
 
 void path_print(path const p)
 {

@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Move error handling to externally defined error handlers (i.e. so the python interface can define a python friendly error handler).
+
 ### Fixed
 
 - Protect against trying to delete non-existent md5 file.
+- Allow the program to continue after a parse error by removing data stored from the malformed input file.
 
 ## [2.0.6] 2024-01-20
 

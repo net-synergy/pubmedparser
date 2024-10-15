@@ -52,10 +52,14 @@ static size_t find_sub_tag_names(
   }
 
   if (p[i] == '\0') {
-    pubmedparser_error(3, "Could not find subtag; malformed path.\n");
+    pubmedparser_error(0, "Could not find subtag; malformed path.");
   }
 
   sub_tags_holder[0] = malloc(sizeof(char*) * count);
+  if (!sub_tags_holder[0]) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   char tag[str_max];
   for (size_t j = 0; j < count; j++) {
     for (i = 0; (*p != ',') && (*p != '}') && (i < (str_max - 1)); i++, p++) {
@@ -91,6 +95,10 @@ static void find_attribute_name(char const* p, char** attribute,
   }
 
   *attribute = malloc(sizeof(**attribute) * str_max);
+  if (!(*attribute)) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   p++; /* Skip @ */
   size_t i;
   for (i = 0; (p[i] != '\0') && (p[i] != '=') && (i < (str_max - 1)); i++) {
@@ -100,6 +108,10 @@ static void find_attribute_name(char const* p, char** attribute,
 
   if (att_type == ATT_EXPECTED) {
     *expected_attribute = malloc(sizeof(**expected_attribute) * str_max);
+    if (!(*expected_attribute)) {
+      pubmedparser_error(PP_ERR_OOM, "");
+    }
+
     p += i;
     while ((*p == '=') || (*p == '\'') || (*p == ' ')) {
       p++;
@@ -126,6 +138,10 @@ static attribute attribute_init(char const* xml_path, size_t const str_max)
   };
 
   attribute att = malloc(sizeof(*att));
+  if (!att) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   memcpy(att, &att_init, sizeof(*att));
   att->buff[0] = '\0';
   return att;
@@ -153,6 +169,10 @@ static value value_init(size_t const str_max)
   };
 
   value val = malloc(sizeof(*val));
+  if (!val) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   memcpy(val, &val_init, sizeof(*val));
   val->buff[0] = '\0';
   return val;
@@ -164,6 +184,9 @@ static node_set* node_set_generate_from_sub_tags(char const* xml_path,
 {
   path p = path_init(xml_path, str_max);
   char* path_str = malloc(sizeof(*path_str) * str_max);
+  if (!path_str) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
 
   for (size_t i = 0; i < p->length; i++) {
     strncat(path_str, "/", str_max);
@@ -180,6 +203,9 @@ static node_set* node_set_generate_from_sub_tags(char const* xml_path,
 
   for (size_t i = 0; i < ps.n_children; i++) {
     ps.children[i] = malloc(sizeof(struct PathStructure));
+    if (!ps.children[i]) {
+      pubmedparser_error(PP_ERR_OOM, "");
+    }
   }
 
   ps.children[0]->name = strdup("root");
@@ -195,8 +221,16 @@ static node_set* node_set_generate_from_sub_tags(char const* xml_path,
   ps.children[1]->n_children = 0;
 
   char** sub_tag_paths = malloc(sizeof(*sub_tag_paths) * n_sub_tags);
+  if (!sub_tag_paths) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   for (size_t i = 0; i < n_sub_tags; i++) {
     sub_tag_paths[i] = malloc(sizeof(*sub_tag_paths[i]) * str_max);
+    if (!sub_tag_paths[i]) {
+      pubmedparser_error(PP_ERR_OOM, "");
+    }
+
     strncpy(sub_tag_paths[i], "/", str_max);
     strncat(sub_tag_paths[i], sub_tags[i], str_max);
 
@@ -255,14 +289,20 @@ static node* node_generate(path_struct const ps, char const* cache_dir,
     }
   }
 
-  node n_init = { .name = strdup(ps->name),
+  node n_init = {
+    .name = strdup(ps->name),
     .path = p,
     .value = v,
     .attribute = a,
     .child_ns = ns,
-    .out = get_file(ps->name, cache_dir, overwrite) };
+    .out = get_file(ps->name, cache_dir, overwrite),
+  };
 
   node* n = malloc(sizeof *n);
+  if (!n) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   memcpy(n, &n_init, sizeof *n);
 
   return n;
@@ -285,6 +325,7 @@ static void node_destroy(node* n)
   }
 
   if (n->out) {
+    fprintf(n->out, "%c\n", PP_EOF);
     fclose(n->out);
   }
   free(n);
@@ -297,6 +338,10 @@ static key* key_generate(keytype const type)
   };
 
   key* k = malloc(sizeof(*k));
+  if (!k) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   memcpy(k, &key_init, sizeof(*k));
   return k;
 }
@@ -334,6 +379,10 @@ node_set* node_set_generate(path_struct const ps, char const* name_prefix,
   }
 
   node** nodes = malloc(sizeof(*nodes) * (ps->n_children - 1));
+  if (!nodes) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   for (size_t i = 0; i < (ps->n_children - 1); i++) {
     nodes[i] =
       node_generate(ps->children[i + 1], cache_dir, overwrite, str_max);
@@ -371,6 +420,10 @@ node_set* node_set_generate(path_struct const ps, char const* name_prefix,
     .key = ns_key };
 
   node_set* ns = malloc(sizeof(*ns));
+  if (!ns) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   memcpy(ns, &ns_init, sizeof(*ns));
 
   return ns;
@@ -517,6 +570,10 @@ static attribute container_clone(container const c)
     .buff = malloc(sizeof(*c->buff) * c->buffsize) };
 
   attribute dup_container = malloc(sizeof(*dup_container));
+  if (!dup_container) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   memcpy(dup_container, &dup_container_init, sizeof(*dup_container));
   dup_container->buff[0] = '\0';
 
@@ -563,9 +620,14 @@ static node* node_clone(
     .attribute = att,
     .child_ns = child_ns,
     .out = get_file(name, cache_dir,
-      CACHE_OVERWRITE) // Clone files are ephemeral so always overwrite.
+      CACHE_OVERWRITE), // Clone files are ephemeral so always overwrite.
   };
+
   node* dup_n = malloc(sizeof(*dup_n));
+  if (!dup_n) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   memcpy(dup_n, &dup_n_init, sizeof(*dup_n));
 
   return dup_n;
@@ -574,6 +636,10 @@ static node* node_clone(
 key* key_clone(key const* k)
 {
   key* dup_k = malloc(sizeof(*dup_k));
+  if (!dup_k) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   memcpy(dup_k, k, sizeof(*dup_k));
   dup_k->template = k->template == NULL ? NULL : strdup(k->template);
   dup_k->value = k->value == NULL ? NULL : strdup(k->value);
@@ -585,6 +651,10 @@ node_set* node_set_clone(node_set const* ns, char const* cache_dir,
   size_t const thread, size_t const str_max)
 {
   node_set* dup_ns = malloc(sizeof(*dup_ns));
+  if (!dup_ns) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   memcpy(dup_ns, ns, sizeof(*ns));
   dup_ns->root = strdup(ns->root);
 
@@ -601,6 +671,10 @@ static void collect_auto_index(node_set* ns, char** key)
 {
   size_t idx_size = 6; // Assume 4 digits (+2 '\t'/'\0') is plenty for index.
   *key = malloc(sizeof(**key) * idx_size);
+  if (!key) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   snprintf(*key, idx_size - 1, "\t%zu", ns->key->auto_index);
 }
 
@@ -619,6 +693,10 @@ static void collect_index(node_set* ns, size_t const str_max)
 
   if (ns->key->template) {
     ns->key->value = malloc(sizeof(*ns->key->value) * str_max);
+    if (!ns->key->value) {
+      pubmedparser_error(PP_ERR_OOM, "");
+    }
+
     snprintf(ns->key->value, str_max, ns->key->template, ns_key);
   } else {
     ns->key->value = strdup(ns_key);
@@ -697,4 +775,34 @@ void node_set_copy_parents_index(
 bool path_attribute_matches_required(node const* n)
 {
   return strcmp(n->attribute->buff, n->attribute->required_value) == 0;
+}
+
+static void node_mark_i(node* n)
+{
+  fgetpos(n->out, &(n->eof));
+  if (n->child_ns) {
+    node_set_mark(n->child_ns);
+  }
+}
+
+void node_set_mark(node_set* ns)
+{
+  for (size_t i = 0; i < ns->n_nodes; i++) {
+    node_mark_i(ns->nodes[i]);
+  }
+}
+
+static void node_rewind_i(node* n)
+{
+  fsetpos(n->out, &(n->eof));
+  if (n->child_ns) {
+    node_set_rewind(n->child_ns);
+  }
+}
+
+void node_set_rewind(node_set* ns)
+{
+  for (size_t i = 0; i < ns->n_nodes; i++) {
+    node_rewind_i(ns->nodes[i]);
+  }
 }

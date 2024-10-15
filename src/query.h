@@ -1,6 +1,8 @@
 #ifndef QUERY_H
 #define QUERY_H
 
+#include "error.h"
+
 #include <stdbool.h>
 #include <zlib.h>
 
@@ -22,8 +24,8 @@ typedef struct Tag {
   bool is_close;
 } tag;
 
-char tag_get(char c, gzFile fptr, tag* t);
-char value_get(char c, gzFile fptr, value val, tag* t);
-char attribute_get(char c, gzFile fptr, attribute att, tag* t);
+pp_errno tag_get(char* c, gzFile fptr, tag* t);
+pp_errno value_get(char* c, gzFile fptr, value val, tag* t);
+pp_errno attribute_get(char* c, gzFile fptr, attribute att, tag* t);
 
 #endif

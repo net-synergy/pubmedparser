@@ -7,6 +7,10 @@
 #include <stdio.h>
 #include <zlib.h>
 
+/* Where to stop when concatenating files in case a file failed to parse but
+   leftover data remains in the out file. */
+#define PP_EOF '\0'
+
 enum { CACHE_APPEND = 0, CACHE_OVERWRITE };
 
 typedef enum KeyTypes { IDX_NORMAL = 0, IDX_AUTO, IDX_CONDENSE } keytype;
@@ -25,6 +29,7 @@ typedef struct Node {
   struct Container* attribute;
   struct NodeSet* child_ns;
   FILE* out;
+  fpos_t eof;
 } node;
 
 typedef struct NodeSet {
@@ -56,5 +61,8 @@ void node_set_write_headers(node_set const* ns, size_t const str_max);
 node_set* node_set_clone(node_set const* ns, char const* cache_dir,
   size_t const thread, size_t const str_max);
 void node_set_destroy(node_set* ns);
+
+void node_set_mark(node_set* ns);
+void node_set_rewind(node_set* ns);
 
 #endif

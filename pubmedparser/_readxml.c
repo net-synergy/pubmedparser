@@ -1,10 +1,28 @@
 #define PY_SSIZE_T_CLEAN
+
 #include "read_xml.h"
 #include "structure.h"
 
 #include <Python.h>
+#include <stdio.h>
 
 #define STRMAX 10000
+
+static void py_warning_handler(char const* errstr, char const* msg)
+{
+  char buff[4096];
+  snprintf(buff, sizeof(buff), "%s\n  %s\n", msg, errstr);
+  PyErr_WarnEx(PyExc_RuntimeWarning, buff, 1);
+}
+
+static void py_error_handler(char const* errstr, char const* msg)
+{
+  PyObject* exc =
+    pubmedparser_get_oom() ? PyExc_MemoryError : PyExc_RuntimeError;
+  char buff[4096];
+  snprintf(buff, sizeof(buff), "%s\n  %s\n", msg, errstr);
+  PyErr_SetString(exc, buff);
+}
 
 static void parse_file_list(PyObject* py_files, char*** files, size_t* n_files)
 {
@@ -35,47 +53,42 @@ static void destroy_file_list(char*** files, size_t n_files)
 
 static size_t determine_n_threads(int n_threads)
 {
-  size_t n_threads_i = (size_t)n_threads;
-  if (n_threads == -1) {
-    return 1;
-  }
-  return n_threads_i;
+  return 1;
+  /* size_t n_threads_i = (size_t)n_threads; */
+  /* if (n_threads == -1) { */
+  /*   return 1; */
+  /* } */
+  /* return n_threads_i; */
 }
 
-static PyObject* read_xml_from_structure_file(PyObject* self, PyObject* args)
+static PyObject* read_xml_from_structure_file(PyObject* _, PyObject* args)
 {
   PyObject* files;
   char const* structure_file;
-  char const* cache_dir;
-  char const* progress_file;
-  int const n_threads;
-  int const overwrite_cache;
+  char const* cache_dir = "";
+  char const* progress_file = "";
+  int const n_threads = 0;
+  int const overwrite_cache = 0;
   char** files_i;
   size_t n_threads_i;
   size_t n_files_i;
   path_struct ps;
-  int status;
 
   if (!PyArg_ParseTuple(args, "Osssip", &files, &structure_file, &cache_dir,
         &progress_file, &n_threads, &overwrite_cache)) {
     return NULL;
   }
 
+  pubmedparser_set_error_handler(py_error_handler);
+  pubmedparser_set_warn_handler(py_warning_handler);
+
   parse_file_list(files, &files_i, &n_files_i);
   n_threads_i = determine_n_threads(n_threads);
   ps = parse_structure_file(structure_file, STRMAX);
-  status = read_xml(files_i, n_files_i, ps, cache_dir, overwrite_cache,
-    progress_file, n_threads_i);
+  read_xml(files_i, n_files_i, ps, cache_dir, overwrite_cache, progress_file,
+    n_threads_i);
   destroy_file_list(&files_i, n_files_i);
   path_struct_destroy(ps);
-
-  // read_xml exits on error so should never enter this if statement until the
-  // pubmedparser C lib gets proper error handling.
-  if (status > 0) {
-    PyErr_SetString(
-      PyExc_EOFError, "One or more XML files was not formatted correctly");
-    return NULL;
-  }
 
   Py_RETURN_NONE;
 }
@@ -157,55 +170,60 @@ static path_struct parse_structure_dictionary(PyObject* structure_dict)
 }
 
 static PyObject* read_xml_from_structure_dictionary(
-  PyObject* self, PyObject* args)
+  PyObject* _, PyObject* args)
 {
   PyObject* files;
   PyObject* structure_dict;
-  char const* cache_dir;
-  char const* progress_file;
-  int const n_threads;
-  int const overwrite_cache;
+  char const* cache_dir = "";
+  char const* progress_file = "";
+  int const n_threads = 0;
+  int const overwrite_cache = 0;
   char** files_i;
   size_t n_threads_i;
   size_t n_files_i;
   path_struct ps;
-  int status;
 
   if (!PyArg_ParseTuple(args, "OOssip", &files, &structure_dict, &cache_dir,
         &progress_file, &n_threads, &overwrite_cache)) {
     return NULL;
   }
 
+  pubmedparser_set_error_handler(py_error_handler);
+
   parse_file_list(files, &files_i, &n_files_i);
   n_threads_i = determine_n_threads(n_threads);
   ps = parse_structure_dictionary(structure_dict);
-  status = read_xml(files_i, n_files_i, ps, cache_dir, overwrite_cache,
-    progress_file, n_threads_i);
+  read_xml(files_i, n_files_i, ps, cache_dir, overwrite_cache, progress_file,
+    n_threads_i);
   destroy_file_list(&files_i, n_files_i);
   path_struct_destroy(ps);
-
-  // read_xml exits on error so should never enter this if statement until the
-  // pubmedparser C lib gets proper error handling.
-  if (status > 0) {
-    PyErr_SetString(
-      PyExc_EOFError, "One or more XML files was not formatted correctly");
-    return NULL;
-  }
 
   Py_RETURN_NONE;
 }
 
 static PyMethodDef ReadXmlMethods[] = {
-  { "from_structure_file", read_xml_from_structure_file, METH_VARARGS,
-    "Read the provided XML files using a structure YAML file." },
-  { "from_structure_dictionary", read_xml_from_structure_dictionary,
+  {
+    "from_structure_file",
+    read_xml_from_structure_file,
     METH_VARARGS,
-    "Read the provided XML files using a dictionary of dictionaries." },
+    "Read the provided XML files using a structure YAML file.",
+  },
+  {
+    "from_structure_dictionary",
+    read_xml_from_structure_dictionary,
+    METH_VARARGS,
+    "Read the provided XML files using a dictionary of dictionaries.",
+  },
   { NULL, NULL, 0, NULL }
 };
 
-static struct PyModuleDef readxmlmodule = { PyModuleDef_HEAD_INIT, "_readxml",
-  "Functions for reading XML files.", -1, ReadXmlMethods };
+static struct PyModuleDef readxmlmodule = {
+  .m_base = PyModuleDef_HEAD_INIT,
+  .m_name = "_readxml",
+  .m_doc = "Functions for reading XML files.",
+  .m_size = -1,
+  .m_methods = ReadXmlMethods,
+};
 
 PyMODINIT_FUNC PyInit__readxml(void)
 {

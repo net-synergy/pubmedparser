@@ -7,8 +7,12 @@ export INCLUDE_DIR := $(ROOT)/include
 export PYTHON_MODULE := $(ROOT)/pubmedparser
 export CFLAGS += -fPIC -Wall -Wextra -O3
 
-example := $(BIN_DIR)/read_xml --cache=cache --structure-file=example/structure.yml \
-	data/pubmed21n100*.xml.gz
+FILES ?= $(wildcard  data/*)
+
+example := $(BIN_DIR)/read_xml --cache=cache \
+	--structure-file=example/structure.yml \
+	--overwrite-cache \
+	$(FILES)
 
 .PHONY: all
 all: python cli lib
@@ -62,3 +66,7 @@ asan: debug
 .PHONY: time
 time: cli
 	time $(example)
+
+.PHONY: run
+run: cli
+	$(example)

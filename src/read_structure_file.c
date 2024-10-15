@@ -25,8 +25,8 @@ static void get_names(FILE* fptr, int const fpos, char*** names,
     ;
 
   if (i == *n_names) {
-    pubmedparser_error(PP_ERR_STRUCTURE_KEY,
-      "Structure file must contain a key named \"root\"\n");
+    pubmedparser_error(
+      PP_ERR_KEY, "Structure file must contain a key named \"root\".");
   }
 
   char* swap = NULL;
@@ -40,8 +40,8 @@ static void get_names(FILE* fptr, int const fpos, char*** names,
     ;
 
   if (i == *n_names) {
-    pubmedparser_error(PP_ERR_STRUCTURE_KEY,
-      "Structure file must contain a key named \"key\"\n");
+    pubmedparser_error(
+      PP_ERR_KEY, "Structure file must contain a key named \"key\".");
   }
 
   for (size_t j = i; j > 1; j--) {
@@ -74,6 +74,10 @@ static path_struct read_element(FILE* fptr, char const* name,
   }
 
   path_struct element = malloc(sizeof(*element));
+  if (!element) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   memcpy(element, &el_init, sizeof(*element));
   return element;
 }
@@ -87,6 +91,10 @@ static void read_elements(
   get_names(fptr, fpos, &names, &n_names, str_max);
 
   path_struct* children = malloc(sizeof(*children) * n_names);
+  if (!children) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   for (size_t i = 0; i < n_names; i++) {
     children[i] = read_element(fptr, names[i], parent, fpos, str_max);
   }
@@ -128,12 +136,16 @@ path_struct parse_structure_file(
   top.path = NULL;
 
   if (!(fptr = fopen(structure_file, "r"))) {
-    pubmedparser_error(1, "Could not open structure file");
+    pubmedparser_error(0, "Could not open structure file.");
   }
 
   read_elements(fptr, &top, 0, str_max);
 
   path_struct ret = malloc(sizeof(*ret));
+  if (!ret) {
+    pubmedparser_error(PP_ERR_OOM, "");
+  }
+
   memcpy(ret, &top, sizeof(*ret));
   return ret;
 };

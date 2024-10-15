@@ -1,9 +1,12 @@
 #include "error.h"
 #include "nodes.h"
+#include "paths.h"
 #include "structure.h"
+#include "sys/types.h"
 
 #include <dirent.h>
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -22,8 +25,6 @@
       continue;                                                               \
     }                                                                         \
   }
-
-#define omp_get_thread_num() 1
 
 static char* ensure_path_ends_with_slash(char const* p)
 {
@@ -50,18 +51,27 @@ static char* expand_file(char const* filename, char const* dirname)
   return strdup(temp);
 }
 
-static int parse_file_i(gzFile fptr, node_set* ns, tag* current_tag)
+#define CHECK(expr)                                                           \
+  rs = (expr);                                                                \
+  do {                                                                        \
+    if (rs != PP_SUCCESS) {                                                   \
+      goto cleanup;                                                           \
+    }                                                                         \
+  } while (0)
+
+static pp_errno parse_file_i(gzFile fptr, node_set* ns, tag* current_tag)
 {
+  pp_errno rs;
   path current_path = path_init_dynamic(ns->max_path_depth);
   char c = '\0';
 
   while ((strcmp(ns->root, current_tag->value) != 0) && (!(gzeof(fptr)))) {
-    c = tag_get(c, fptr, current_tag);
+    CHECK(tag_get(&c, fptr, current_tag));
   }
 
   node* n;
   while (!(gzeof(fptr)) && !(OUT_OF_ROOT_SCOPE(current_tag, ns))) {
-    c = tag_get(c, fptr, current_tag);
+    CHECK(tag_get(&c, fptr, current_tag));
 
     if (current_tag->is_empty) {
       continue;
@@ -72,12 +82,13 @@ static int parse_file_i(gzFile fptr, node_set* ns, tag* current_tag)
       current_tag->was_prev_empty = false;
     } else {
       path_append(current_path, current_tag);
+      int att_unused = false;
       for (size_t i = 0; i < ns->n_nodes; i++) {
         n = ns->nodes[i];
         if (path_match(current_path, n->path)) {
           if (n->child_ns) {
             node_set_copy_parents_index(n->child_ns, ns, STR_MAX);
-            parse_file_i(fptr, n->child_ns, current_tag);
+            CHECK(parse_file_i(fptr, n->child_ns, current_tag));
             path_drop_last_component(current_path);
             node_set_fprintf_condensed_node(n->out, n->child_ns, STR_MAX);
             node_set_reset_index(n->child_ns);
@@ -85,32 +96,43 @@ static int parse_file_i(gzFile fptr, node_set* ns, tag* current_tag)
           }
 
           if (n->attribute->name) {
-            c = attribute_get(c, fptr, n->attribute, current_tag);
+            if (!att_unused) {
+              CHECK(attribute_get(&c, fptr, n->attribute, current_tag));
+            }
             CONTINUE_IF_EMPTY_TAG(current_tag, current_path);
 
             if ((n->attribute->required_value) &&
                 (!path_attribute_matches_required(n))) {
+              /* For case when multiple nodes match the same path but have
+                 different required attributes. If the earlier node doesn't
+                 match, the later node should try on the same attribute instead
+                 of trying to read in a new attribute. */
+              att_unused = true;
               continue;
             }
           }
 
           if ((i != ns->key_idx) || (ns->key->type == IDX_NORMAL)) {
-            c = value_get(c, fptr, n->value, current_tag);
+            CHECK(value_get(&c, fptr, n->value, current_tag));
             CONTINUE_IF_EMPTY_TAG(current_tag, current_path);
           }
 
           node_set_fprintf_node(n->out, ns, i, STR_MAX);
+          break;
         }
       }
     }
   }
 
-  int tags_matched = path_is_empty(current_path);
+  rs = path_is_empty(current_path) ? PP_SUCCESS : PP_ERR_TAG_MISMATCH;
+
+cleanup:
   path_destroy(current_path);
-  return tags_matched;
+
+  return rs;
 }
 
-static int parse_file(char const* input, node_set* ns)
+static pp_errno parse_file(char const* input, node_set* ns)
 {
   gzFile fptr;
   if (strcmp(input, "-") == 0) {
@@ -118,27 +140,24 @@ static int parse_file(char const* input, node_set* ns)
   } else {
     fptr = gzopen(input, "rb");
   }
+
   if (!fptr) {
-    pubmedparser_error(
-      PP_ERR_FILE_NOT_FOUND, "Could not open file %s\n", input);
-    return PP_ERR_FILE_NOT_FOUND;
+    PP_RETURN_ERROR_WITH_MSG(PP_ERR_FILE_NOT_FOUND, "%s", input);
   }
 
   char s[STR_MAX] = "\0";
-  tag current_tag = { .value = s,
+  tag current_tag = {
+    .value = s,
     .buff_size = STR_MAX,
     .is_close = false,
     .is_empty = false,
-    .was_prev_empty = false };
+    .was_prev_empty = false,
+  };
 
-  int status = parse_file_i(fptr, ns, &current_tag);
+  pp_errno status = parse_file_i(fptr, ns, &current_tag);
   gzclose(fptr);
 
-  if (status) {
-    return 0;
-  } else {
-    return PP_ERR_TAG_MISMATCH;
-  }
+  return status;
 }
 
 /* Used after new file has been written to, so should only be at position 0 if
@@ -157,7 +176,7 @@ void cat_concat_file_i(
     snprintf(file_name, STR_MAX, "%s%s_%d.tsv", cache_dir, file_prefix, i);
     FILE* processor_file = fopen(file_name, "r");
     char c = '\0';
-    while ((c = getc(processor_file)) != EOF) {
+    while ((c = getc(processor_file)) != PP_EOF) {
       putc(c, aggregate_file);
     }
     fclose(processor_file);
@@ -320,7 +339,7 @@ int read_xml(char** files, size_t const n_files, path_struct const ps,
   FILE* progress_ptr;
 
   if ((mkdir_and_parents(cache_dir_i, 0777)) < 0) {
-    pubmedparser_error(1, "Failed to make cache directory.");
+    pubmedparser_error(0, "%s", "Failed to make cache directory.");
   }
 
   if ((progress_file != NULL) ||
@@ -330,11 +349,12 @@ int read_xml(char** files, size_t const n_files, path_struct const ps,
     parsed = strdup("/dev/null");
   }
 
-  if (!(progress_ptr = fopen(parsed, "a"))) {
-    pubmedparser_error(
-      PP_ERR_FILE_NOT_FOUND, "Failed to open progress file.\n");
-  }
+  progress_ptr = fopen(parsed, "a");
   free(parsed);
+  if (!progress_ptr) {
+    pubmedparser_error(
+      PP_ERR_FILE_NOT_FOUND, "%s", "Failed to open progress file.");
+  }
 
   node_set* ns =
     node_set_generate(ps, NULL, cache_dir_i, overwrite_cache, STR_MAX);
@@ -345,15 +365,23 @@ int read_xml(char** files, size_t const n_files, path_struct const ps,
 
   node_set_write_headers(ns, STR_MAX);
 
-  /* #pragma omp parallel for */
+  size_t n_failed = 0;
   for (size_t i = 0; i < n_files; i++) {
-    int status = parse_file(files[i], ns_dup[omp_get_thread_num()]);
+    node_set_mark(ns_dup[0]);
+    pp_errno status = parse_file(files[i], ns_dup[0]);
 
-    if (status != 0) {
-      pubmedparser_error(status, "Error in file %s\n", files[i]);
+    if (status != PP_SUCCESS) {
+      pubmedparser_warn(status, "Error in file %s:", files[i]);
+      node_set_rewind(ns_dup[0]);
+      n_failed++;
+    } else {
+      fprintf(progress_ptr, "%s\n", files[i]);
     }
+  }
 
-    fprintf(progress_ptr, "%s\n", files[i]);
+  if (n_failed > 0) {
+    pubmedparser_warn(
+      0, "Failed to parse %zu file%s.", n_failed, n_failed > 1 ? "s" : "");
   }
 
   for (size_t i = 0; i < n_threads; i++) {
@@ -365,5 +393,5 @@ int read_xml(char** files, size_t const n_files, path_struct const ps,
   node_set_destroy(ns);
   free(cache_dir_i);
 
-  return EXIT_SUCCESS;
+  return PP_SUCCESS;
 }

@@ -55,6 +55,17 @@ static struct option const longopts[] = {
   { "help", no_argument, NULL, 'h' }, { NULL, 0, NULL, 0 }
 };
 
+void pp_error_handler_exit(char const* errstr, char const* msg)
+{
+  fprintf(stderr, "%s\n  %s\n\n", msg, errstr);
+  exit(1);
+}
+
+void pp_warn_handler_print(char const* errstr, char const* msg)
+{
+  fprintf(stderr, "%s\n  %s\n\n", msg, errstr);
+}
+
 int main(int argc, char** argv)
 {
   int optc;
@@ -92,23 +103,26 @@ int main(int argc, char** argv)
     }
   }
 
+  pubmedparser_set_error_handler(pp_error_handler_exit);
+  pubmedparser_set_warn_handler(pp_warn_handler_print);
+
   char** files = argv + optind;
   size_t n_files = (size_t)(argc - optind);
 
   path_struct structure = parse_structure_file(structure_file, STR_MAX);
 
-  int status = 0;
+  size_t n_failed = 0;
   if (n_files == 0) {
     *files = strdup("-");
-    status = read_xml(
+    n_failed = read_xml(
       files, 1, structure, cache_dir, overwrite_cache, progress_file, 1);
     free(*files);
   } else {
-    status = read_xml(files, n_files, structure, cache_dir, overwrite_cache,
+    n_failed = read_xml(files, n_files, structure, cache_dir, overwrite_cache,
       progress_file, n_threads);
   }
 
   path_struct_destroy(structure);
 
-  return status;
+  return n_failed;
 }
