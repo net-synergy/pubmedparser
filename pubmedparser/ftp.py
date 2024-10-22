@@ -37,6 +37,10 @@ def _download_files(
 
             time.sleep(0.1)
             _download_i(file_name, i + 1, max_tries)
+        except KeyboardInterrupt as err:
+            os.unlink(in_cache(file_name))
+            os.unlink(in_cache(f"{file_name}.md5"))
+            raise err
 
     with FTP(BASE_URL) as ftp:
         ftp.login()
