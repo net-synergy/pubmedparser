@@ -14,6 +14,7 @@ include = [ "include", "src" ]
 [tool.poetry.dependencies]
 python = "^3.10"
 appdirs = "^1.4.4"
+psutil = "^6.1.0"
 
 [tool.poetry.group.dev]
 optional = true

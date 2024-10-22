@@ -8,6 +8,18 @@
 
 #define STRMAX 10000
 
+static char** files;
+static path_struct ps;
+size_t n_files;
+
+static void file_list_destroy(char*** files, size_t n_files)
+{
+  for (size_t i = 0; i < n_files; i++) {
+    free((*files)[i]);
+  }
+  free(*files);
+}
+
 static void py_warning_handler(char const* errstr, char const* msg)
 {
   char buff[4096];
@@ -21,6 +33,10 @@ static void py_error_handler(char const* errstr, char const* msg)
     pubmedparser_get_oom() ? PyExc_MemoryError : PyExc_RuntimeError;
   char buff[4096];
   snprintf(buff, sizeof(buff), "%s\n  %s\n", msg, errstr);
+
+  file_list_destroy(&files, n_files);
+  path_struct_destroy(ps);
+
   PyErr_SetString(exc, buff);
 }
 
@@ -43,51 +59,28 @@ static void parse_file_list(PyObject* py_files, char*** files, size_t* n_files)
   }
 }
 
-static void destroy_file_list(char*** files, size_t n_files)
-{
-  for (size_t i = 0; i < n_files; i++) {
-    free((*files)[i]);
-  }
-  free(*files);
-}
-
-static size_t determine_n_threads(int n_threads)
-{
-  return 1;
-  /* size_t n_threads_i = (size_t)n_threads; */
-  /* if (n_threads == -1) { */
-  /*   return 1; */
-  /* } */
-  /* return n_threads_i; */
-}
-
 static PyObject* read_xml_from_structure_file(PyObject* _, PyObject* args)
 {
-  PyObject* files;
+  PyObject* files_obj;
   char const* structure_file;
   char const* cache_dir = "";
   char const* progress_file = "";
   int const n_threads = 0;
   int const overwrite_cache = 0;
-  char** files_i;
-  size_t n_threads_i;
-  size_t n_files_i;
-  path_struct ps;
 
-  if (!PyArg_ParseTuple(args, "Osssip", &files, &structure_file, &cache_dir,
-        &progress_file, &n_threads, &overwrite_cache)) {
+  if (!PyArg_ParseTuple(args, "Osssip", &files_obj, &structure_file,
+        &cache_dir, &progress_file, &n_threads, &overwrite_cache)) {
     return NULL;
   }
 
   pubmedparser_set_error_handler(py_error_handler);
   pubmedparser_set_warn_handler(py_warning_handler);
 
-  parse_file_list(files, &files_i, &n_files_i);
-  n_threads_i = determine_n_threads(n_threads);
+  parse_file_list(files_obj, &files, &n_files);
   ps = parse_structure_file(structure_file, STRMAX);
-  read_xml(files_i, n_files_i, ps, cache_dir, overwrite_cache, progress_file,
-    n_threads_i);
-  destroy_file_list(&files_i, n_files_i);
+  read_xml(
+    files, n_files, ps, cache_dir, overwrite_cache, progress_file, n_threads);
+  file_list_destroy(&files, n_files);
   path_struct_destroy(ps);
 
   Py_RETURN_NONE;
@@ -172,30 +165,25 @@ static path_struct parse_structure_dictionary(PyObject* structure_dict)
 static PyObject* read_xml_from_structure_dictionary(
   PyObject* _, PyObject* args)
 {
-  PyObject* files;
+  PyObject* files_obj;
   PyObject* structure_dict;
   char const* cache_dir = "";
   char const* progress_file = "";
   int const n_threads = 0;
   int const overwrite_cache = 0;
-  char** files_i;
-  size_t n_threads_i;
-  size_t n_files_i;
-  path_struct ps;
 
-  if (!PyArg_ParseTuple(args, "OOssip", &files, &structure_dict, &cache_dir,
-        &progress_file, &n_threads, &overwrite_cache)) {
+  if (!PyArg_ParseTuple(args, "OOssip", &files_obj, &structure_dict,
+        &cache_dir, &progress_file, &n_threads, &overwrite_cache)) {
     return NULL;
   }
 
   pubmedparser_set_error_handler(py_error_handler);
 
-  parse_file_list(files, &files_i, &n_files_i);
-  n_threads_i = determine_n_threads(n_threads);
+  parse_file_list(files_obj, &files, &n_files);
   ps = parse_structure_dictionary(structure_dict);
-  read_xml(files_i, n_files_i, ps, cache_dir, overwrite_cache, progress_file,
-    n_threads_i);
-  destroy_file_list(&files_i, n_files_i);
+  read_xml(
+    files, n_files, ps, cache_dir, overwrite_cache, progress_file, n_threads);
+  file_list_destroy(&files, n_files);
   path_struct_destroy(ps);
 
   Py_RETURN_NONE;

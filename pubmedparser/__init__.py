@@ -1,6 +1,8 @@
 import importlib.metadata
 import os
 
+import psutil
+
 from ._readxml import from_structure_dictionary as _read_xml_from_dictionary
 from ._readxml import from_structure_file as _read_xml_from_structure_file
 from .storage import default_data_dir
@@ -57,7 +59,11 @@ def read_xml(
         If not none, save successfully parsed files to the progress file. If
         the file already exists, only files not listed in it will be read.
     n_threads : int, default -1
-        Number of files to process in parallel. If -1, use system default.
+        Number of files to process in parallel. If -1, use 1 thread per
+        available CPU (if hyper-threading is available this is the number of
+        logical CPUs not physical CPUs). If the number of files to be processed
+        is less than the requested number of threads, n_threads is reduced to
+        number of files.
     mode : str {"append", "write"}
         If "write", write over the old collected results, otherwise append to
         the end. In either case, only xml files that haven't been processed yet
@@ -73,6 +79,7 @@ def read_xml(
     Returns
     -------
     data_dir : the location the collected data was written to.
+
     """
     if isinstance(files, str):
         if os.path.isdir(files):
@@ -91,6 +98,9 @@ def read_xml(
         overwrite_cache = False
     else:
         raise KeyError(f'Mode should be "append" or "write" got {mode}')
+
+    if n_threads == -1:
+        n_threads = len(psutil.Process().cpu_affinity())
 
     files = [f for f in files if f.endswith(exts)]
     if reprocess_all:

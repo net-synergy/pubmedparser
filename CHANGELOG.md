@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Support for multi-threading using pthreads.
+
 ### Changed
 
 - Move error handling to externally defined error handlers (i.e. so the python interface can define a python friendly error handler).

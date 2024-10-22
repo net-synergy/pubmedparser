@@ -8,10 +8,12 @@ export PYTHON_MODULE := $(ROOT)/pubmedparser
 export CFLAGS += -fPIC -Wall -Wextra -O3
 
 FILES ?= $(wildcard  data/*)
+NTHREADS ?= 1
 
 example := $(BIN_DIR)/read_xml --cache=cache \
 	--structure-file=example/structure.yml \
 	--overwrite-cache \
+	--num-threads $(NTHREADS) \
 	$(FILES)
 
 .PHONY: all

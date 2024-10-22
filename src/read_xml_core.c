@@ -2,17 +2,26 @@
 #include "nodes.h"
 #include "paths.h"
 #include "structure.h"
-#include "sys/types.h"
 
 #include <dirent.h>
 #include <errno.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <time.h>
 #include <zlib.h>
 
 #define STR_MAX 10000
+
+#define WAIT(ms)                                                              \
+  struct timespec pause = {                                                   \
+    .tv_sec = 0,                                                              \
+    .tv_nsec = (ms) * 1000000,                                                \
+  };                                                                          \
+  nanosleep(&pause, NULL)
 
 #define OUT_OF_ROOT_SCOPE(tag, ns)                                            \
   (tag)->is_close && (strcmp((tag)->value, (ns)->root) == 0)
@@ -25,6 +34,10 @@
       continue;                                                               \
     }                                                                         \
   }
+
+static pthread_mutex_t progress_mutex;
+static size_t threads_finished = 0;
+static pp_errno global_status = PP_SUCCESS; // Stores fatal errors.
 
 static char* ensure_path_ends_with_slash(char const* p)
 {
@@ -54,8 +67,8 @@ static char* expand_file(char const* filename, char const* dirname)
 #define CHECK(expr)                                                           \
   rs = (expr);                                                                \
   do {                                                                        \
-    if (rs != PP_SUCCESS) {                                                   \
-      goto cleanup;                                                           \
+    if (global_status != PP_SUCCESS || rs != PP_SUCCESS) {                    \
+      goto cleanup_file;                                                      \
     }                                                                         \
   } while (0)
 
@@ -126,45 +139,86 @@ static pp_errno parse_file_i(gzFile fptr, node_set* ns, tag* current_tag)
 
   rs = path_is_empty(current_path) ? PP_SUCCESS : PP_ERR_TAG_MISMATCH;
 
-cleanup:
+cleanup_file:
   path_destroy(current_path);
 
   return rs;
 }
 
-static pp_errno parse_file(char const* input, node_set* ns)
+struct parse_params {
+  size_t tid;
+  size_t iter;
+  size_t n_threads;
+  pp_errno status;
+  char** files;
+  size_t n_files;
+  node_set* ns;
+  FILE* progress_ptr;
+};
+
+static void* parse_files(void* parameters)
 {
-  gzFile fptr;
-  if (strcmp(input, "-") == 0) {
-    fptr = gzdopen(fileno(stdin), "rb");
-  } else {
-    fptr = gzopen(input, "rb");
+  struct parse_params* p = (struct parse_params*)parameters;
+
+  for (p->iter = p->tid; p->iter < p->n_files; p->iter += p->n_threads) {
+    node_set_mark(p->ns);
+    printf("Starting iter: %zu, from thread: %zu\n", p->iter, p->tid);
+
+    gzFile fptr;
+    if (strcmp(p->files[p->iter], "-") == 0) {
+      fptr = gzdopen(fileno(stdin), "rb");
+    } else {
+      fptr = gzopen(p->files[p->iter], "rb");
+    }
+
+    if (!fptr) {
+      p->status = PP_ERR_FILE_NOT_FOUND;
+      goto clean_iter;
+    }
+
+    char s[STR_MAX] = "\0";
+    tag current_tag = {
+      .value = s,
+      .buff_size = STR_MAX,
+      .is_close = false,
+      .is_empty = false,
+      .was_prev_empty = false,
+    };
+
+    p->status = parse_file_i(fptr, p->ns, &current_tag);
+    gzclose(fptr);
+
+clean_iter:
+    if (global_status != PP_SUCCESS) {
+      node_set_rewind(p->ns);
+      break;
+    }
+
+    if (p->status != PP_SUCCESS) {
+      node_set_rewind(p->ns);
+      // Main thread will reset status to success after handling error.
+      while (p->status != PP_SUCCESS) {
+        WAIT(32);
+      }
+    } else {
+      pthread_mutex_lock(&progress_mutex);
+      fprintf(p->progress_ptr, "%s\n", p->files[p->iter]);
+      pthread_mutex_unlock(&progress_mutex);
+    }
   }
 
-  if (!fptr) {
-    PP_RETURN_ERROR_WITH_MSG(PP_ERR_FILE_NOT_FOUND, "%s", input);
-  }
+  pthread_mutex_lock(&progress_mutex);
+  threads_finished++;
+  pthread_mutex_unlock(&progress_mutex);
 
-  char s[STR_MAX] = "\0";
-  tag current_tag = {
-    .value = s,
-    .buff_size = STR_MAX,
-    .is_close = false,
-    .is_empty = false,
-    .was_prev_empty = false,
-  };
-
-  pp_errno status = parse_file_i(fptr, ns, &current_tag);
-  gzclose(fptr);
-
-  return status;
+  return NULL;
 }
 
 /* Used after new file has been written to, so should only be at position 0 if
 nothing was written. */
 static inline bool is_empty_file(FILE* f) { return ftell(f) == 0; }
 
-void cat_concat_file_i(
+static void cat_concat_file_i(
   char const* file_prefix, char const* cache_dir, int const n_threads)
 {
   char file_name[STR_MAX];
@@ -191,17 +245,22 @@ void cat_concat_file_i(
   free(agg_file_name);
 }
 
-void cat_delete_empty_files_i(char const* file_prefix, char const* cache_dir)
-{
-  char file_name[STR_MAX];
-  snprintf(file_name, STR_MAX, "%s%s.tsv", cache_dir, file_prefix);
-  FILE* fptr = fopen(file_name, "r");
-  fseek(fptr, 0L, SEEK_END);
+struct cat_params {
+  size_t tid;
+  char** node_names;
+  char* cache_dir;
+  size_t n_threads;
+  size_t n_nodes;
+};
 
-  if (ftell(fptr) == 0) {
-    remove(file_name);
+static void* thread_cat_concat_files(void* parameters)
+{
+  struct cat_params* p = (struct cat_params*)parameters;
+  for (size_t i = p->tid; i < p->n_nodes; i += p->n_threads) {
+    cat_concat_file_i(p->node_names[i], p->cache_dir, p->n_threads);
   }
-  fclose(fptr);
+
+  return NULL;
 }
 
 static size_t cat_count_flat_nodes_i(node_set const* ns)
@@ -249,14 +308,30 @@ static void cat_flatten_node_list_i(
    the extra processor specific files. Additionally, some files that are opened
    for writing are not used, these files will also be cleaned up.
  */
-static void cat(node_set const* ns, char const* cache_dir, int const n_threads)
+static void cat(
+  node_set const* ns, char const* cache_dir, size_t const n_threads)
 {
   char** node_names;
   size_t n_nodes;
   cat_flatten_node_list_i(ns, &node_names, &n_nodes);
-  /* #pragma omp parallel for */
-  for (size_t i = 0; i < n_nodes; i++) {
-    cat_concat_file_i(node_names[i], cache_dir, n_threads);
+
+  pthread_t threads[n_threads];
+  struct cat_params params[n_threads];
+  for (size_t i = 0; i < n_threads; i++) {
+    params[i].tid = i;
+    params[i].node_names = node_names;
+    params[i].cache_dir = (char*)cache_dir;
+    params[i].n_threads = n_threads;
+    params[i].n_nodes = n_nodes;
+  }
+
+  for (size_t i = 0; i < n_threads; i++) {
+    pthread_create(
+      &threads[i], NULL, thread_cat_concat_files, (void*)&params[i]);
+  }
+
+  for (size_t i = 0; i < n_threads; i++) {
+    pthread_join(threads[i], NULL);
   }
 
   for (size_t i = 0; i < n_nodes; i++) {
@@ -337,6 +412,7 @@ int read_xml(char** files, size_t const n_files, path_struct const ps,
   char* cache_dir_i = ensure_path_ends_with_slash(cache_dir);
   char* parsed;
   FILE* progress_ptr;
+  size_t n_threads_i = n_threads > n_files ? n_files : n_threads;
 
   if ((mkdir_and_parents(cache_dir_i, 0777)) < 0) {
     pubmedparser_error(0, "%s", "Failed to make cache directory.");
@@ -358,25 +434,45 @@ int read_xml(char** files, size_t const n_files, path_struct const ps,
 
   node_set* ns =
     node_set_generate(ps, NULL, cache_dir_i, overwrite_cache, STR_MAX);
-  node_set* ns_dup[n_threads];
-  for (size_t i = 0; i < n_threads; i++) {
-    ns_dup[i] = node_set_clone(ns, cache_dir_i, i, STR_MAX);
-  }
 
   node_set_write_headers(ns, STR_MAX);
 
-  size_t n_failed = 0;
-  for (size_t i = 0; i < n_files; i++) {
-    node_set_mark(ns_dup[0]);
-    pp_errno status = parse_file(files[i], ns_dup[0]);
+  pthread_t threads[n_threads_i];
+  pthread_mutex_init(&progress_mutex, NULL);
+  struct parse_params params[n_threads_i];
+  for (size_t i = 0; i < n_threads_i; i++) {
+    params[i].tid = i;
+    params[i].iter = 0;
+    params[i].n_threads = n_threads_i;
+    params[i].status = PP_SUCCESS;
+    params[i].files = files;
+    params[i].n_files = n_files;
+    params[i].ns = node_set_clone(ns, cache_dir_i, i, STR_MAX);
+    params[i].progress_ptr = progress_ptr;
+  }
 
-    if (status != PP_SUCCESS) {
-      pubmedparser_warn(status, "Error in file %s:", files[i]);
-      node_set_rewind(ns_dup[0]);
-      n_failed++;
-    } else {
-      fprintf(progress_ptr, "%s\n", files[i]);
+  size_t n_failed = 0;
+  for (size_t i = 0; i < n_threads_i; i++) {
+    pthread_create(&threads[i], NULL, parse_files, (void*)&params[i]);
+  }
+
+  while (threads_finished < n_threads_i) {
+    WAIT(64);
+    for (size_t i = 0; i < n_threads_i; i++) {
+      if (params[i].status == PP_ERR_OOM) {
+        global_status = params[i].status;
+        goto cleanup;
+      } else if (params[i].status != PP_SUCCESS) {
+        pubmedparser_warn(
+          params[i].status, "Error in file %s:", files[params[i].iter]);
+        params[i].status = PP_SUCCESS;
+        n_failed++;
+      }
     }
+  }
+
+  for (size_t i = 0; i < n_threads_i; i++) {
+    pthread_join(threads[i], NULL);
   }
 
   if (n_failed > 0) {
@@ -384,14 +480,20 @@ int read_xml(char** files, size_t const n_files, path_struct const ps,
       0, "Failed to parse %zu file%s.", n_failed, n_failed > 1 ? "s" : "");
   }
 
-  for (size_t i = 0; i < n_threads; i++) {
-    node_set_destroy(ns_dup[i]);
+cleanup:
+  for (size_t i = 0; i < n_threads_i; i++) {
+    node_set_destroy(params[i].ns);
   }
   fclose(progress_ptr);
+  pthread_mutex_destroy(&progress_mutex);
 
-  cat(ns, cache_dir_i, n_threads);
+  cat(ns, cache_dir_i, n_threads_i);
   node_set_destroy(ns);
   free(cache_dir_i);
+
+  if (global_status != PP_SUCCESS) {
+    pubmedparser_error(global_status, "%s\n", "Fatal error:");
+  }
 
   return PP_SUCCESS;
 }
