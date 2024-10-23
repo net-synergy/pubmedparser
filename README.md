@@ -8,7 +8,7 @@ Files can be passed as either gzipped or uncompressed XML files or from
 standard in.
 
 For more info on Pubmed's XML files see:
-[pubmed<sub>190101</sub>.dtd.](https://dtd.nlm.nih.gov/ncbi/pubmed/doc/out/190101/index.html)
+[pubmed\_190101\_.dtd.](https://dtd.nlm.nih.gov/ncbi/pubmed/doc/out/190101/index.html)
 
 Usage:
 
@@ -49,7 +49,7 @@ pip install pubmedparser2
 
 Requires `zlib`.
 
-Clone the repository and in the directory. Then use [poetry](https://python-poetry.org/docs) to install the dependencies.
+Clone the repository and cd into the directory. Then use [poetry](https://python-poetry.org/docs) to install the dependencies.
 
 ``` bash
 poetry install
@@ -226,36 +226,3 @@ structure = {
 
 This can then be passed to `pubmedparser.read_xml` in place of the
 structure file.
-
-# Future goals
-
-## Improve printing logic
-
-Currently, values are printed as they are read in. Since the results for
-the different paths are written to separate files, this shouldn't
-matter, except for the case of the key. The key is not printed to its
-own results file, instead whatever the last seen key was is printed as
-the key for the current value being printed. If the key is not the first
-element to be read in the subtree, there will be a mismatch between
-value and publication ID.
-
-In the case of `PMID` this is consistently the first element, so there
-should not be a problem, however, it could be in other scenarios.
-
-## Error handling
-
-After refactoring the code, I have started adding some error handling
-code, however this has not been consistently applied. Ideally, the
-default behavior will be for functions to return error codes. Then use
-an error checking macro to test that the result was not an error. I
-would also like to add a set error strings that would be printed
-depending on the error code. Possibly use a structure to represent
-errors so that the erroring function could supply an additional string
-along with the error.
-
-Better error handling like this could also allow the python package to
-write it's own error handling function in the C API to override the
-default error mechanism to use python level errors. This would be done
-by testing if an error handler function was defined, if so the error
-checking macro would use that function, otherwise it would fallback to a
-default function.
