@@ -29,17 +29,18 @@ lib:
 
 .PHONY: python
 python:
-	python setup.py develop --editable -b build
+	poetry build
+	poetry install
 
 .PHONY: clean
 clean:
-	rm -f $(PYTHON_MODULE)/_*.so
 	rm -rf build/temp*
 	rm -f vgcore.*
 	@cd $(SRC_DIR); $(MAKE) clean
 
 .PHONY: clean-dist
 clean-dist: clean
+	rm -f $(PYTHON_MODULE)/_*.so
 	rm -rf dist
 	rm -rf build
 	rm -rf cache
