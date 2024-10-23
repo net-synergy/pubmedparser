@@ -1,4 +1,5 @@
 #include "error.h"
+#include "read_xml.h"
 #include "structure.h"
 #include "yaml_reader.h"
 
@@ -12,11 +13,12 @@ static void get_names(FILE* fptr, int const fpos, char*** names,
   size_t* n_names, size_t const str_max)
 {
   *n_names = 0;
-  int rc = 0;
+  pp_errno rc = 0;
 
   rc = yaml_get_keys(fptr, names, n_names, fpos, str_max);
-  if (rc > 0) {
+  if (rc != PP_SUCCESS) {
     pubmedparser_error(rc, "Error reading keys from structure file");
+    return;
   }
 
   char** keys = *names;
@@ -27,6 +29,7 @@ static void get_names(FILE* fptr, int const fpos, char*** names,
   if (i == *n_names) {
     pubmedparser_error(
       PP_ERR_KEY, "Structure file must contain a key named \"root\".");
+    return;
   }
 
   char* swap = NULL;
@@ -42,6 +45,7 @@ static void get_names(FILE* fptr, int const fpos, char*** names,
   if (i == *n_names) {
     pubmedparser_error(
       PP_ERR_KEY, "Structure file must contain a key named \"key\".");
+    return;
   }
 
   for (size_t j = i; j > 1; j--) {
@@ -56,29 +60,27 @@ static void get_names(FILE* fptr, int const fpos, char*** names,
 static path_struct read_element(FILE* fptr, char const* name,
   path_struct parent, int const fpos, size_t const str_max)
 {
-  struct PathStructure el_init;
+  path_struct element = malloc(sizeof(*element));
+  if (!element) {
+    pubmedparser_error(PP_ERR_OOM, "");
+    return NULL;
+  }
 
-  el_init.name = strdup(name);
-  el_init.parent = parent;
+  element->name = strdup(name);
+  element->parent = parent;
 
   if (yaml_map_value_is_singleton(fptr, name, fpos, str_max)) {
     char xml_path[str_max];
     yaml_get_map_value(fptr, name, xml_path, fpos, str_max);
-    el_init.path = strdup(xml_path);
-    el_init.children = NULL;
-    el_init.n_children = 0;
+    element->path = strdup(xml_path);
+    element->children = NULL;
+    element->n_children = 0;
   } else {
-    el_init.path = NULL;
+    element->path = NULL;
     int fpos = ftell(fptr);
-    read_elements(fptr, &el_init, fpos, str_max);
+    read_elements(fptr, element, fpos, str_max);
   }
 
-  path_struct element = malloc(sizeof(*element));
-  if (!element) {
-    pubmedparser_error(PP_ERR_OOM, "");
-  }
-
-  memcpy(element, &el_init, sizeof(*element));
   return element;
 }
 
@@ -93,6 +95,7 @@ static void read_elements(
   path_struct* children = malloc(sizeof(*children) * n_names);
   if (!children) {
     pubmedparser_error(PP_ERR_OOM, "");
+    return;
   }
 
   for (size_t i = 0; i < n_names; i++) {
@@ -101,6 +104,9 @@ static void read_elements(
   parent->children = children;
   parent->n_children = n_names;
 
+  for (size_t i = 0; i < n_names; i++) {
+    free(names[i]);
+  }
   free(names);
 }
 
@@ -130,23 +136,24 @@ path_struct parse_structure_file(
   char const* structure_file, size_t const str_max)
 {
   FILE* fptr;
-  struct PathStructure top;
-  top.name = strdup("top");
-  top.parent = NULL;
-  top.path = NULL;
+  path_struct ret = malloc(sizeof(*ret));
+  ret->path = NULL;
+  ret->children = NULL;
+
+  if (!ret) {
+    pubmedparser_error(PP_ERR_OOM, "");
+    return NULL;
+  }
+
+  ret->name = strdup("top");
 
   if (!(fptr = fopen(structure_file, "r"))) {
     pubmedparser_error(0, "Could not open structure file.");
+    return NULL;
   }
 
-  read_elements(fptr, &top, 0, str_max);
+  read_elements(fptr, ret, 0, str_max);
 
-  path_struct ret = malloc(sizeof(*ret));
-  if (!ret) {
-    pubmedparser_error(PP_ERR_OOM, "");
-  }
-
-  memcpy(ret, &top, sizeof(*ret));
   return ret;
 };
 
@@ -155,9 +162,10 @@ void path_struct_destroy(path_struct ps)
   for (size_t i = 0; i < ps->n_children; i++) {
     path_struct_destroy(ps->children[i]);
   }
+  free(ps->children);
 
   free(ps->name);
-  if (ps->path != NULL) {
+  if (ps->path) {
     free(ps->path);
   }
 

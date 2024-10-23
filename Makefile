@@ -40,9 +40,9 @@ clean:
 
 .PHONY: clean-dist
 clean-dist: clean
-	@rm -rf dist
-	@rm -rf build
-	@rm -rf cache
+	rm -rf dist
+	rm -rf build
+	rm -rf cache
 
 .PHONY: check
 check: cli
@@ -58,6 +58,7 @@ debug: cli
 
 .PHONY: valgrind
 valgrind: debug
+	@rm -f vgcore.*
 	valgrind --track-origins=yes --leak-check=full $(example)
 
 .PHONY: asan

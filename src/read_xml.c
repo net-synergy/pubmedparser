@@ -3,6 +3,7 @@
 #include "structure.h"
 
 #include <getopt.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -55,19 +56,29 @@ static struct option const longopts[] = {
   { "help", no_argument, NULL, 'h' }, { NULL, 0, NULL, 0 }
 };
 
-void pp_error_handler_exit(char const* errstr, char const* msg)
+static void pp_error_handler_exit(
+  pp_errno const _, char const* errstr, char const* msg)
 {
   fprintf(stderr, "%s\n  %s\n\n", msg, errstr);
   exit(1);
 }
 
-void pp_warn_handler_print(char const* errstr, char const* msg)
+static void pp_warn_handler_print(
+  pp_errno const _, char const* errstr, char const* msg)
 {
   fprintf(stderr, "%s\n  %s\n\n", msg, errstr);
 }
 
+static int interruption = 0;
+
+static void signal_handler(int sig) { interruption = sig == SIGINT; }
+
+static int pp_interruption_handler(void) { return interruption; }
+
 int main(int argc, char** argv)
 {
+  signal(SIGINT, signal_handler);
+
   int optc;
   char* structure_file = "structure.yml";
   char* cache_dir = "cache/";
@@ -105,6 +116,7 @@ int main(int argc, char** argv)
 
   pubmedparser_set_error_handler(pp_error_handler_exit);
   pubmedparser_set_warn_handler(pp_warn_handler_print);
+  pubmedparser_set_interruption_handler(pp_interruption_handler);
 
   char** files = argv + optind;
   size_t n_files = (size_t)(argc - optind);

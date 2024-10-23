@@ -1,6 +1,7 @@
 #include "error.h"
 #include "nodes.h"
 #include "paths.h"
+#include "read_xml.h"
 #include "structure.h"
 
 #include <dirent.h>
@@ -50,7 +51,7 @@ static char* ensure_path_ends_with_slash(char const* p)
   str_len--;
 
   if (out[str_len] != '/') {
-    strncat(out, "/", STR_MAX);
+    strncat(out, "/", STR_MAX - strlen(out));
   }
 
   return out;
@@ -67,7 +68,7 @@ static char* expand_file(char const* filename, char const* dirname)
 #define CHECK(expr)                                                           \
   rs = (expr);                                                                \
   do {                                                                        \
-    if (global_status != PP_SUCCESS || rs != PP_SUCCESS) {                    \
+    if ((global_status != PP_SUCCESS) || (rs != PP_SUCCESS)) {                \
       goto cleanup_file;                                                      \
     }                                                                         \
   } while (0)
@@ -162,7 +163,6 @@ static void* parse_files(void* parameters)
 
   for (p->iter = p->tid; p->iter < p->n_files; p->iter += p->n_threads) {
     node_set_mark(p->ns);
-    printf("Starting iter: %zu, from thread: %zu\n", p->iter, p->tid);
 
     gzFile fptr;
     if (strcmp(p->files[p->iter], "-") == 0) {
@@ -228,7 +228,7 @@ static void cat_concat_file_i(
 
   for (int i = 0; i < n_threads; i++) {
     snprintf(file_name, STR_MAX, "%s%s_%d.tsv", cache_dir, file_prefix, i);
-    FILE* processor_file = fopen(file_name, "r");
+    FILE* processor_file = fopen(file_name, "rb");
     char c = '\0';
     while ((c = getc(processor_file)) != PP_EOF) {
       putc(c, aggregate_file);
@@ -416,13 +416,15 @@ int read_xml(char** files, size_t const n_files, path_struct const ps,
 
   if ((mkdir_and_parents(cache_dir_i, 0777)) < 0) {
     pubmedparser_error(0, "%s", "Failed to make cache directory.");
+    free(cache_dir_i);
+    return -1;
   }
 
-  if ((progress_file != NULL) ||
+  if ((progress_file == NULL) ||
       ((n_files == 1) && (strcmp(files[0], "-") == 0))) {
-    parsed = expand_file(progress_file, cache_dir_i);
-  } else {
     parsed = strdup("/dev/null");
+  } else {
+    parsed = expand_file(progress_file, cache_dir_i);
   }
 
   progress_ptr = fopen(parsed, "a");
@@ -430,6 +432,8 @@ int read_xml(char** files, size_t const n_files, path_struct const ps,
   if (!progress_ptr) {
     pubmedparser_error(
       PP_ERR_FILE_NOT_FOUND, "%s", "Failed to open progress file.");
+    free(cache_dir_i);
+    return -1;
   }
 
   node_set* ns =
@@ -458,11 +462,18 @@ int read_xml(char** files, size_t const n_files, path_struct const ps,
 
   while (threads_finished < n_threads_i) {
     WAIT(64);
+    if (pubmedparser_interruption()) {
+      global_status = PP_INTERRUPTION;
+      goto cleanup;
+    }
+
     for (size_t i = 0; i < n_threads_i; i++) {
       if (params[i].status == PP_ERR_OOM) {
         global_status = params[i].status;
         goto cleanup;
-      } else if (params[i].status != PP_SUCCESS) {
+      }
+
+      if (params[i].status != PP_SUCCESS) {
         pubmedparser_warn(
           params[i].status, "Error in file %s:", files[params[i].iter]);
         params[i].status = PP_SUCCESS;
@@ -471,6 +482,7 @@ int read_xml(char** files, size_t const n_files, path_struct const ps,
     }
   }
 
+cleanup:
   for (size_t i = 0; i < n_threads_i; i++) {
     pthread_join(threads[i], NULL);
   }
@@ -480,7 +492,6 @@ int read_xml(char** files, size_t const n_files, path_struct const ps,
       0, "Failed to parse %zu file%s.", n_failed, n_failed > 1 ? "s" : "");
   }
 
-cleanup:
   for (size_t i = 0; i < n_threads_i; i++) {
     node_set_destroy(params[i].ns);
   }
@@ -495,5 +506,5 @@ cleanup:
     pubmedparser_error(global_status, "%s\n", "Fatal error:");
   }
 
-  return PP_SUCCESS;
+  return global_status;
 }

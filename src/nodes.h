@@ -11,8 +11,6 @@
    leftover data remains in the out file. */
 #define PP_EOF '\0'
 
-enum { CACHE_APPEND = 0, CACHE_OVERWRITE };
-
 typedef enum KeyTypes { IDX_NORMAL = 0, IDX_AUTO, IDX_CONDENSE } keytype;
 
 typedef struct Key {

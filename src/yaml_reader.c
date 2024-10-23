@@ -1,6 +1,7 @@
 #include "yaml_reader.h"
 
 #include "error.h"
+#include "read_xml.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -22,7 +23,7 @@ static void yaml_rewind_to_start_of_line(FILE* fptr)
   };
 }
 
-static pp_errno yaml_get_key(char* buffer, size_t const max_size, FILE* fptr)
+static int yaml_get_key(char* buffer, size_t const max_size, FILE* fptr)
 {
   char c;
 
@@ -47,6 +48,7 @@ static pp_errno yaml_get_key(char* buffer, size_t const max_size, FILE* fptr)
     pubmedparser_error(PP_ERR_BUFFER_OVERFLOW, "%s",
       "Buffer too small to fit key. Increase buffer size to get "
       "entire key.");
+    return EOF - 1;
   }
 
   return c;
@@ -62,6 +64,7 @@ static int yaml_get_value(char* buffer, size_t const max_size, FILE* fptr)
 
   if (c == '}' || c == EOF || c == '\n') {
     pubmedparser_error(PP_ERR_VALUE, "%s", "Found malformed value.");
+    return EOF - 1;
   }
 
   if (c == '{') {
@@ -88,12 +91,14 @@ static int yaml_get_value(char* buffer, size_t const max_size, FILE* fptr)
 
   if (c == EOF) {
     pubmedparser_error(PP_ERR_EOF, "");
+    return EOF - 1;
   }
 
   if (i == max_size) {
     buffer[i - 1] = '\0';
     pubmedparser_error(PP_ERR_BUFFER_OVERFLOW, "%s",
       "Value was larger than buffer. Increase buffer size to get full value.");
+    return EOF - 1;
   }
 
   while (ISWHITESPACE(buffer[i - 1])) {
@@ -103,6 +108,7 @@ static int yaml_get_value(char* buffer, size_t const max_size, FILE* fptr)
 
   if (c == EOF) {
     pubmedparser_error(PP_ERR_EOF, "");
+    return EOF - 1;
   }
 
   return c;
@@ -137,8 +143,8 @@ static int next_line_depth(FILE* fptr)
   return depth;
 }
 
-int yaml_get_keys(FILE* fptr, char*** keys, size_t* n_keys, int const start,
-  size_t const str_max)
+pp_errno yaml_get_keys(FILE* fptr, char*** keys, size_t* n_keys,
+  int const start, size_t const str_max)
 {
   fseek(fptr, start, SEEK_SET);
   char buff[str_max];
@@ -154,6 +160,9 @@ int yaml_get_keys(FILE* fptr, char*** keys, size_t* n_keys, int const start,
   int depth = initial_depth;
   while (((c = yaml_get_key(buff, str_max, fptr)) != EOF) &&
          (depth >= initial_depth)) {
+    if (c == (EOF - 1)) {
+      return c;
+    }
     (*n_keys)++;
 
     do {
@@ -165,16 +174,21 @@ int yaml_get_keys(FILE* fptr, char*** keys, size_t* n_keys, int const start,
     pubmedparser_error(PP_ERR_EOF, "%s",
       "End of file while parsing key value in structure file\n. "
       "Possibly a missing \"}\"");
+    return PP_ERR_EOF;
   }
 
   *keys = malloc(sizeof **keys * (*n_keys));
   if (!keys) {
     pubmedparser_error(PP_ERR_OOM, "");
+    return EOF - 1;
   }
 
   fseek(fptr, start, SEEK_SET);
   for (size_t k = 0; k < (*n_keys); k++) {
     c = yaml_get_key(buff, str_max, fptr);
+    if (c == (EOF - 1)) {
+      return c;
+    }
     (*keys)[k] = strdup(buff);
 
     do {
@@ -186,7 +200,7 @@ int yaml_get_keys(FILE* fptr, char*** keys, size_t* n_keys, int const start,
     } while ((depth > initial_depth));
   }
 
-  return EXIT_SUCCESS;
+  return PP_SUCCESS;
 }
 
 static void yaml_ff_to_key(
@@ -206,11 +220,11 @@ static void yaml_ff_to_key(
   }
 }
 
-void yaml_get_map_value(FILE* fptr, char const* key, char* value,
+pp_errno yaml_get_map_value(FILE* fptr, char const* key, char* value,
   int const start, size_t const str_max)
 {
   yaml_ff_to_key(fptr, key, start, str_max);
-  yaml_get_value(value, str_max, fptr);
+  return yaml_get_value(value, str_max, fptr);
 }
 
 int yaml_map_value_is_singleton(
@@ -225,6 +239,7 @@ int yaml_map_value_is_singleton(
 
   if (c == EOF) {
     pubmedparser_error(PP_ERR_EOF, "");
+    return EOF - 1;
   }
 
   return c == '{' ? 0 : 1;

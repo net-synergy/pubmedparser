@@ -8,10 +8,6 @@
 
 #define STRMAX 10000
 
-static char** files;
-static path_struct ps;
-size_t n_files;
-
 static void file_list_destroy(char*** files, size_t n_files)
 {
   for (size_t i = 0; i < n_files; i++) {
@@ -20,31 +16,43 @@ static void file_list_destroy(char*** files, size_t n_files)
   free(*files);
 }
 
-static void py_warning_handler(char const* errstr, char const* msg)
+#define py_set_handlers()                                                     \
+  pubmedparser_set_error_handler(py_error_handler);                           \
+  pubmedparser_set_warn_handler(py_warning_handler);                          \
+  pubmedparser_set_interruption_handler(py_interruption_handler)
+
+static void py_warning_handler(
+  pp_errno const _, char const* errstr, char const* msg)
 {
   char buff[4096];
-  snprintf(buff, sizeof(buff), "%s\n  %s\n", msg, errstr);
+  snprintf(buff, sizeof(buff) - 1, "%s\n  %s\n", msg, errstr);
   PyErr_WarnEx(PyExc_RuntimeWarning, buff, 1);
 }
 
-static void py_error_handler(char const* errstr, char const* msg)
+static void py_error_handler(
+  pp_errno const code, char const* errstr, char const* msg)
 {
-  PyObject* exc =
-    pubmedparser_get_oom() ? PyExc_MemoryError : PyExc_RuntimeError;
+  PyObject* exc = PyExc_RuntimeError;
+  if (code == PP_ERR_OOM) {
+    exc = PyExc_MemoryError;
+  } else if (code == PP_INTERRUPTION) {
+    exc = PyExc_KeyboardInterrupt;
+  }
   char buff[4096];
-  snprintf(buff, sizeof(buff), "%s\n  %s\n", msg, errstr);
+  snprintf(buff, sizeof(buff) - 1, "%s\n  %s\n", msg, errstr);
 
-  file_list_destroy(&files, n_files);
-  path_struct_destroy(ps);
-
-  PyErr_SetString(exc, buff);
+  if (!PyErr_Occurred()) {
+    PyErr_SetString(exc, buff);
+  }
 }
 
-static void parse_file_list(PyObject* py_files, char*** files, size_t* n_files)
+static int py_interruption_handler(void) { return PyErr_CheckSignals() < 0; }
+
+static int parse_file_list(PyObject* py_files, char*** files, size_t* n_files)
 {
   if (!PyList_Check(py_files)) {
     PyErr_SetString(PyExc_ValueError, "Files argument was not a list.");
-    return;
+    return -1;
   }
 
   *n_files = (size_t)PyList_Size(py_files);
@@ -54,34 +62,53 @@ static void parse_file_list(PyObject* py_files, char*** files, size_t* n_files)
     f = PyList_GetItem(py_files, (Py_ssize_t)i);
     if (!PyUnicode_Check(f)) {
       PyErr_SetString(PyExc_ValueError, "Files was not a list of strings.");
+      return -1;
     }
     (*files)[i] = strdup(PyUnicode_AsUTF8(f));
   }
+
+  return 0;
 }
 
 static PyObject* read_xml_from_structure_file(PyObject* _, PyObject* args)
 {
+  static char** files;
+  static path_struct ps;
+  size_t n_files;
+
   PyObject* files_obj;
-  char const* structure_file;
-  char const* cache_dir = "";
-  char const* progress_file = "";
-  int const n_threads = 0;
-  int const overwrite_cache = 0;
+  char* structure_file;
+  char* cache_dir = "";
+  char* progress_file = "";
+  int n_threads = 0;
+  int overwrite_cache = 0;
 
   if (!PyArg_ParseTuple(args, "Osssip", &files_obj, &structure_file,
         &cache_dir, &progress_file, &n_threads, &overwrite_cache)) {
     return NULL;
   }
 
-  pubmedparser_set_error_handler(py_error_handler);
-  pubmedparser_set_warn_handler(py_warning_handler);
+  py_set_handlers();
 
-  parse_file_list(files_obj, &files, &n_files);
+  if (parse_file_list(files_obj, &files, &n_files) < 0) {
+    return NULL;
+  };
+
   ps = parse_structure_file(structure_file, STRMAX);
+  if (PyErr_Occurred()) {
+    file_list_destroy(&files, n_files);
+    return NULL;
+  }
+
   read_xml(
     files, n_files, ps, cache_dir, overwrite_cache, progress_file, n_threads);
+
   file_list_destroy(&files, n_files);
   path_struct_destroy(ps);
+
+  if (PyErr_Occurred()) {
+    return NULL;
+  }
 
   Py_RETURN_NONE;
 }
@@ -165,26 +192,43 @@ static path_struct parse_structure_dictionary(PyObject* structure_dict)
 static PyObject* read_xml_from_structure_dictionary(
   PyObject* _, PyObject* args)
 {
+  static char** files;
+  static path_struct ps;
+  size_t n_files;
+
   PyObject* files_obj;
   PyObject* structure_dict;
-  char const* cache_dir = "";
-  char const* progress_file = "";
-  int const n_threads = 0;
-  int const overwrite_cache = 0;
+  char* cache_dir = "";
+  char* progress_file = "";
+  int n_threads = 0;
+  int overwrite_cache = 0;
 
   if (!PyArg_ParseTuple(args, "OOssip", &files_obj, &structure_dict,
         &cache_dir, &progress_file, &n_threads, &overwrite_cache)) {
     return NULL;
   }
 
-  pubmedparser_set_error_handler(py_error_handler);
+  py_set_handlers();
 
-  parse_file_list(files_obj, &files, &n_files);
+  if (parse_file_list(files_obj, &files, &n_files) < 0) {
+    return NULL;
+  };
+
   ps = parse_structure_dictionary(structure_dict);
+  if (PyErr_Occurred()) {
+    file_list_destroy(&files, n_files);
+    return NULL;
+  }
+
   read_xml(
     files, n_files, ps, cache_dir, overwrite_cache, progress_file, n_threads);
+
   file_list_destroy(&files, n_files);
   path_struct_destroy(ps);
+
+  if (PyErr_Occurred()) {
+    return NULL;
+  }
 
   Py_RETURN_NONE;
 }

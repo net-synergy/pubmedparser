@@ -9,7 +9,7 @@ files = pubmedparser.ftp.download(range(1383, 1389))
 # Read XML files using a YAML file to describe what data to collect.
 data_dir = "file_example"
 structure_file = "example/structure.yml"
-results = pubmedparser.read_xml(files, structure_file, data_dir)
+results = pubmedparser.read_xml(files, structure_file, data_dir, n_threads=3)
 
 os.listdir(results)
 

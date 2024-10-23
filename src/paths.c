@@ -35,7 +35,7 @@ static void get_components(
     pubmedparser_error(0, "Path malformed. Most start with '/'");
   }
   p++; // Strip initial '/';
-  while (*p != '\0' && !IS_SPECIAL(*p)) {
+  while ((*p != '\0') && !IS_SPECIAL(*p)) {
     if (*p == '/') {
       name[tag_i] = '\0';
       components[comp_i] = strdup(name);
@@ -78,6 +78,15 @@ path path_init(char const* xml_path, size_t const str_max)
 
 void path_destroy(path p)
 {
+  /* if ((int)p->length >= 0) { */
+  /*   printf("plen: %zu\n", p->length); */
+  /* } */
+  for (int i = 0; i < (int)p->length; i++) {
+    if (p->components[i]) {
+      /* printf("comp(%d): %s\n", i, p->components[i]); */
+      free(p->components[i]);
+    }
+  }
   free(p->components);
   free(p);
 }
@@ -127,11 +136,7 @@ int path_match(path const p1, path const p2)
   return i == 0;
 }
 
-inline int path_is_empty(path const p)
-{
-  /* printf("%d\n", (int)p->length); */
-  return (int)p->length == -1;
-}
+inline int path_is_empty(path const p) { return (int)p->length == -1; }
 
 void path_print(path const p)
 {

@@ -1,6 +1,7 @@
 #include "nodes.h"
 
 #include "error.h"
+#include "paths.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,14 +17,14 @@ static node* node_generate(path_struct const ps, char const* cache_dir,
 static FILE* get_file(
   char const* name, char const* cache_dir, int const overwrite)
 {
-  FILE* fptr = malloc(sizeof(*fptr));
+  FILE* fptr;
   size_t str_max = 8000;
   char out[str_max + 1];
   char* mode = overwrite ? "w" : "a";
 
   strncpy(out, cache_dir, str_max);
-  strncat(out, name, str_max);
-  strncat(out, ".tsv", str_max);
+  strncat(out, name, str_max - strlen(out));
+  strncat(out, ".tsv", str_max - strlen(out));
 
   fptr = fopen(out, mode);
   return fptr;
@@ -183,15 +184,6 @@ static node_set* node_set_generate_from_sub_tags(char const* xml_path,
   char const* cache_dir, int const overwrite, size_t const str_max)
 {
   path p = path_init(xml_path, str_max);
-  char* path_str = malloc(sizeof(*path_str) * str_max);
-  if (!path_str) {
-    pubmedparser_error(PP_ERR_OOM, "");
-  }
-
-  for (size_t i = 0; i < p->length; i++) {
-    strncat(path_str, "/", str_max);
-    strncat(path_str, p->components[i], str_max);
-  }
 
   struct PathStructure ps = {
     .name = strdup(name),
@@ -209,13 +201,13 @@ static node_set* node_set_generate_from_sub_tags(char const* xml_path,
   }
 
   ps.children[0]->name = strdup("root");
-  ps.children[0]->path = strdup(p->components[p->length - 1]);
+  ps.children[0]->path = p->components[p->length - 1];
   ps.children[0]->parent = &ps;
   ps.children[0]->children = NULL;
   ps.children[0]->n_children = 0;
 
   ps.children[1]->name = strdup("key");
-  ps.children[1]->path = strdup("/condensed");
+  ps.children[1]->path = "/condensed";
   ps.children[1]->parent = &ps;
   ps.children[1]->children = NULL;
   ps.children[1]->n_children = 0;
@@ -234,7 +226,7 @@ static node_set* node_set_generate_from_sub_tags(char const* xml_path,
     strncpy(sub_tag_paths[i], "/", str_max);
     strncat(sub_tag_paths[i], sub_tags[i], str_max);
 
-    ps.children[i + 2]->name = sub_tags[i];
+    ps.children[i + 2]->name = strdup(sub_tags[i]);
     ps.children[i + 2]->path = sub_tag_paths[i];
     ps.children[i + 2]->parent = &ps;
     ps.children[i + 2]->children = NULL;
@@ -244,14 +236,18 @@ static node_set* node_set_generate_from_sub_tags(char const* xml_path,
   node_set* ns =
     node_set_generate(&ps, ps.name, cache_dir, overwrite, str_max);
 
+  path_destroy(p);
   for (size_t i = 0; i < n_sub_tags; i++) {
     free(sub_tag_paths[i]);
   }
   free(sub_tag_paths);
+
   free(ps.name);
   for (size_t i = 0; i < ps.n_children; i++) {
+    free(ps.children[i]->name);
     free(ps.children[i]);
   }
+  free(ps.children);
 
   return ns;
 };
@@ -271,10 +267,10 @@ static node* node_generate(path_struct const ps, char const* cache_dir,
     can use the same pattern as in the top level where we search for the first
     instance of root then loop until hitting the root end tag. This allows us
     to use recursion in the main parser. */
-    /* p->length--; */
+    free(ps->children[0]->name);
+    free(ps->children[0]->path);
     ps->children[0]->name = strdup(p->components[p->length - 1]);
     ps->children[0]->path = strdup(p->components[p->length - 1]);
-    /* free(p->components[p->length]); */
 
     ns = node_set_generate(ps, ps->name, cache_dir, overwrite, str_max);
   } else {
@@ -283,6 +279,11 @@ static node* node_generate(path_struct const ps, char const* cache_dir,
     if (n_sub_tags > 0) {
       ns = node_set_generate_from_sub_tags(ps->path, ps->name, sub_tags,
         n_sub_tags, cache_dir, overwrite, str_max);
+
+      for (size_t i = 0; i < n_sub_tags; i++) {
+        free(sub_tags[i]);
+      }
+      free(sub_tags);
     } else {
       v = value_init(str_max);
       a = attribute_init(ps->path, str_max);
@@ -362,17 +363,22 @@ static void key_destroy(key* k)
 node_set* node_set_generate(path_struct const ps, char const* name_prefix,
   char const* cache_dir, int const overwrite, size_t const str_max)
 {
-  if (name_prefix != NULL) {
-    char* new_name;
-    char* old_name;
-    char* name_prefix_i = strdup(name_prefix);
+  if (name_prefix) {
+    char* name_prefix_i =
+      malloc(sizeof(*name_prefix_i) * (strlen(name_prefix) + 2));
+    name_prefix_i[0] = '\0';
+    strcpy(name_prefix_i, name_prefix);
     strcat(name_prefix_i, "_");
-    for (size_t i = 0; i < (ps->n_children - 1); i++) {
-      new_name = malloc(sizeof(*new_name) * str_max);
-      old_name = ps->children[i + 1]->name;
-      strncpy(new_name, name_prefix_i, str_max);
-      strncat(new_name, old_name, str_max);
-      ps->children[i + 1]->name = new_name;
+
+    for (size_t i = 1; i < ps->n_children; i++) {
+      char* old_name = ps->children[i]->name;
+      size_t name_sz = strlen(name_prefix) + strlen(old_name) + 1;
+      char* new_name = malloc(sizeof(*new_name) * name_sz);
+
+      new_name[0] = '\0';
+      strncat(new_name, name_prefix_i, name_sz);
+      strncat(new_name, old_name, name_sz - strlen(new_name));
+      ps->children[i]->name = new_name;
       free(old_name);
     }
     free(name_prefix_i);
@@ -409,15 +415,18 @@ node_set* node_set_generate(path_struct const ps, char const* name_prefix,
   key* ns_key = key_generate(key_type);
 
   char* root = ps->children[0]->path;
-  while (root[0] == '/') {
+  while (*root == '/') {
     root++;
   }
-  node_set ns_init = { .root = strdup(root),
+
+  node_set ns_init = {
+    .root = strdup(root),
     .key_idx = 0, // Always 0 since get_names moves it to 0 if it's not.
     .nodes = nodes,
     .n_nodes = ps->n_children - 1,
     .max_path_depth = max_p_depth,
-    .key = ns_key };
+    .key = ns_key,
+  };
 
   node_set* ns = malloc(sizeof(*ns));
   if (!ns) {
@@ -586,7 +595,7 @@ static path path_clone(path const p)
   memcpy(dup_p, p, sizeof(*dup_p));
   dup_p->components = malloc(sizeof(*dup_p->components) * dup_p->length);
   for (size_t i = 0; i < p->length; i++) {
-    dup_p->components[i] = p->components[i];
+    dup_p->components[i] = strdup(p->components[i]);
   }
 
   return dup_p;

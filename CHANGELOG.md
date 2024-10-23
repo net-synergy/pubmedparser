@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Support for multi-threading using pthreads.
+- Ability to interrupt.
 
 ### Changed
 
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Protect against trying to delete non-existent md5 file.
 - Allow the program to continue after a parse error by removing data stored from the malformed input file.
+- Memory leaks using valgrind.
 
 ## [2.0.6] 2024-01-20
 
