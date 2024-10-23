@@ -1,7 +1,6 @@
 #include "yaml_reader.h"
 
 #include "error.h"
-#include "read_xml.h"
 
 #include <stdlib.h>
 #include <string.h>

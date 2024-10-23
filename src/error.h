@@ -1,7 +1,7 @@
 #ifndef ERROR_H
 #define ERROR_H
 
-#include "../include/read_xml.h"
+#include "read_xml.h"
 
 #define PP_RETURN_ERROR_WITH_MSG(errcode, fmt, ...)                           \
   pubmedparser_set_errmsg((fmt), __VA_ARGS__);                                \

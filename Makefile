@@ -44,6 +44,7 @@ clean-dist: clean
 	rm -rf dist
 	rm -rf build
 	rm -rf cache
+	@cd $(SRC_DIR); $(MAKE) clean-dist
 
 .PHONY: check
 check: cli

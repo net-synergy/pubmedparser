@@ -1,7 +1,7 @@
 #ifndef YAML_READER_H
 #define YAML_READER_H
 
-#include "../include/read_xml.h"
+#include "read_xml.h"
 
 #include <stdio.h>
 
