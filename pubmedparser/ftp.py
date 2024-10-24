@@ -76,7 +76,7 @@ def _download_files(
 
 def _list_local_pubmed_files(path: str, name_regex_template) -> List[str]:
     files = os.listdir(path)
-    regex = re.compile(name_regex_template.format("\d{4}"))
+    regex = re.compile(name_regex_template.format(r"\d{4}"))
     return [f for f in files if regex.match(f)]
 
 
@@ -93,6 +93,7 @@ def list_files(remote_dir: str = "all") -> List[str]:
     -------
     files : list
         A list of all files in the requested directories.
+
     """
     assert remote_dir == "all" or remote_dir in KNOWN_PUBMED_DIRECTORIES
     files: List[str] = []
@@ -177,6 +178,7 @@ def download(
     >>> # Download all available files.
     >>> files = ftp.download()
     >>> # Call above periodically to check for and download new files.
+
     """
     if isinstance(file_numbers, str) and file_numbers != "all":
         raise TypeError('Files is not of type int or "all".')
