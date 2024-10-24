@@ -17,6 +17,10 @@
 
 #define STR_MAX 10000
 
+#ifdef _WIN32
+  #define mkdir(a, b) mkdir((a))
+#endif
+
 #define WAIT(ms)                                                              \
   struct timespec pause = {                                                   \
     .tv_sec = 0,                                                              \

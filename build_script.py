@@ -12,7 +12,7 @@ extensions = [
         "pubmedparser._readxml",
         sources=["pubmedparser/_readxml.c"],
         include_dirs=["include"],
-        libraries=["z"],
+        libraries=["z", "pthread"],
         extra_compile_args=["-O3"],
     ),
 ]

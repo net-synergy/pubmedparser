@@ -1,0 +1,148 @@
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG =~ "/v\d+\.\d+\.\d+/"
+
+stages:
+  - test
+  - build
+  - deploy
+  - release
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  PYTHON_TAG: "3.12"
+  CIBUILDWHEEL_VERSION: "2.21.3"
+
+type-check:
+  image: python:$PYTHON_TAG
+  stage: test
+  needs: []
+  cache:
+    key: test-$PYTHON_TAG
+    paths:
+      - .cache/pip
+      - .venv
+  before_script:
+    - pip install poetry
+    - poetry config virtualenvs.in-project true
+    - poetry build
+    - poetry install --with dev -vv
+    - rm -rf dist build
+  script:
+    - poetry run mypy --junit-xml mypy_report.xml .
+  artifacts:
+    when: always
+    reports:
+      junit: mypy_report.xml
+
+.build:
+  stage: build
+  needs: [type-check]
+  variables:
+    CIBW_SKIP: "cp36-* cp37-* cp38-* cp39-* pp*"
+  artifacts:
+    paths: [dist/]
+
+build_linux:
+  image: python:$PYTHON_TAG
+  extends: .build
+  services:
+    - name: docker:dind
+      entrypoint: ["env", "-u", "DOCKER_HOST"]
+      command: ["dockerd-entrypoint.sh"]
+  variables:
+    DOCKER_HOST: tcp://docker:2375/
+    DOCKER_DRIVER: overlay2
+    # See https://github.com/docker-library/docker/pull/166
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    - python -m pip install build setuptools cibuildwheel==$CIBUILDWHEEL_VERSION
+    - curl -sSL https://get.docker.com/ | sh
+  script:
+    - cibuildwheel --output-dir dist
+    - python -m build --sdist
+
+# .setup_msys2:
+#   before_script:
+#     - wget.exe -nv -O msys2.exe https://github.com/msys2/msys2-installer/releases/download/nightly-x86_64/msys2-base-x86_64-latest.sfx.exe
+#     - ./msys2.exe -y -oC:\
+#     - Remove-Item msys2.exe
+#     - $env:CHERE_INVOKING = 'yes'
+#     - $env:MSYSTEM = 'CLANG64'
+#     - C:\msys64\usr\bin\bash -lc ' '
+#     - C:\msys64\usr\bin\bash -lc 'pacman --noconfirm -Syuu'
+#     - C:\msys64\usr\bin\bash -lc 'pacman --noconfirm -Syuu'
+#     - >
+#       C:\msys64\usr\bin\bash -lc 'pacman --noconfirm -Syu
+#       git base-devel
+#       mingw-w64-clang-x86_64-toolchain
+#       mingw-w64-clang-x86_64-python3
+#       mingw-w64-clang-x86_64-python3-pip'
+
+## Giving up on windows for now. Don't think cibuildwheel works in msys2? And
+## don't want to set up code so pthreads and windows threads work.
+# build_windows:
+#   tags:
+#     - saas-windows-medium-amd64
+#   extends: [.setup_msys2, .build]
+#   script:
+#     - C:\msys64\usr\bin\bash -lc 'python -m pip install pip --upgrade'
+#     - C:\msys64\usr\bin\bash -lc 'python -m pip install cibuildwheel==$CIBUILDWHEEL_VERSION'
+#     - C:\msys64\usr\bin\bash -lc 'python -m cibuildwheel --output-dir dist --platform windows'
+#   cache:
+#     key: $CI_JOB_NAME-$CIBUILDWHEEL_VERSION
+#     paths: ['C:\msys64\clang64']
+
+## Gitlab is not finding a runner that satisfies this tag for some reason.
+# build_macos:
+#   tags:
+#     - saas-macos-medium-m1
+#   variables:
+#     CIBW_ARCHS_MACOS: "x86_64 arm64"
+#   extends: .build
+#   before_script: python3 -m pip install cibuildwheel==$CIBUILDWHEEL_VERSION
+#   script: python3 -m cibuildwheel --output-dir dist
+
+.deploy:
+  stage: deploy
+  image: python:$PYTHON_TAG
+  needs: [build_linux]
+  dependencies: [build_linux]
+  variables:
+    TWINE_PASSWORD: $CI_JOB_TOKEN
+    TWINE_USERNAME: gitlab-ci-token
+  before_script:
+    - pip install twine
+  script:
+    - python -m twine upload --verbose dist/*
+
+deploy_release:
+  extends: .deploy
+  environment: publish
+  only:
+    - tags
+
+gitlab_release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  needs: [deploy_devel]
+  script:
+    - range=$(grep --max-count=2 --line-number "## \[" < CHANGELOG.md |\
+      cut -f 1 -d ':' | tr '\n' ',' | sed -n 's/,$/p\n/p')
+    - sed -n $range < CHANGELOG.md | head -n-2 | tail -n+3 > release_notes.md
+    - sed -i 's/###/##/g' release_notes.md
+  release:
+    name: "$CI_PROJECT_NAME $CI_COMMIT_TAG"
+    tag_name: "$CI_COMMIT_TAG"
+    ref: "$CI_COMMIT_SHA"
+    description: release_notes.md
+  only:
+    - tags
+
+deploy_devel:
+  extends: .deploy
+  variables:
+    TWINE_REPOSITORY: testpypi
+  only:
+    - branches
