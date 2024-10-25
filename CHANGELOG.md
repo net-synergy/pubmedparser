@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.1.0] 2024-10-23
 
 ### Added
 
@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Protect against trying to delete non-existent md5 file.
 - Allow the program to continue after a parse error by removing data stored from the malformed input file.
 - Memory leaks using valgrind.
+- Ensure the reprocess all flag works even if no files have been processed yet.
 
 ## [2.0.6] 2024-01-20
 

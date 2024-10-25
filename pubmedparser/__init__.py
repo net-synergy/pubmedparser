@@ -103,7 +103,7 @@ def read_xml(
         n_threads = len(psutil.Process().cpu_affinity())
 
     files = [f for f in files if f.endswith(exts)]
-    if reprocess_all:
+    if reprocess_all and os.path.exists(os.path.join(data_dir, progress_file)):
         os.unlink(os.path.join(data_dir, progress_file))
     else:
         files = _unprocessed_files(
