@@ -49,7 +49,7 @@ ignore = ["E203", "D400"]
 select = ["A", "C", "D", "E", "F", "N", "RET", "SIM"]
 
 [tool.poetry.build]
-script = "build.py"
+script = "build_script.py"
 generate-setup-file = true
 
 [build-system]
