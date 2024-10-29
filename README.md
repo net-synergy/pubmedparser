@@ -1,3 +1,6 @@
+![PyPI - Version](https://img.shields.io/pypi/v/pubmedparser2)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pubmedparser2)
+
 Read XML files and pull out selected values. Values to collect are
 determined by paths found in a [structure file](#structure-file). The
 structure file also includes a key which associates the values with a
@@ -26,7 +29,7 @@ results = pubmedparser.read_xml(files, structure_file, data_dir)
 ```
 
 See [the example
-file](https://gitlab.com/net-synergy/pubmedparser/-/blob/master/example/creating_graphs.py)
+file](https://github.com/net-synergy/pubmedparser/blob/master/example/creating_graphs.py)
 for more options.
 
 In python, the structure file can be replaced with a dictionary of
@@ -49,13 +52,7 @@ pip install pubmedparser2
 
 Requires `zlib`.
 
-Clone the repository and cd into the directory. Then use [poetry](https://python-poetry.org/docs) to install the dependencies.
-
-``` bash
-poetry install
-```
-
-Then run the make command:
+Clone the repository and cd into the directory. Then use [poetry](https://python-poetry.org/docs) to build and install the package.
 
 ``` bash
 make python
