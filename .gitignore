@@ -17,3 +17,4 @@ lib/
 .mypy_cache
 *.egg-info/
 vgcore.*
+setup.py

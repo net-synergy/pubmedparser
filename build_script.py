@@ -3,9 +3,7 @@
 import os
 
 from setuptools import Extension
-from setuptools.command.build_ext import build_ext
 from setuptools.command.develop import develop
-from setuptools.errors import CCompilerError, ExecError, PlatformError
 
 extensions = [
     Extension(
@@ -18,25 +16,6 @@ extensions = [
 ]
 
 
-class ExtBuilder(build_ext):
-    def run(self):
-        try:
-            build_ext.run(self)
-        except FileNotFoundError:
-            print("Failed to build C extension.")
-
-    def build_extension(self, ext):
-        try:
-            build_ext.build_extension(self, ext)
-        except (
-            CCompilerError,
-            ExecError,
-            PlatformError,
-            ValueError,
-        ):
-            print("Failed to build C extension.")
-
-
 class CustomDevelop(develop):
     def run(self):
         self.run_command("build_clib")
@@ -44,6 +23,7 @@ class CustomDevelop(develop):
 
 
 def build(setup_kwargs):
+    print("Running build")
     c_files = [
         "read_xml_core.c",
         "paths.c",
@@ -61,7 +41,7 @@ def build(setup_kwargs):
                     {
                         "sources": [os.path.join("src", f) for f in c_files],
                         "include_dirs": ["include"],
-                        "libraries": ["z"],
+                        "libraries": ["z", "pthread"],
                         "cflags": ["-O3"],
                     },
                 )
