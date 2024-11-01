@@ -10,8 +10,7 @@ extensions = [
         "pubmedparser._readxml",
         sources=["pubmedparser/_readxml.c"],
         include_dirs=["include"],
-        libraries=["z", "pthread"],
-        extra_compile_args=["-O3"],
+        libraries=["pubmedparser", "z", "pthread"],
     ),
 ]
 
@@ -42,7 +41,6 @@ def build(setup_kwargs):
                         "sources": [os.path.join("src", f) for f in c_files],
                         "include_dirs": ["include"],
                         "libraries": ["z", "pthread"],
-                        "cflags": ["-O3"],
                     },
                 )
             ],
