@@ -52,7 +52,7 @@ pp_errno tag_get(char* c, gzFile fptr, tag* t)
     return PP_ERR_EOF;
   }
 
-  if (t->value[i - 1] == '/') {
+  if ((i > 0) && (t->value[i - 1] == '/')) {
     t->is_empty = true;
     i--;
   } else {

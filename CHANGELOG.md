@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Memory error caused by taking the length of the wrong string.
+- Handle case where tag's value is empty.
 
 ## [2.1.1] 2024-10-31
 
