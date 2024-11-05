@@ -366,18 +366,16 @@ node_set* node_set_generate(path_struct const ps, char const* name_prefix,
   if (name_prefix) {
     char* name_prefix_i =
       malloc(sizeof(*name_prefix_i) * (strlen(name_prefix) + 2));
-    name_prefix_i[0] = '\0';
     strcpy(name_prefix_i, name_prefix);
     strcat(name_prefix_i, "_");
 
     for (size_t i = 1; i < ps->n_children; i++) {
       char* old_name = ps->children[i]->name;
-      size_t name_sz = strlen(name_prefix) + strlen(old_name) + 1;
+      size_t name_sz = strlen(name_prefix_i) + strlen(old_name) + 1;
       char* new_name = malloc(sizeof(*new_name) * name_sz);
 
-      new_name[0] = '\0';
-      strncat(new_name, name_prefix_i, name_sz);
-      strncat(new_name, old_name, name_sz - strlen(new_name));
+      strcpy(new_name, name_prefix_i);
+      strcat(new_name, old_name);
       ps->children[i]->name = new_name;
       free(old_name);
     }
