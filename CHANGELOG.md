@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Memory error caused by taking the length of the wrong string.
 - Handle case where tag's value is empty.
+- Handle tag mismatch causing a dynamic path to not get unwound by end of parsing.
 
 ## [2.1.1] 2024-10-31
 

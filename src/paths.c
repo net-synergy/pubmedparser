@@ -76,20 +76,19 @@ path path_init(char const* xml_path, size_t const str_max)
   return out;
 }
 
+#define MIN(a, b) (a) > (b) ? (b) : (a)
+
 void path_destroy(path p)
 {
-  /* if ((int)p->length >= 0) { */
-  /*   printf("plen: %zu\n", p->length); */
-  /* } */
-  for (int i = 0; i < (int)p->length; i++) {
-    if (p->components[i]) {
-      /* printf("comp(%d): %s\n", i, p->components[i]); */
-      free(p->components[i]);
-    }
+  int length = MIN((int)p->length, (int)p->max_path_depth);
+  for (int i = 0; i < length; i++) {
+    free(p->components[i]);
   }
   free(p->components);
   free(p);
 }
+
+#undef MIN
 
 path path_init_dynamic(size_t const max_path_depth)
 {
