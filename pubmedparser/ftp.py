@@ -35,7 +35,9 @@ def _download_files(
             if i == max_tries:
                 raise err
 
-            time.sleep(0.1)
+            n = 5 * (i + 1)
+            print(f"Download failed. Trying again in {n} seconds")
+            time.sleep(n)
             _download_i(file_name, i + 1, max_tries)
         except KeyboardInterrupt as err:
             os.unlink(in_cache(file_name))
