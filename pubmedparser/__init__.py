@@ -3,11 +3,13 @@ import os
 
 import psutil
 
+from . import ftp
 from ._readxml import from_structure_dictionary as _read_xml_from_dictionary
 from ._readxml import from_structure_file as _read_xml_from_structure_file
 from .storage import default_data_dir
 
-__all__ = ["read_xml"]
+__all__ = ["read_xml", "ftp"]
+
 package_name = "pubmedparser2"
 __version__ = importlib.metadata.version(package_name)
 
